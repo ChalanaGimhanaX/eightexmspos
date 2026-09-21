@@ -15,6 +15,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Include="ApplyUpdate.ps1" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <ProjectReference Include="..\Enightx.Pos\Enightx.Pos.csproj" />
   </ItemGroup>
 
