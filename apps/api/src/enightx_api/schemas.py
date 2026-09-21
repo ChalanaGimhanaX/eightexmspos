@@ -82,6 +82,18 @@ class DeviceEnrollmentResponse(BaseModel):
     device_generation: int
     token: str
 
+class HeartbeatRequest(BaseModel):
+    device_id: str
+    token: str
+    app_version: str
+    status: str = "ONLINE"
+    battery_level: Optional[int] = None
+    ip_address: Optional[str] = None
+
+class HeartbeatResponse(BaseModel):
+    acknowledged: bool = True
+    server_time: datetime
+
 class CategorySchema(BaseModel):
     category_id: str
     name: str

@@ -61,7 +61,7 @@ def main():
     print("    Connected successfully.")
 
     sftp = c.open_sftp()
-    target_rel = "/srv/enightx/production/releases/v1.0.3"
+    target_rel = "/srv/enightx/production/releases/v1.0.4"
     print(f"--> Uploading source files to {target_rel} via SFTP...")
 
     # Upload apps/api/src

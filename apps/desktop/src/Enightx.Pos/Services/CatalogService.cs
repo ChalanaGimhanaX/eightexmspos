@@ -13,7 +13,7 @@ public interface ICatalogService
     Task<Product?> GetProductByIdAsync(string productId);
     Task<decimal> GetStockOnHandAsync(string productId);
     Task AdjustStockAsync(string productId, decimal quantityChange, string reason, User actor, string tenantId, string branchId, string counterId);
-    Task ApplyCatalogUpdatesAsync(CatalogSyncResponseDto catalogData);
+    Task ApplyCatalogUpdatesAsync(CatalogSyncResponseDto catalogData, bool updateCursor = true);
     Task<DateTime?> GetLastCatalogSyncTimeAsync();
     Task SetLastCatalogSyncTimeAsync(DateTime timestamp);
     Task<List<Product>> GetAllActiveProductsAsync();
@@ -170,7 +170,7 @@ public class CatalogService : ICatalogService
         tx.Commit();
     }
 
-    public async Task ApplyCatalogUpdatesAsync(CatalogSyncResponseDto catalogData)
+    public async Task ApplyCatalogUpdatesAsync(CatalogSyncResponseDto catalogData, bool updateCursor = true)
     {
         using var conn = _db.CreateConnection();
         using var tx = conn.BeginTransaction();
@@ -247,19 +247,22 @@ public class CatalogService : ICatalogService
             }
 
             // 4. Update sync state cursor
-            using var stateCmd = conn.CreateCommand();
-            stateCmd.Transaction = tx;
-            stateCmd.CommandText = @"
-                INSERT INTO sync_state (key, value, updated_at_utc)
-                VALUES ('catalog_last_sync_utc', $val, $now)
-                ON CONFLICT(key) DO UPDATE SET
-                    value = excluded.value,
-                    updated_at_utc = excluded.updated_at_utc;
-            ";
-            var nowStr = DateTime.UtcNow.ToString("o");
-            stateCmd.Parameters.AddWithValue("$val", catalogData.ServerTime.ToString("o"));
-            stateCmd.Parameters.AddWithValue("$now", nowStr);
-            await stateCmd.ExecuteNonQueryAsync();
+            if (updateCursor)
+            {
+                using var stateCmd = conn.CreateCommand();
+                stateCmd.Transaction = tx;
+                stateCmd.CommandText = @"
+                    INSERT INTO sync_state (key, value, updated_at_utc)
+                    VALUES ('catalog_last_sync_utc', $val, $now)
+                    ON CONFLICT(key) DO UPDATE SET
+                        value = excluded.value,
+                        updated_at_utc = excluded.updated_at_utc;
+                ";
+                var nowStr = DateTime.UtcNow.ToString("o");
+                stateCmd.Parameters.AddWithValue("$val", catalogData.ServerTime.ToString("o"));
+                stateCmd.Parameters.AddWithValue("$now", nowStr);
+                await stateCmd.ExecuteNonQueryAsync();
+            }
 
             tx.Commit();
         }

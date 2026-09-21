@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Data.Sqlite;
 using Enightx.Pos.Domain;
 using Enightx.Pos.Storage;
@@ -213,47 +214,77 @@ public class SyncService : ISyncService
         try
         {
             var lastSync = await _catalogService.GetLastCatalogSyncTimeAsync();
-            var query = new List<string>();
-            if (lastSync.HasValue)
-            {
-                query.Add($"since={Uri.EscapeDataString(lastSync.Value.ToString("o"))}");
-            }
-            query.Add("limit=200");
-            var queryString = string.Join("&", query);
+            int totalProducts = 0;
+            int totalCategories = 0;
+            int totalDeleted = 0;
+            DateTime? serverTime = null;
 
-            var url = $"{_apiBaseUrl.TrimEnd('/')}/api/v1/sync/catalog?{queryString}";
-            using var resp = await _httpClient.GetAsync(url, ct);
+            int offset = 0;
+            const int pageSize = 200;
+            bool hasMore = true;
 
-            if (!resp.IsSuccessStatusCode)
+            while (hasMore && !ct.IsCancellationRequested)
             {
-                var err = await resp.Content.ReadAsStringAsync(ct);
-                return new CatalogSyncResult
+                var query = new List<string>();
+                if (lastSync.HasValue)
                 {
-                    Success = false,
-                    ErrorMessage = $"Server returned {resp.StatusCode}: {err}"
-                };
-            }
+                    query.Add($"since={Uri.EscapeDataString(lastSync.Value.ToString("o"))}");
+                }
+                query.Add($"offset={offset}");
+                query.Add($"limit={pageSize}");
+                var queryString = string.Join("&", query);
 
-            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            var data = await resp.Content.ReadFromJsonAsync<CatalogSyncResponseDto>(options, ct);
-            if (data == null)
-            {
-                return new CatalogSyncResult
+                var url = $"{_apiBaseUrl.TrimEnd('/')}/api/v1/sync/catalog?{queryString}";
+                using var resp = await _httpClient.GetAsync(url, ct);
+
+                if (!resp.IsSuccessStatusCode)
                 {
-                    Success = false,
-                    ErrorMessage = "Received empty response from catalog sync endpoint."
-                };
-            }
+                    var err = await resp.Content.ReadAsStringAsync(ct);
+                    return new CatalogSyncResult
+                    {
+                        Success = false,
+                        ErrorMessage = $"Server returned {resp.StatusCode}: {err}"
+                    };
+                }
 
-            await _catalogService.ApplyCatalogUpdatesAsync(data);
+                var options = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true,
+                    NumberHandling = JsonNumberHandling.AllowReadingFromString
+                };
+                var data = await resp.Content.ReadFromJsonAsync<CatalogSyncResponseDto>(options, ct);
+                if (data == null)
+                {
+                    return new CatalogSyncResult
+                    {
+                        Success = false,
+                        ErrorMessage = "Received empty response from catalog sync endpoint."
+                    };
+                }
+
+                bool isLastPage = !data.HasMore;
+                await _catalogService.ApplyCatalogUpdatesAsync(data, updateCursor: isLastPage);
+
+                totalProducts += data.Products.Count;
+                totalCategories += data.Categories.Count;
+                totalDeleted += data.DeletedItemIds.Count;
+                serverTime = data.ServerTime;
+
+                hasMore = data.HasMore;
+                offset += Math.Max(data.Products.Count, data.Categories.Count);
+                if (data.Products.Count == 0 && data.Categories.Count == 0)
+                {
+                    break;
+                }
+            }
 
             return new CatalogSyncResult
             {
                 Success = true,
-                ProductsUpdated = data.Products.Count,
-                CategoriesUpdated = data.Categories.Count,
-                ItemsDeleted = data.DeletedItemIds.Count,
-                ServerTimeUtc = data.ServerTime
+                ProductsUpdated = totalProducts,
+                CategoriesUpdated = totalCategories,
+                ItemsDeleted = totalDeleted,
+                ServerTimeUtc = serverTime
             };
         }
         catch (HttpRequestException ex)

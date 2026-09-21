@@ -197,12 +197,15 @@ public class CatalogProductDto
     public string? NameTa { get; set; }
 
     [JsonPropertyName("unit_price")]
+    [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
     public decimal UnitPrice { get; set; }
 
     [JsonPropertyName("cost_basis")]
+    [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
     public decimal CostBasis { get; set; }
 
     [JsonPropertyName("tax_rate")]
+    [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
     public decimal TaxRate { get; set; }
 
     [JsonPropertyName("is_active")]

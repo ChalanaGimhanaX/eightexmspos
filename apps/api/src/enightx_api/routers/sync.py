@@ -89,6 +89,7 @@ def push_sync_batch(batch: SyncBatchRequest, db: Session = Depends(get_db)):
 @router.get("/catalog", response_model=CatalogSyncResponse)
 def get_catalog_sync(
     since: Optional[str] = Query(default=None, description="ISO UTC timestamp"),
+    offset: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=1000),
     db: Session = Depends(get_db)
 ):
@@ -134,10 +135,10 @@ def get_catalog_sync(
         prod_query = prod_query.filter(Product.deleted_at.is_(None))
         cat_query = cat_query.filter(Category.deleted_at.is_(None))
 
-    products = prod_query.order_by(Product.updated_at.asc()).limit(limit).all()
-    categories = cat_query.order_by(Category.updated_at.asc()).limit(limit).all()
+    products = prod_query.order_by(Product.updated_at.asc(), Product.product_id.asc()).offset(offset).limit(limit).all()
+    categories = cat_query.order_by(Category.updated_at.asc(), Category.category_id.asc()).offset(offset).limit(limit).all()
 
-    has_more = len(products) == limit
+    has_more = (len(products) == limit) or (len(categories) == limit)
 
     product_items = [
         CatalogProductSchema(

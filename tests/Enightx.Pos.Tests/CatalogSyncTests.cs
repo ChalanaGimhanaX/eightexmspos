@@ -280,4 +280,116 @@ public class CatalogSyncTests : IDisposable
         Assert.True(result.NetworkOffline);
         Assert.Contains("Network is down", result.ErrorMessage);
     }
+
+    [Fact]
+    public async Task PullCatalogUpdatesAsync_MultiplePages_PaginatesAndUpdatesCursorOnCompletion()
+    {
+        var serverNow = DateTime.UtcNow;
+        var requestedUris = new List<string>();
+
+        var page1 = new CatalogSyncResponseDto
+        {
+            ServerTime = serverNow,
+            Categories = new List<CategoryDto>(),
+            Products = new List<CatalogProductDto>
+            {
+                new()
+                {
+                    ProductId = "prod_page_01",
+                    Barcode = "990001",
+                    Name = "Page 1 Item",
+                    UnitPrice = 100m,
+                    CostBasis = 50m,
+                    TaxRate = 0.18m,
+                    IsActive = true,
+                    UpdatedAt = serverNow
+                }
+            },
+            DeletedItemIds = new List<string>(),
+            HasMore = true
+        };
+
+        var page2 = new CatalogSyncResponseDto
+        {
+            ServerTime = serverNow,
+            Categories = new List<CategoryDto>(),
+            Products = new List<CatalogProductDto>
+            {
+                new()
+                {
+                    ProductId = "prod_page_02",
+                    Barcode = "990002",
+                    Name = "Page 2 Item",
+                    UnitPrice = 200m,
+                    CostBasis = 100m,
+                    TaxRate = 0.18m,
+                    IsActive = true,
+                    UpdatedAt = serverNow
+                }
+            },
+            DeletedItemIds = new List<string>(),
+            HasMore = false
+        };
+
+        var handler = MockHttpMessageHandler.FromSync(req =>
+        {
+            var uri = req.RequestUri?.ToString() ?? "";
+            requestedUris.Add(uri);
+
+            var responseObj = uri.Contains("offset=0") ? page1 : page2;
+            var json = JsonSerializer.Serialize(responseObj);
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+            };
+        });
+
+        using var http = new HttpClient(handler);
+        var sync = new SyncService(_db, _catalog, http, "https://mockapi.eightexms.site");
+
+        var result = await sync.PullCatalogUpdatesAsync();
+
+        Assert.True(result.Success);
+        Assert.Equal(2, result.ProductsUpdated);
+        Assert.Equal(2, requestedUris.Count);
+        Assert.Contains("offset=0", requestedUris[0]);
+        Assert.Contains("offset=1", requestedUris[1]);
+
+        // Both products should be saved
+        var p1 = await _catalog.GetProductByIdAsync("prod_page_01");
+        var p2 = await _catalog.GetProductByIdAsync("prod_page_02");
+        Assert.NotNull(p1);
+        Assert.NotNull(p2);
+
+        // Cursor should be updated
+        var cursor = await _catalog.GetLastCatalogSyncTimeAsync();
+        Assert.NotNull(cursor);
+        Assert.Equal(serverNow.ToString("o"), cursor.Value.ToString("o"));
+    }
+
+    [Fact]
+    public async Task LiveApi_CatalogSync_PullsActualCatalogFromVpsPostgres()
+    {
+        using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+        var sync = new SyncService(_db, _catalog, http, "https://posapi.eightexms.site");
+
+        var result = await sync.PullCatalogUpdatesAsync();
+
+        Assert.True(result.Success, $"Catalog sync failed: {result.ErrorMessage}");
+        Assert.True(result.ProductsUpdated >= 4, $"Expected >= 4 products, got {result.ProductsUpdated}");
+        Assert.True(result.CategoriesUpdated >= 4, $"Expected >= 4 categories, got {result.CategoriesUpdated}");
+
+        var prod1 = await _catalog.GetProductByBarcodeAsync("4792001001");
+        Assert.NotNull(prod1);
+        Assert.Equal("Brake Pad Front Set (Toyota)", prod1.Name);
+        Assert.Equal(4500.00m, prod1.UnitPrice);
+
+        var prod2 = await _catalog.GetProductByBarcodeAsync("4792001002");
+        Assert.NotNull(prod2);
+        Assert.Equal("Oil Filter Element (Denso)", prod2.Name);
+
+        var categories = await _catalog.GetAllActiveCategoriesAsync();
+        Assert.Contains(categories, c => c.CategoryId == "cat_brakes");
+        Assert.Contains(categories, c => c.CategoryId == "cat_lubricants");
+    }
 }
