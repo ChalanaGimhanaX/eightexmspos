@@ -81,3 +81,54 @@ class DeviceEnrollmentResponse(BaseModel):
     device_id: str
     device_generation: int
     token: str
+
+class StockTransferItemRequest(BaseModel):
+    product_id: str
+    requested_quantity: Decimal
+
+class StockTransferItemResponse(BaseModel):
+    item_id: uuid.UUID
+    product_id: str
+    requested_quantity: Decimal
+    dispatched_quantity: Decimal
+    received_quantity: Decimal
+
+class StockTransferRequest(BaseModel):
+    tenant_id: str = "TENANT_LK_01"
+    source_branch_id: str
+    dest_branch_id: str
+    requested_by: str
+    notes: Optional[str] = None
+    items: List[StockTransferItemRequest]
+
+class StockTransferResponse(BaseModel):
+    transfer_id: uuid.UUID
+    tenant_id: str
+    source_branch_id: str
+    dest_branch_id: str
+    status: str
+    requested_by: str
+    dispatched_by: Optional[str] = None
+    received_by: Optional[str] = None
+    requested_at: datetime
+    dispatched_at: Optional[datetime] = None
+    received_at: Optional[datetime] = None
+    notes: Optional[str] = None
+    items: List[StockTransferItemResponse]
+
+class BranchStockAdjustmentRequest(BaseModel):
+    tenant_id: str = "TENANT_LK_01"
+    branch_id: str
+    product_id: str
+    stock_on_hand: Decimal
+    reorder_point: Decimal = Decimal("0.00")
+
+class BranchInventoryResponse(BaseModel):
+    tenant_id: str
+    branch_id: str
+    product_id: str
+    stock_on_hand: Decimal
+    stock_in_transit: Decimal
+    reorder_point: Decimal
+    updated_at: datetime
+

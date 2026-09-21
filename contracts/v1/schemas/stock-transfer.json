@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://enightx.com/schemas/v1/stock-transfer.json",
+  "title": "StockTransferRequest",
+  "type": "object",
+  "required": [
+    "source_branch_id",
+    "dest_branch_id",
+    "requested_by",
+    "items"
+  ],
+  "properties": {
+    "tenant_id": { "type": "string" },
+    "source_branch_id": { "type": "string" },
+    "dest_branch_id": { "type": "string" },
+    "requested_by": { "type": "string" },
+    "notes": { "type": ["string", "null"] },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["product_id", "requested_quantity"],
+        "properties": {
+          "product_id": { "type": "string" },
+          "requested_quantity": { "type": "string" }
+        }
+      }
+    }
+  }
+}
+
