@@ -24,8 +24,7 @@
                 <PasswordBox x:Name="PasswordBox" Height="36" Padding="8,4" FontSize="14"/>
 
                 <TextBlock Text="{Binding ErrorMessage}" Foreground="Red" FontSize="12" 
-                           Margin="0,12,0,0" TextWrapping="Wrap"
-                           Visibility="{Binding ErrorMessage, Converter={x:Null}}"/>
+                           Margin="0,12,0,0" TextWrapping="Wrap"/>
 
                 <Button Content="Sign In" Height="42" Margin="0,24,0,0"
                         Background="{StaticResource PrimaryBrush}" Foreground="White"

@@ -82,7 +82,7 @@ public class PaymentViewModel : INotifyPropertyChanged
             var lineRequests = BillingContext.CartItems.Select(i => new CreateSaleLineRequest(
                 ProductId: i.ProductId,
                 Quantity: i.Quantity,
-                PriceOverride: i.UnitPrice,
+                PriceOverride: i.IsPriceOverridden ? i.UnitPrice : null,
                 OverrideReason: i.OverrideReason,
                 DiscountRate: i.DiscountRate
             )).ToList();

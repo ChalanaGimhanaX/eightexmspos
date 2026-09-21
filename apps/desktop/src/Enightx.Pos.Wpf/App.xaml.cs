@@ -13,6 +13,7 @@ public partial class App : Application
     public static ISaleService SaleService { get; private set; } = null!;
     public static IPrinterService PrinterService { get; private set; } = null!;
     public static IReceiptService ReceiptService { get; private set; } = null!;
+    public static ISyncService SyncService { get; private set; } = null!;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -27,6 +28,7 @@ public partial class App : Application
         CatalogService = new CatalogService(Database);
         ShiftService = new ShiftService(Database);
         SaleService = new SaleService(Database, CatalogService);
+        SyncService = new SyncService(Database);
         PrinterService = new MemoryPrinterService(); // WindowsReceiptPrinter can be injected in production
         ReceiptService = new ReceiptService(Database, SaleService, PrinterService);
     }

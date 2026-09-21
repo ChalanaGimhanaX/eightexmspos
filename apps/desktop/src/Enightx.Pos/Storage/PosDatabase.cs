@@ -128,6 +128,7 @@ public class PosDatabase : IDisposable
             counter_id TEXT NOT NULL,
             cashier_id TEXT NOT NULL,
             customer_id TEXT,
+            parent_sale_id TEXT,
             subtotal NUMERIC NOT NULL,
             discount_total NUMERIC NOT NULL DEFAULT 0,
             tax_total NUMERIC NOT NULL DEFAULT 0,
@@ -197,6 +198,9 @@ public class PosDatabase : IDisposable
             source_sequence INTEGER NOT NULL,
             schema_version TEXT NOT NULL,
             payload_json TEXT NOT NULL,
+            actor_id TEXT NOT NULL,
+            occurred_at_utc TEXT NOT NULL,
+            causal_reference TEXT,
             status TEXT NOT NULL,
             created_at_utc TEXT NOT NULL
         );

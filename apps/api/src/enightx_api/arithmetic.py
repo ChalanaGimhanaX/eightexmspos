@@ -56,3 +56,50 @@ def calculate_shift_expected_cash(
     return round_money(
         opening_float + cash_received - change_given - cash_refunds + cash_in - cash_out
     )
+
+def calculate_sale_totals(lines: List[Dict[str, Decimal]]) -> Dict[str, Decimal]:
+    """Calculates aggregate sale subtotal, discount, tax, and grand total."""
+    subtotal = round_money(sum((l["subtotal"] for l in lines), Decimal("0.0")))
+    discount_total = round_money(sum((l["discount_amount"] for l in lines), Decimal("0.0")))
+    tax_total = round_money(sum((l["tax_amount"] for l in lines), Decimal("0.0")))
+    grand_total = round_money(sum((l["line_total"] for l in lines), Decimal("0.0")))
+    return {
+        "subtotal": subtotal,
+        "discount_total": discount_total,
+        "tax_total": tax_total,
+        "grand_total": grand_total
+    }
+
+def calculate_tenders(grand_total: Decimal, tenders: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Validates tenders and calculates cash change and net cash effects.
+    Order-independent tender processing matching C# MoneyCalculator/SaleService.
+    """
+    total_tendered = round_money(sum((Decimal(str(t["amount"])) for t in tenders), Decimal("0.0")))
+    if total_tendered < grand_total:
+        raise ValueError(f"Total tendered ({total_tendered}) is less than grand total ({grand_total})")
+
+    non_cash_total = round_money(sum(
+        (Decimal(str(t["amount"])) for t in tenders if t.get("type") != "CASH"),
+        Decimal("0.0")
+    ))
+    if non_cash_total > grand_total:
+        raise ValueError("Non-cash tenders cannot exceed grand total")
+
+    cash_needed = grand_total - non_cash_total
+    cash_total = round_money(sum(
+        (Decimal(str(t["amount"])) for t in tenders if t.get("type") == "CASH"),
+        Decimal("0.0")
+    ))
+    if cash_total < cash_needed:
+        raise ValueError(f"Cash tendered ({cash_total}) is less than cash needed ({cash_needed})")
+
+    cash_change = cash_total - cash_needed if cash_total > cash_needed else Decimal("0.0")
+    return {
+        "total_tendered": total_tendered,
+        "non_cash_total": non_cash_total,
+        "cash_total": cash_total,
+        "change_given": cash_change,
+        "net_cash_received": cash_total - cash_change
+    }
+

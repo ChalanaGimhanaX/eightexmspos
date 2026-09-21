@@ -92,6 +92,7 @@ public class Sale
     public required string CounterId { get; set; }
     public required string CashierId { get; set; }
     public string? CustomerId { get; set; }
+    public Guid? ParentSaleId { get; set; }
     public decimal Subtotal { get; set; }
     public decimal DiscountTotal { get; set; }
     public decimal TaxTotal { get; set; }
@@ -155,7 +156,10 @@ public class OutboxEvent
     public int DeviceGeneration { get; set; }
     public long SourceSequence { get; set; }
     public string SchemaVersion { get; set; } = "1.0";
+    public required string ActorId { get; set; }
     public required string PayloadJson { get; set; }
+    public DateTime OccurredAtUtc { get; set; } = DateTime.UtcNow;
+    public string? CausalReference { get; set; }
     public string Status { get; set; } = "PENDING"; // "PENDING", "SENT", "ACKNOWLEDGED"
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 }

@@ -50,3 +50,37 @@ def test_shift_expected_cash_fixture():
     assert expected == Decimal(str(shift_case["expected_drawer_cash"]))
     variance = Decimal(str(shift_case["actual_counted_cash"])) - expected
     assert variance == Decimal(str(shift_case["expected_variance"]))
+
+def test_sale_arithmetic_fixtures():
+    fixtures_path = repo_root / "contracts" / "fixtures" / "arithmetic_fixtures.json"
+    with open(fixtures_path, "r", encoding="utf-8") as f:
+        fixtures = json.load(f)
+
+    from src.enightx_api.arithmetic import calculate_sale_totals, calculate_tenders
+
+    for case in fixtures["sale_tests"]:
+        calc_lines = []
+        for l in case["lines"]:
+            calc_lines.append(calculate_line(
+                quantity=Decimal(str(l["quantity"])),
+                unit_price=Decimal(str(l["unit_price"])),
+                discount_rate=Decimal(str(l.get("discount_rate", 0.0))),
+                discount_fixed=Decimal(str(l.get("discount_fixed", 0.0))),
+                tax_rate=Decimal(str(l.get("tax_rate", 0.0)))
+            ))
+
+        totals = calculate_sale_totals(calc_lines)
+        assert totals["subtotal"] == Decimal(str(case["expected_subtotal"])), f"Subtotal mismatch in {case['name']}"
+        assert totals["discount_total"] == Decimal(str(case["expected_discount_total"])), f"Discount mismatch in {case['name']}"
+        assert totals["tax_total"] == Decimal(str(case["expected_tax_total"])), f"Tax mismatch in {case['name']}"
+        assert totals["grand_total"] == Decimal(str(case["expected_grand_total"])), f"Grand total mismatch in {case['name']}"
+
+        # Tender validation
+        if "cash_tendered" in case:
+            tenders = [{"type": "CASH", "amount": case["cash_tendered"]}]
+        else:
+            tenders = case["tenders"]
+
+        tender_res = calculate_tenders(totals["grand_total"], tenders)
+        assert tender_res["change_given"] == Decimal(str(case["expected_change"])), f"Change mismatch in {case['name']}"
+
