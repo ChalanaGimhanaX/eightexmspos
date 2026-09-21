@@ -3,7 +3,33 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Enightx POS - Counter Terminal" Height="768" Width="1024"
         WindowState="Maximized" WindowStartupLocation="CenterScreen">
-    <Grid x:Name="MainContainer">
-        <!-- Content dynamically switches between LoginView and BillingView -->
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Top Update Notification Banner (Hidden when no update) -->
+        <Border x:Name="UpdateBanner" Grid.Row="0" Background="#1565C0" Padding="14,8" Visibility="Collapsed">
+            <DockPanel>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="🚀 " FontSize="14" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="UpdateBannerText" Text="A new software update is available!" 
+                               FontWeight="SemiBold" Foreground="White" FontSize="13" VerticalAlignment="Center"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Button Content="Update Now" Height="28" Padding="14,2" Margin="0,0,8,0"
+                            Background="White" Foreground="#1565C0" FontWeight="Bold" FontSize="12"
+                            Click="OpenUpdateDialog_Click"/>
+                    <Button Content="✕" Width="28" Height="28" Background="Transparent" BorderThickness="0"
+                            Foreground="White" FontWeight="Bold" FontSize="13"
+                            Click="DismissUpdateBanner_Click"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <Grid x:Name="MainContainer" Grid.Row="1">
+            <!-- Content dynamically switches between LoginView and BillingView -->
+        </Grid>
     </Grid>
 </Window>

@@ -1,5 +1,6 @@
 using System.Windows;
 using Enightx.Pos.Domain;
+using Enightx.Pos.Services;
 using Enightx.Pos.Wpf.ViewModels;
 using Enightx.Pos.Wpf.Views;
 
@@ -9,11 +10,59 @@ public partial class MainWindow : Window
 {
     private User? _currentUser;
     private CashShift? _currentShift;
+    private UpdateManifest? _latestManifest;
 
     public MainWindow()
     {
         InitializeComponent();
+        Loaded += MainWindow_Loaded;
         ShowLogin();
+    }
+
+    private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
+    {
+        await CheckForUpdatesAsync();
+    }
+
+    private async Task CheckForUpdatesAsync()
+    {
+        try
+        {
+            var check = await App.UpdateService.CheckForUpdatesAsync();
+            if (check.UpdateAvailable && check.Manifest != null)
+            {
+                _latestManifest = check.Manifest;
+                UpdateBannerText.Text = $"A new update (v{_latestManifest.Version}) is available! Click to install.";
+                UpdateBanner.Visibility = Visibility.Visible;
+
+                var dialog = new UpdateDialog(_latestManifest, App.UpdateService.CurrentVersion, App.UpdateService)
+                {
+                    Owner = this
+                };
+                dialog.ShowDialog();
+            }
+        }
+        catch
+        {
+            // Silently swallow errors during background update check
+        }
+    }
+
+    private void OpenUpdateDialog_Click(object sender, RoutedEventArgs e)
+    {
+        if (_latestManifest != null)
+        {
+            var dialog = new UpdateDialog(_latestManifest, App.UpdateService.CurrentVersion, App.UpdateService)
+            {
+                Owner = this
+            };
+            dialog.ShowDialog();
+        }
+    }
+
+    private void DismissUpdateBanner_Click(object sender, RoutedEventArgs e)
+    {
+        UpdateBanner.Visibility = Visibility.Collapsed;
     }
 
     private void ShowLogin()

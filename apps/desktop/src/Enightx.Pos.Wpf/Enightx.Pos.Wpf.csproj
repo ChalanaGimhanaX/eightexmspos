@@ -8,6 +8,10 @@
     <UseWPF>true</UseWPF>
     <RootNamespace>Enightx.Pos.Wpf</RootNamespace>
     <AssemblyName>Enightx.Pos.Wpf</AssemblyName>
+    <Version>1.0.1</Version>
+    <AssemblyVersion>1.0.1.0</AssemblyVersion>
+    <FileVersion>1.0.1.0</FileVersion>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
 
   <ItemGroup>

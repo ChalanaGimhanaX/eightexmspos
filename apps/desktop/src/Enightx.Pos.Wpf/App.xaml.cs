@@ -15,6 +15,7 @@ public partial class App : Application
     public static IPrinterService PrinterService { get; private set; } = null!;
     public static IReceiptService ReceiptService { get; private set; } = null!;
     public static ISyncService SyncService { get; private set; } = null!;
+    public static IUpdateService UpdateService { get; private set; } = null!;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -32,6 +33,9 @@ public partial class App : Application
         SyncService = new SyncService(Database);
         PrinterService = new MemoryPrinterService(); // WindowsReceiptPrinter can be injected in production
         ReceiptService = new ReceiptService(Database, SaleService, PrinterService);
+
+        var currentVer = typeof(App).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
+        UpdateService = new UpdateService(currentVersion: currentVer);
 
         SeedDefaultDataAsync().GetAwaiter().GetResult();
 
