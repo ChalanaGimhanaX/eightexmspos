@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://enightx.com/schemas/v1/entitlement.json",
+  "title": "LicenceEntitlement",
+  "type": "object",
+  "required": [
+    "entitlement_id",
+    "tenant_id",
+    "licence_type",
+    "status",
+    "issued_at",
+    "valid_until",
+    "revision",
+    "features"
+  ],
+  "properties": {
+    "entitlement_id": { "type": "string", "format": "uuid" },
+    "tenant_id": { "type": "string" },
+    "licence_type": { "type": "string", "enum": ["TRIAL", "SUBSCRIPTION", "PERMANENT"] },
+    "status": { "type": "string", "enum": ["ACTIVE", "EXPIRED", "FROZEN"] },
+    "issued_at": { "type": "string", "format": "date-time" },
+    "valid_until": { "type": ["string", "null"], "format": "date-time" },
+    "revision": { "type": "integer", "minimum": 1 },
+    "features": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

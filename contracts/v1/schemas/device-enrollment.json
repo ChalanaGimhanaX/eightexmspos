@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://enightx.com/schemas/v1/device-enrollment.json",
+  "title": "DeviceEnrollmentRequest",
+  "type": "object",
+  "required": [
+    "tenant_id",
+    "branch_id",
+    "device_code",
+    "device_name",
+    "hardware_fingerprint",
+    "app_version"
+  ],
+  "properties": {
+    "tenant_id": { "type": "string" },
+    "branch_id": { "type": "string" },
+    "device_code": { "type": "string" },
+    "device_name": { "type": "string" },
+    "hardware_fingerprint": { "type": "string" },
+    "app_version": { "type": "string" }
+  }
+}

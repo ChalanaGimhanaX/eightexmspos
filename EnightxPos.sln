@@ -1,0 +1,42 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "apps", "apps", "{C27064FE-4E05-4764-BB1E-27F68B771481}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "desktop", "desktop", "{C7FD872B-9E8F-43F0-BFD3-A8FCF5F26EC5}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{255610C1-D884-4505-A442-55A93F6BE9A9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Enightx.Pos", "apps\desktop\src\Enightx.Pos\Enightx.Pos.csproj", "{C87DCC6E-06E2-4931-A46B-DF2F07D6A1A8}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{5573FB98-1C4B-4659-9B36-37265A4D2D28}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Enightx.Pos.Tests", "tests\Enightx.Pos.Tests\Enightx.Pos.Tests.csproj", "{7291F22E-6CDC-4057-8ABB-52CCA171B045}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C87DCC6E-06E2-4931-A46B-DF2F07D6A1A8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C87DCC6E-06E2-4931-A46B-DF2F07D6A1A8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C87DCC6E-06E2-4931-A46B-DF2F07D6A1A8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C87DCC6E-06E2-4931-A46B-DF2F07D6A1A8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7291F22E-6CDC-4057-8ABB-52CCA171B045}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7291F22E-6CDC-4057-8ABB-52CCA171B045}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7291F22E-6CDC-4057-8ABB-52CCA171B045}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7291F22E-6CDC-4057-8ABB-52CCA171B045}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{C7FD872B-9E8F-43F0-BFD3-A8FCF5F26EC5} = {C27064FE-4E05-4764-BB1E-27F68B771481}
+		{255610C1-D884-4505-A442-55A93F6BE9A9} = {C7FD872B-9E8F-43F0-BFD3-A8FCF5F26EC5}
+		{C87DCC6E-06E2-4931-A46B-DF2F07D6A1A8} = {255610C1-D884-4505-A442-55A93F6BE9A9}
+		{7291F22E-6CDC-4057-8ABB-52CCA171B045} = {5573FB98-1C4B-4659-9B36-37265A4D2D28}
+	EndGlobalSection
+EndGlobal

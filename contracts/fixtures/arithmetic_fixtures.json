@@ -1,0 +1,126 @@
+{
+  "version": "1.0",
+  "currency": "LKR",
+  "line_tests": [
+    {
+      "name": "Standard single item without discount or tax",
+      "quantity": 2.0,
+      "unit_price": 150.00,
+      "discount_rate": 0.0,
+      "discount_fixed": 0.0,
+      "tax_rate": 0.0,
+      "expected_line_subtotal": 300.00,
+      "expected_discount_amount": 0.00,
+      "expected_tax_amount": 0.00,
+      "expected_line_total": 300.00
+    },
+    {
+      "name": "Percentage discount with exact cents",
+      "quantity": 3.0,
+      "unit_price": 250.00,
+      "discount_rate": 0.10,
+      "discount_fixed": 0.0,
+      "tax_rate": 0.0,
+      "expected_line_subtotal": 750.00,
+      "expected_discount_amount": 75.00,
+      "expected_tax_amount": 0.00,
+      "expected_line_total": 675.00
+    },
+    {
+      "name": "Half-up rounding on fractional cent discount",
+      "quantity": 1.0,
+      "unit_price": 99.95,
+      "discount_rate": 0.15,
+      "discount_fixed": 0.0,
+      "tax_rate": 0.0,
+      "expected_line_subtotal": 99.95,
+      "expected_discount_amount": 14.99,
+      "expected_tax_amount": 0.00,
+      "expected_line_total": 84.96
+    },
+    {
+      "name": "Sri Lankan VAT 18% on undiscounted item",
+      "quantity": 1.0,
+      "unit_price": 1000.00,
+      "discount_rate": 0.0,
+      "discount_fixed": 0.0,
+      "tax_rate": 0.18,
+      "expected_line_subtotal": 1000.00,
+      "expected_discount_amount": 0.00,
+      "expected_tax_amount": 180.00,
+      "expected_line_total": 1180.00
+    },
+    {
+      "name": "Discounted item with 18% tax on net amount",
+      "quantity": 2.0,
+      "unit_price": 500.00,
+      "discount_rate": 0.10,
+      "discount_fixed": 0.0,
+      "tax_rate": 0.18,
+      "expected_line_subtotal": 1000.00,
+      "expected_discount_amount": 100.00,
+      "expected_tax_amount": 162.00,
+      "expected_line_total": 1062.00
+    }
+  ],
+  "sale_tests": [
+    {
+      "name": "Exact cash tender with change",
+      "lines": [
+        {
+          "quantity": 2.0,
+          "unit_price": 500.00,
+          "discount_rate": 0.10,
+          "discount_fixed": 0.0,
+          "tax_rate": 0.18
+        }
+      ],
+      "bill_discount": 0.0,
+      "cash_tendered": 1500.00,
+      "expected_subtotal": 1000.00,
+      "expected_discount_total": 100.00,
+      "expected_tax_total": 162.00,
+      "expected_grand_total": 1062.00,
+      "expected_change": 438.00
+    },
+    {
+      "name": "Split tender cash and card with cash change",
+      "lines": [
+        {
+          "quantity": 5.0,
+          "unit_price": 490.00,
+          "discount_rate": 0.0,
+          "discount_fixed": 0.0,
+          "tax_rate": 0.0
+        }
+      ],
+      "bill_discount": 0.0,
+      "tenders": [
+        { "type": "CARD", "amount": 1000.00 },
+        { "type": "CASH", "amount": 1500.00 }
+      ],
+      "expected_subtotal": 2450.00,
+      "expected_discount_total": 0.00,
+      "expected_tax_total": 0.00,
+      "expected_grand_total": 2450.00,
+      "expected_change": 50.00
+    }
+  ],
+  "shift_cash_drawer_test": {
+    "name": "A10 Shift Expected Cash hand-calculated verification",
+    "opening_float": 5000.00,
+    "cash_received": 25450.00,
+    "change_given": 3250.00,
+    "cash_refunds": 1200.00,
+    "cash_in": 2000.00,
+    "cash_out": 4000.00,
+    "non_cash_sales": {
+      "card_total": 15000.00,
+      "qr_total": 3500.00,
+      "credit_total": 8000.00
+    },
+    "expected_drawer_cash": 24000.00,
+    "actual_counted_cash": 23950.00,
+    "expected_variance": -50.00
+  }
+}

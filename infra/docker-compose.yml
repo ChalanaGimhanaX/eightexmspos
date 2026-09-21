@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: ../apps/api
+      dockerfile: Dockerfile
+    container_name: enightx_api
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=${POSTGRES_DB:-enightx_pos}
+      - POSTGRES_USER=${POSTGRES_USER:-enightx_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - SECRET_KEY=${SECRET_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - enightx_backend_net
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: enightx_db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-enightx_pos}
+      - POSTGRES_USER=${POSTGRES_USER:-enightx_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-enightx_user} -d ${POSTGRES_DB:-enightx_pos}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - enightx_backend_net
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  enightx_backend_net:
+    driver: bridge

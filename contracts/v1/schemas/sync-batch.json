@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://enightx.com/schemas/v1/sync-batch.json",
+  "title": "SyncBatch",
+  "type": "object",
+  "required": [
+    "batch_id",
+    "tenant_id",
+    "source_device_id",
+    "source_generation",
+    "batch_sequence",
+    "sent_at",
+    "events"
+  ],
+  "properties": {
+    "batch_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "tenant_id": {
+      "type": "string"
+    },
+    "source_device_id": {
+      "type": "string"
+    },
+    "source_generation": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "batch_sequence": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "sent_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    }
+  }
+}

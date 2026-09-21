@@ -1,0 +1,18 @@
+<root>
+  <data name="AppTitle" xml:space="preserve"><value>Enightx POS - Counter Terminal</value></data>
+  <data name="Login" xml:space="preserve"><value>Login</value></data>
+  <data name="Username" xml:space="preserve"><value>Username</value></data>
+  <data name="Password" xml:space="preserve"><value>Password</value></data>
+  <data name="SignIn" xml:space="preserve"><value>Sign In</value></data>
+  <data name="Barcode" xml:space="preserve"><value>Barcode</value></data>
+  <data name="ProductName" xml:space="preserve"><value>Product Name</value></data>
+  <data name="Quantity" xml:space="preserve"><value>Quantity</value></data>
+  <data name="UnitPrice" xml:space="preserve"><value>Unit Price</value></data>
+  <data name="Discount" xml:space="preserve"><value>Discount</value></data>
+  <data name="Total" xml:space="preserve"><value>Total</value></data>
+  <data name="Subtotal" xml:space="preserve"><value>Subtotal</value></data>
+  <data name="GrandTotal" xml:space="preserve"><value>Grand Total</value></data>
+  <data name="PayCash" xml:space="preserve"><value>Pay Cash</value></data>
+  <data name="ChangeDue" xml:space="preserve"><value>Change Due</value></data>
+  <data name="Reprint" xml:space="preserve"><value>Reprint Receipt</value></data>
+</root>

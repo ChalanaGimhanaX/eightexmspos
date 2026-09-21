@@ -1,0 +1,78 @@
+openapi: 3.1.0
+info:
+  title: Enightx POS Cloud Sync & Management API
+  version: 1.0.0
+  description: Versioned API contract for device sync, health, and cloud aggregation.
+paths:
+  /health:
+    get:
+      summary: Health and readiness check
+      operationId: getHealth
+      responses:
+        '200':
+          description: Service is healthy and database is reachable
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  version:
+                    type: string
+                    example: 1.0.0
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /api/v1/devices/enroll:
+    post:
+      summary: Enroll a new POS counter terminal
+      operationId: enrollDevice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './schemas/device-enrollment.json'
+      responses:
+        '200':
+          description: Device enrolled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  device_id:
+                    type: string
+                  device_generation:
+                    type: integer
+                  token:
+                    type: string
+
+  /api/v1/sync/push:
+    post:
+      summary: Push an authenticated batch of events from counter or relay
+      operationId: pushSyncBatch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './schemas/sync-batch.json'
+      responses:
+        '200':
+          description: Batch accepted and durably persisted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  batch_id:
+                    type: string
+                  acknowledged_sequence:
+                    type: integer
+                  status:
+                    type: string
+                    example: acknowledged

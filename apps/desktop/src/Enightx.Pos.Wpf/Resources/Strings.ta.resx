@@ -1,0 +1,18 @@
+<root>
+  <data name="AppTitle" xml:space="preserve"><value>Enightx POS - விற்பனை முனையம்</value></data>
+  <data name="Login" xml:space="preserve"><value>உள்நுழைக</value></data>
+  <data name="Username" xml:space="preserve"><value>பயனர்பெயர்</value></data>
+  <data name="Password" xml:space="preserve"><value>கடவுச்சொல்</value></data>
+  <data name="SignIn" xml:space="preserve"><value>உள்நுழைய</value></data>
+  <data name="Barcode" xml:space="preserve"><value>பார்கோடு</value></data>
+  <data name="ProductName" xml:space="preserve"><value>பொருளின் பெயர்</value></data>
+  <data name="Quantity" xml:space="preserve"><value>அளவு</value></data>
+  <data name="UnitPrice" xml:space="preserve"><value>அலகு விலை</value></data>
+  <data name="Discount" xml:space="preserve"><value>தள்ளுபடி</value></data>
+  <data name="Total" xml:space="preserve"><value>மொத்தம்</value></data>
+  <data name="Subtotal" xml:space="preserve"><value>துணை மொத்தம்</value></data>
+  <data name="GrandTotal" xml:space="preserve"><value>பெரும் மொத்தம்</value></data>
+  <data name="PayCash" xml:space="preserve"><value>பணம் செலுத்துங்கள்</value></data>
+  <data name="ChangeDue" xml:space="preserve"><value>மீதி பணம்</value></data>
+  <data name="Reprint" xml:space="preserve"><value>ரசீது மறுபதிப்பு</value></data>
+</root>

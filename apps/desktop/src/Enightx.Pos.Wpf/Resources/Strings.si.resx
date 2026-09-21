@@ -1,0 +1,18 @@
+<root>
+  <data name="AppTitle" xml:space="preserve"><value>Enightx POS - විකුණුම් පර්යන්තය</value></data>
+  <data name="Login" xml:space="preserve"><value>ඇතුල්වීම</value></data>
+  <data name="Username" xml:space="preserve"><value>පරිශීලක නම</value></data>
+  <data name="Password" xml:space="preserve"><value>මුරපදය</value></data>
+  <data name="SignIn" xml:space="preserve"><value>ඇතුල් වන්න</value></data>
+  <data name="Barcode" xml:space="preserve"><value>තීරු කේතය (බාර්කෝඩ්)</value></data>
+  <data name="ProductName" xml:space="preserve"><value>භාණ්ඩයේ නම</value></data>
+  <data name="Quantity" xml:space="preserve"><value>ප්‍රමාණය</value></data>
+  <data name="UnitPrice" xml:space="preserve"><value>ඒකක මිල</value></data>
+  <data name="Discount" xml:space="preserve"><value>වට්ටම්</value></data>
+  <data name="Total" xml:space="preserve"><value>මුළු එකතුව</value></data>
+  <data name="Subtotal" xml:space="preserve"><value>උප එකතුව</value></data>
+  <data name="GrandTotal" xml:space="preserve"><value>මුළු මුදල</value></data>
+  <data name="PayCash" xml:space="preserve"><value>මුදල් ගෙවීම</value></data>
+  <data name="ChangeDue" xml:space="preserve"><value>ඉතිරි මුදල</value></data>
+  <data name="Reprint" xml:space="preserve"><value>රිසිට්පත නැවත මුද්‍රණය</value></data>
+</root>

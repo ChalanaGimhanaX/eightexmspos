@@ -1,0 +1,57 @@
+name: Enightx POS CI
+
+on:
+  push:
+    branches: [ main, develop, "codex/**" ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test-domain-and-api:
+    name: Domain & Cloud API Tests (Linux)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build & Test .NET Domain Core
+        run: |
+          dotnet restore EnightxPos.sln
+          dotnet build EnightxPos.sln --no-restore
+          dotnet test EnightxPos.sln --no-build --verbosity normal
+
+      - name: Install & Test Python Cloud API
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          pip install -e "apps/api[dev]"
+          pytest tests/api
+
+  build-desktop-wpf:
+    name: Windows POS Desktop Build (Windows CI)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore & Build WPF Desktop App
+        run: |
+          dotnet restore apps/desktop/src/Enightx.Pos.Wpf/Enightx.Pos.Wpf.csproj
+          dotnet build apps/desktop/src/Enightx.Pos.Wpf/Enightx.Pos.Wpf.csproj -c Release
