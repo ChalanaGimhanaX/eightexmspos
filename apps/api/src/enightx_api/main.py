@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from .routers import health, sync, devices
+from .routers import health, sync, devices, updates
 from .config import settings
 
 app = FastAPI(
@@ -11,6 +11,7 @@ app = FastAPI(
 app.include_router(health.router)
 app.include_router(sync.router)
 app.include_router(devices.router)
+app.include_router(updates.router)
 
 if __name__ == "__main__":
     import uvicorn

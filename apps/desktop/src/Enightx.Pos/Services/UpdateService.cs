@@ -1,7 +1,9 @@
 using System.Diagnostics;
 using System.Net.Http.Json;
+using System.Net.WebSockets;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -38,9 +40,11 @@ public class UpdateCheckResult
 public interface IUpdateService
 {
     string CurrentVersion { get; }
+    event Action<UpdateManifest>? LiveUpdateReceived;
     Task<UpdateCheckResult> CheckForUpdatesAsync(CancellationToken ct = default);
     Task<string> DownloadUpdateAsync(string downloadUrl, IProgress<double>? progress = null, CancellationToken ct = default);
     void ApplyUpdateAndRestart(string downloadedFilePath);
+    void StartListeningForLiveUpdates(string? wsUrl = null, CancellationToken ct = default);
 }
 
 public class UpdateService : IUpdateService
@@ -236,4 +240,108 @@ start """" %TARGET%
             }
         }
     }
+
+    public event Action<UpdateManifest>? LiveUpdateReceived;
+    private CancellationTokenSource? _wsCts;
+
+    public void StartListeningForLiveUpdates(string? wsUrl = null, CancellationToken ct = default)
+    {
+        var targetWsUrl = wsUrl ?? "wss://posapi.eightexms.site/ws/updates";
+        _wsCts?.Cancel();
+        _wsCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        var token = _wsCts.Token;
+
+        Task.Run(async () =>
+        {
+            var buffer = new byte[8192];
+            while (!token.IsCancellationRequested)
+            {
+                using var ws = new ClientWebSocket();
+                try
+                {
+                    Debug.WriteLine($"[UpdateService] Connecting to WebSocket: {targetWsUrl}");
+                    await ws.ConnectAsync(new Uri(targetWsUrl), token);
+                    Debug.WriteLine("[UpdateService] WebSocket connected. Listening for real-time updates...");
+
+                    while (ws.State == WebSocketState.Open && !token.IsCancellationRequested)
+                    {
+                        var segment = new ArraySegment<byte>(buffer);
+                        var receiveTask = ws.ReceiveAsync(segment, token);
+                        var completed = await Task.WhenAny(receiveTask, Task.Delay(25000, token));
+
+                        if (completed == receiveTask)
+                        {
+                            var result = await receiveTask;
+                            if (result.MessageType == WebSocketMessageType.Close)
+                            {
+                                await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", token);
+                                break;
+                            }
+
+                            if (result.MessageType == WebSocketMessageType.Text)
+                            {
+                                var jsonText = Encoding.UTF8.GetString(buffer, 0, result.Count);
+                                ProcessWebSocketMessage(jsonText);
+                            }
+                        }
+                        else
+                        {
+                            if (ws.State == WebSocketState.Open)
+                            {
+                                var pingBytes = Encoding.UTF8.GetBytes("ping");
+                                await ws.SendAsync(new ArraySegment<byte>(pingBytes), WebSocketMessageType.Text, true, token);
+                            }
+                        }
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[UpdateService] WebSocket disconnect/error: {ex.Message}. Reconnecting in 15s...");
+                }
+
+                try
+                {
+                    await Task.Delay(15000, token);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+            }
+        }, token);
+    }
+
+    public void ProcessWebSocketMessage(string jsonText)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(jsonText);
+            var root = doc.RootElement;
+            if (root.TryGetProperty("event", out var evProp) && evProp.GetString() == "update_available")
+            {
+                if (root.TryGetProperty("manifest", out var manifestProp))
+                {
+                    var manifest = JsonSerializer.Deserialize<UpdateManifest>(manifestProp.GetRawText(), new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+
+                    if (manifest != null && IsVersionNewer(manifest.Version, _currentVersion))
+                    {
+                        Debug.WriteLine($"[UpdateService] Real-time update event received: v{manifest.Version}");
+                        LiveUpdateReceived?.Invoke(manifest);
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[UpdateService] Error parsing WebSocket message: {ex.Message}");
+        }
+    }
 }
+

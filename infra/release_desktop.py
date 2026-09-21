@@ -89,30 +89,42 @@ def create_manifest(version: str, notes: str, sha256: str) -> str:
     return manifest_path
 
 def deploy_to_vps(exe_path: str, manifest_path: str):
-    print(f"--> Uploading files to {TARGET_HOST}:{TARGET_DIR}...")
-    # Upload exe
-    cmd_exe = ["scp", "-o", "StrictHostKeyChecking=no", exe_path, f"root@{TARGET_HOST}:{TARGET_DIR}/Enightx.Pos.Wpf.exe"]
-    res = subprocess.run(cmd_exe, capture_output=True, text=True)
-    if res.returncode != 0:
-        print("ERROR: scp Enightx.Pos.Wpf.exe failed:", res.stderr)
-        sys.exit(1)
+    print(f"--> Uploading files to {TARGET_HOST}:{TARGET_DIR} via Paramiko SFTP...")
+    import paramiko
+    c = paramiko.SSHClient()
+    c.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    c.connect(TARGET_HOST, username="root", password="@0517eighte@ft0517", timeout=15)
 
-    # Upload manifest
-    cmd_manifest = ["scp", "-o", "StrictHostKeyChecking=no", manifest_path, f"root@{TARGET_HOST}:{TARGET_DIR}/version.json"]
-    res = subprocess.run(cmd_manifest, capture_output=True, text=True)
-    if res.returncode != 0:
-        print("ERROR: scp version.json failed:", res.stderr)
-        sys.exit(1)
+    sftp = c.open_sftp()
+    print("    Uploading Enightx.Pos.Wpf.exe...")
+    sftp.put(exe_path, f"{TARGET_DIR}/Enightx.Pos.Wpf.exe")
+    print("    Uploading version.json...")
+    sftp.put(manifest_path, f"{TARGET_DIR}/version.json")
+    sftp.close()
 
     # Copy alias & fix permissions
-    remote_cmd = (
-        f"cp {TARGET_DIR}/Enightx.Pos.Wpf.exe {TARGET_DIR}/EnightxPos.exe && "
-        f"chmod 644 {TARGET_DIR}/* && "
-        f"ls -lh {TARGET_DIR}/"
-    )
-    cmd_ssh = ["ssh", "-o", "StrictHostKeyChecking=no", f"root@{TARGET_HOST}", remote_cmd]
-    res = subprocess.run(cmd_ssh, capture_output=True, text=True)
-    print(res.stdout)
+    chan = c.get_transport().open_session()
+    chan.exec_command(f"cp -f {TARGET_DIR}/Enightx.Pos.Wpf.exe {TARGET_DIR}/EnightxPos.exe && chmod 644 {TARGET_DIR}/* && ls -lh {TARGET_DIR}/")
+    while not chan.exit_status_ready():
+        time.sleep(0.2)
+    print(chan.recv(4096).decode("utf-8", errors="replace"))
+    c.close()
+
+def broadcast_realtime_update(manifest_data: dict):
+    print("--> Triggering real-time WebSocket broadcast to live terminals...")
+    broadcast_url = "https://posapi.eightexms.site/api/v1/updates/broadcast"
+    try:
+        import urllib.request
+        req = urllib.request.Request(
+            broadcast_url,
+            data=json.dumps(manifest_data).encode("utf-8"),
+            headers={"Content-Type": "application/json"}
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            print(f"    Broadcast sent! Active live terminals notified: {data.get('recipient_count', 0)}")
+    except Exception as ex:
+        print(f"    Notice: Broadcast trigger returned: {ex}")
 
 def verify_public_urls():
     print("--> Verifying public HTTPS endpoints...")
@@ -126,8 +138,8 @@ def verify_public_urls():
         print(f"    {url} -> {first_line}")
 
 def main():
-    version = sys.argv[1] if len(sys.argv) > 1 else "1.0.1"
-    notes = sys.argv[2] if len(sys.argv) > 2 else "Added automatic in-app updater, demo login guide, and performance fixes."
+    version = sys.argv[1] if len(sys.argv) > 1 else "1.0.2"
+    notes = sys.argv[2] if len(sys.argv) > 2 else "Added real-time WebSocket live updates and instant push alerts."
 
     print(f"==================================================")
     print(f" Enightx POS Desktop Release - Version {version}")
@@ -139,9 +151,14 @@ def main():
     sha256 = compute_sha256(exe_path)
     print(f"    SHA-256: {sha256}")
     manifest_path = create_manifest(version, notes, sha256)
+    with open(manifest_path, "r", encoding="utf-8") as f:
+        manifest_data = json.load(f)
+
     deploy_to_vps(exe_path, manifest_path)
+    broadcast_realtime_update(manifest_data)
     verify_public_urls()
     print("\n✅ Desktop release completed successfully!")
 
 if __name__ == "__main__":
     main()
+

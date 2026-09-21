@@ -76,6 +76,53 @@ public class UpdateServiceTests
         Assert.Equal("1.0.0", check.CurrentVersion);
     }
 
+    [Fact]
+    public void ProcessWebSocketMessage_NewerVersion_FiresLiveUpdateReceived()
+    {
+        var service = new UpdateService(currentVersion: "1.0.1");
+        UpdateManifest? received = null;
+        service.LiveUpdateReceived += m => received = m;
+
+        var json = """
+        {
+            "event": "update_available",
+            "manifest": {
+                "version": "1.0.2",
+                "releaseNotes": "Real-time push works!",
+                "downloadUrl": "https://mock/app.exe"
+            }
+        }
+        """;
+
+        service.ProcessWebSocketMessage(json);
+
+        Assert.NotNull(received);
+        Assert.Equal("1.0.2", received.Version);
+        Assert.Equal("Real-time push works!", received.ReleaseNotes);
+    }
+
+    [Fact]
+    public void ProcessWebSocketMessage_SameOrOlderVersion_DoesNotFire()
+    {
+        var service = new UpdateService(currentVersion: "1.0.2");
+        UpdateManifest? received = null;
+        service.LiveUpdateReceived += m => received = m;
+
+        var json = """
+        {
+            "event": "update_available",
+            "manifest": {
+                "version": "1.0.1",
+                "releaseNotes": "Older version"
+            }
+        }
+        """;
+
+        service.ProcessWebSocketMessage(json);
+
+        Assert.Null(received);
+    }
+
     private class MockHttpMessageHandler : HttpMessageHandler
     {
         private readonly HttpStatusCode _code;
@@ -97,3 +144,4 @@ public class UpdateServiceTests
         }
     }
 }
+

@@ -16,12 +16,30 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         Loaded += MainWindow_Loaded;
+        App.UpdateService.LiveUpdateReceived += OnLiveUpdateReceived;
+        App.UpdateService.StartListeningForLiveUpdates();
         ShowLogin();
     }
 
     private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
         await CheckForUpdatesAsync();
+    }
+
+    private void OnLiveUpdateReceived(UpdateManifest manifest)
+    {
+        Dispatcher.InvokeAsync(() =>
+        {
+            _latestManifest = manifest;
+            UpdateBannerText.Text = $"🚀 LIVE UPDATE: Version {manifest.Version} is available! Click to install.";
+            UpdateBanner.Visibility = Visibility.Visible;
+
+            var dialog = new UpdateDialog(_latestManifest, App.UpdateService.CurrentVersion, App.UpdateService)
+            {
+                Owner = this
+            };
+            dialog.ShowDialog();
+        });
     }
 
     private async Task CheckForUpdatesAsync()
