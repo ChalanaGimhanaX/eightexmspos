@@ -6,6 +6,9 @@
     <Nullable>enable</Nullable>
     <AssemblyName>Enightx.Pos</AssemblyName>
     <RootNamespace>Enightx.Pos</RootNamespace>
+    <Version>1.0.5</Version>
+    <AssemblyVersion>1.0.5.0</AssemblyVersion>
+    <FileVersion>1.0.5.0</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>
