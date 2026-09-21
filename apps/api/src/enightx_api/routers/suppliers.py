@@ -569,3 +569,4 @@ def get_grn(
             detail=f"Goods Received Note '{grn_id}' not found."
         )
     return grn
+

@@ -36,3 +36,18 @@ public class PrinterException : PosException
     public PrinterException(string message) : base(message) { }
     public PrinterException(string message, Exception inner) : base(message, inner) { }
 }
+
+public class LicenseExpiredException : PosException
+{
+    public LicenseExpiredException(string message) : base(message) { }
+}
+
+public class DeviceFrozenException : PosException
+{
+    public DeviceFrozenException(string message) : base(message) { }
+}
+
+public class InvalidLicenseException : PosException
+{
+    public InvalidLicenseException(string message) : base(message) { }
+}
