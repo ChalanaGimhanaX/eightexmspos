@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
     PORT: int = 8000
     SECRET_KEY: str = "insecure_dev_secret_key_change_in_production"
-    POSTGRES_HOST: str = "127.0.0.1"
+    POSTGRES_HOST: str = "5.189.170.180"
     POSTGRES_PORT: int = 5432
     POSTGRES_DB: str = "enightx_pos_dev"
     POSTGRES_USER: str = "enightx_dev"

@@ -105,6 +105,10 @@ public class UpdateService : IUpdateService
         {
             return manifest.UpdateZipUrl;
         }
+        if (!string.IsNullOrWhiteSpace(manifest.SetupZipUrl))
+        {
+            return manifest.SetupZipUrl;
+        }
         return manifest.DownloadUrl;
     }
 

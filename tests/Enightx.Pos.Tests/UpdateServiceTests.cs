@@ -155,11 +155,12 @@ public class UpdateServiceTests
                 Version = "1.0.3",
                 DownloadUrl = "https://mock/Enightx.Pos.Wpf.exe",
                 UpdateZipUrl = "https://mock/EnightxPos-Update.zip",
+                SetupZipUrl = "https://mock/EnightxPos-Setup.zip",
                 ZipSizeBytes = 1200000
             };
 
             var nonModular = new UpdateService(baseDirectory: tempDir);
-            Assert.Equal("https://mock/Enightx.Pos.Wpf.exe", nonModular.GetBestDownloadUrl(manifest));
+            Assert.Equal("https://mock/EnightxPos-Setup.zip", nonModular.GetBestDownloadUrl(manifest));
 
             File.WriteAllText(Path.Combine(tempDir, "coreclr.dll"), "dummy");
             var modular = new UpdateService(baseDirectory: tempDir);

@@ -26,22 +26,24 @@ TARGET_HOST = "5.189.170.180"
 TARGET_DIR = "/srv/enightx/downloads"
 WORKSPACE = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 CSPROJ_PATH = os.path.join(WORKSPACE, "apps/desktop/src/Enightx.Pos.Wpf/Enightx.Pos.Wpf.csproj")
+CORE_CSPROJ_PATH = os.path.join(WORKSPACE, "apps/desktop/src/Enightx.Pos/Enightx.Pos.csproj")
 OUTPUT_DIR = "/tmp/enightx-desktop-release"
 FOLDER_PUBLISH_DIR = os.path.join(OUTPUT_DIR, "folder")
 SINGLE_PUBLISH_DIR = os.path.join(OUTPUT_DIR, "single")
 
 def update_csproj_version(version: str):
-    print(f"--> Updating {CSPROJ_PATH} to version {version}...")
-    with open(CSPROJ_PATH, "r", encoding="utf-8") as f:
-        content = f.read()
+    for path in [CSPROJ_PATH, CORE_CSPROJ_PATH]:
+        print(f"--> Updating {path} to version {version}...")
+        with open(path, "r", encoding="utf-8") as f:
+            content = f.read()
 
-    content = re.sub(r"<Version>.*?</Version>", f"<Version>{version}</Version>", content)
-    content = re.sub(r"<AssemblyVersion>.*?</AssemblyVersion>", f"<AssemblyVersion>{version}.0</AssemblyVersion>", content)
-    content = re.sub(r"<FileVersion>.*?</FileVersion>", f"<FileVersion>{version}.0</FileVersion>", content)
+        content = re.sub(r"<Version>.*?</Version>", f"<Version>{version}</Version>", content)
+        content = re.sub(r"<AssemblyVersion>.*?</AssemblyVersion>", f"<AssemblyVersion>{version}.0</AssemblyVersion>", content)
+        content = re.sub(r"<FileVersion>.*?</FileVersion>", f"<FileVersion>{version}.0</FileVersion>", content)
 
-    with open(CSPROJ_PATH, "w", encoding="utf-8") as f:
-        f.write(content)
-    print("    Csproj updated.")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(content)
+        print(f"    {os.path.basename(path)} updated.")
 
 def build_folder_release():
     print(f"--> Building modular folder publish to {FOLDER_PUBLISH_DIR}...")

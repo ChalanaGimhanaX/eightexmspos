@@ -18,6 +18,7 @@ public partial class App : Application
     public static IUpdateService UpdateService { get; private set; } = null!;
     public static ITransferService TransferService { get; private set; } = null!;
     public static ILicenseService LicenseService { get; private set; } = null!;
+    public static ISyncBackgroundWorker? SyncWorker { get; private set; }
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -32,9 +33,12 @@ public partial class App : Application
         CatalogService = new CatalogService(Database);
         ShiftService = new ShiftService(Database);
         SaleService = new SaleService(Database, CatalogService);
-        SyncService = new SyncService(Database);
         TransferService = new TransferService();
         LicenseService = new LicenseService();
+        var apiBase = Environment.GetEnvironmentVariable("ENIGHTX_API_URL") ?? "https://posapi.eightexms.site";
+        SyncService = new SyncService(Database, CatalogService, apiBaseUrl: apiBase);
+        SyncWorker = new SyncBackgroundWorker(SyncService);
+        SyncWorker.Start();
         PrinterService = new MemoryPrinterService(); // WindowsReceiptPrinter can be injected in production
         ReceiptService = new ReceiptService(Database, SaleService, PrinterService);
 
@@ -70,62 +74,63 @@ public partial class App : Application
             cmd.CommandText = "SELECT COUNT(*) FROM products;";
             var prodCount = Convert.ToInt64(await cmd.ExecuteScalarAsync());
             if (prodCount == 0)
-
-            await CatalogService.AddProductAsync(new Product
             {
-                ProductId = "prod_001",
-                Barcode = "4792001001",
-                Name = "Brake Pad Front Set (Toyota)",
-                NameSi = "ඉදිරිපස බ්‍රේක් පෑඩ් කට්ටලය",
-                NameTa = "முன் பிரேக் பேட் தொகுப்பு",
-                UnitPrice = 4500.00m,
-                CostBasis = 3200.00m,
-                TaxRate = 0.18m,
-                StockOnHand = 25.0m,
-                IsActive = true
-            });
+                await CatalogService.AddProductAsync(new Product
+                {
+                    ProductId = "prod_001",
+                    Barcode = "4792001001",
+                    Name = "Brake Pad Front Set (Toyota)",
+                    NameSi = "ඉදිරිපස බ්‍රේක් පෑඩ් කට්ටලය",
+                    NameTa = "முன் பிரேக் பேட் தொகுப்பு",
+                    UnitPrice = 4500.00m,
+                    CostBasis = 3200.00m,
+                    TaxRate = 0.18m,
+                    StockOnHand = 25.0m,
+                    IsActive = true
+                });
 
-            await CatalogService.AddProductAsync(new Product
-            {
-                ProductId = "prod_002",
-                Barcode = "4792001002",
-                Name = "Oil Filter Element (Denso)",
-                NameSi = "ඔයිල් ෆිල්ටරය",
-                NameTa = "எண்ணெய் வடிகட்டி",
-                UnitPrice = 1850.00m,
-                CostBasis = 1200.00m,
-                TaxRate = 0.18m,
-                StockOnHand = 50.0m,
-                IsActive = true
-            });
+                await CatalogService.AddProductAsync(new Product
+                {
+                    ProductId = "prod_002",
+                    Barcode = "4792001002",
+                    Name = "Oil Filter Element (Denso)",
+                    NameSi = "ඔයිල් ෆිල්ටරය",
+                    NameTa = "எண்ணெய் வடிகட்டி",
+                    UnitPrice = 1850.00m,
+                    CostBasis = 1200.00m,
+                    TaxRate = 0.18m,
+                    StockOnHand = 50.0m,
+                    IsActive = true
+                });
 
-            await CatalogService.AddProductAsync(new Product
-            {
-                ProductId = "prod_003",
-                Barcode = "4792001003",
-                Name = "Spark Plug Iridium (NGK)",
-                NameSi = "ස්පාර්ක් ප්ලග්",
-                NameTa = "ஸ்பார்க் பிளக்",
-                UnitPrice = 2200.00m,
-                CostBasis = 1500.00m,
-                TaxRate = 0.18m,
-                StockOnHand = 40.0m,
-                IsActive = true
-            });
+                await CatalogService.AddProductAsync(new Product
+                {
+                    ProductId = "prod_003",
+                    Barcode = "4792001003",
+                    Name = "Spark Plug Iridium (NGK)",
+                    NameSi = "ස්පාර්ක් ප්ලග්",
+                    NameTa = "ஸ்பார்க் பிளக்",
+                    UnitPrice = 2200.00m,
+                    CostBasis = 1500.00m,
+                    TaxRate = 0.18m,
+                    StockOnHand = 40.0m,
+                    IsActive = true
+                });
 
-            await CatalogService.AddProductAsync(new Product
-            {
-                ProductId = "prod_004",
-                Barcode = "4792001004",
-                Name = "Synthetic Engine Oil 4L (Mobil 1)",
-                NameSi = "එන්ජින් ඔයිල් 4L",
-                NameTa = "என்ஜின் எண்ணெய் 4L",
-                UnitPrice = 14500.00m,
-                CostBasis = 11000.00m,
-                TaxRate = 0.18m,
-                StockOnHand = 15.0m,
-                IsActive = true
-            });
+                await CatalogService.AddProductAsync(new Product
+                {
+                    ProductId = "prod_004",
+                    Barcode = "4792001004",
+                    Name = "Synthetic Engine Oil 4L (Mobil 1)",
+                    NameSi = "එන්ජින් ඔයිල් 4L",
+                    NameTa = "என்ஜின் எண்ணெய் 4L",
+                    UnitPrice = 14500.00m,
+                    CostBasis = 11000.00m,
+                    TaxRate = 0.18m,
+                    StockOnHand = 15.0m,
+                    IsActive = true
+                });
+            }
         }
         catch (Exception ex)
         {
@@ -135,6 +140,7 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        SyncWorker?.Dispose();
         Database?.Dispose();
         base.OnExit(e);
     }

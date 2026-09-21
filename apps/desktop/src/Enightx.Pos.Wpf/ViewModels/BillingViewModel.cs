@@ -95,13 +95,20 @@ public class BillingViewModel : INotifyPropertyChanged
     private readonly ICatalogService _catalogService;
     private readonly ISaleService _saleService;
     private string _barcodeInput = "";
-    private string _statusMessage = "";
+    private string _statusMessage = "Ready for billing";
+    private string _searchQuery = "";
+    private Category? _selectedCategory;
+    private bool _isCatalogLoading;
+
+    private readonly List<Product> _allProducts = new();
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public User CurrentUser { get; }
     public CashShift CurrentShift { get; }
     public ObservableCollection<CartItemViewModel> CartItems { get; } = new();
+    public ObservableCollection<Product> FilteredProducts { get; } = new();
+    public ObservableCollection<Category> Categories { get; } = new();
 
     public decimal Subtotal => MoneyCalculator.Round(CartItems.Sum(i => i.Subtotal));
     public decimal DiscountTotal => MoneyCalculator.Round(CartItems.Sum(i => i.DiscountAmount));
@@ -120,6 +127,40 @@ public class BillingViewModel : INotifyPropertyChanged
         set { _statusMessage = value; OnPropertyChanged(); }
     }
 
+    public string SearchQuery
+    {
+        get => _searchQuery;
+        set
+        {
+            if (_searchQuery != value)
+            {
+                _searchQuery = value;
+                OnPropertyChanged();
+                ApplyFilter();
+            }
+        }
+    }
+
+    public Category? SelectedCategory
+    {
+        get => _selectedCategory;
+        set
+        {
+            if (_selectedCategory != value)
+            {
+                _selectedCategory = value;
+                OnPropertyChanged();
+                ApplyFilter();
+            }
+        }
+    }
+
+    public bool IsCatalogLoading
+    {
+        get => _isCatalogLoading;
+        set { _isCatalogLoading = value; OnPropertyChanged(); }
+    }
+
     public BillingViewModel(User user, CashShift shift, ICatalogService catalogService, ISaleService saleService)
     {
         CurrentUser = user;
@@ -128,17 +169,74 @@ public class BillingViewModel : INotifyPropertyChanged
         _saleService = saleService;
     }
 
-    public async Task AddItemByBarcodeAsync(string barcode)
+    public async Task LoadCatalogAsync()
     {
-        if (string.IsNullOrWhiteSpace(barcode)) return;
-
-        var product = await _catalogService.GetProductByBarcodeAsync(barcode.Trim());
-        if (product == null)
+        try
         {
-            StatusMessage = $"Product not found for barcode: {barcode}";
-            return;
-        }
+            IsCatalogLoading = true;
+            StatusMessage = "Loading product catalog...";
 
+            var cats = await _catalogService.GetAllActiveCategoriesAsync();
+            var prods = await _catalogService.GetAllActiveProductsAsync();
+
+            Categories.Clear();
+            Categories.Add(new Category { CategoryId = "all", Name = "All Products", IsActive = true });
+            foreach (var c in cats)
+            {
+                Categories.Add(c);
+            }
+
+            _allProducts.Clear();
+            _allProducts.AddRange(prods);
+
+            _selectedCategory = Categories[0];
+            OnPropertyChanged(nameof(SelectedCategory));
+
+            ApplyFilter();
+            StatusMessage = $"Catalog loaded ({_allProducts.Count} products ready)";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error loading catalog: {ex.Message}";
+        }
+        finally
+        {
+            IsCatalogLoading = false;
+        }
+    }
+
+    public void ApplyFilter()
+    {
+        FilteredProducts.Clear();
+        var q = _searchQuery.Trim().ToLowerInvariant();
+        var catId = _selectedCategory?.CategoryId;
+
+        foreach (var p in _allProducts)
+        {
+            if (catId != null && catId != "all" && p.CategoryId != catId)
+            {
+                continue;
+            }
+
+            if (!string.IsNullOrWhiteSpace(q))
+            {
+                bool matchesName = p.Name.ToLowerInvariant().Contains(q);
+                bool matchesSi = !string.IsNullOrEmpty(p.NameSi) && p.NameSi.ToLowerInvariant().Contains(q);
+                bool matchesTa = !string.IsNullOrEmpty(p.NameTa) && p.NameTa.ToLowerInvariant().Contains(q);
+                bool matchesBarcode = p.Barcode.Contains(q);
+
+                if (!matchesName && !matchesSi && !matchesTa && !matchesBarcode)
+                {
+                    continue;
+                }
+            }
+
+            FilteredProducts.Add(p);
+        }
+    }
+
+    public void AddProductToCart(Product product)
+    {
         var existing = CartItems.FirstOrDefault(i => i.ProductId == product.ProductId);
         if (existing != null)
         {
@@ -159,8 +257,41 @@ public class BillingViewModel : INotifyPropertyChanged
             CartItems.Add(item);
         }
 
+        StatusMessage = $"Added: {product.Name} (LKR {product.UnitPrice:N2})";
+        RefreshTotals();
+    }
+
+    public async Task AddItemByBarcodeAsync(string barcode)
+    {
+        if (string.IsNullOrWhiteSpace(barcode)) return;
+
+        var product = await _catalogService.GetProductByBarcodeAsync(barcode.Trim());
+        if (product == null)
+        {
+            StatusMessage = $"Product not found for barcode: {barcode}";
+            return;
+        }
+
+        AddProductToCart(product);
         BarcodeInput = "";
-        StatusMessage = $"Added: {product.Name}";
+    }
+
+    public void IncrementItem(CartItemViewModel item)
+    {
+        item.Quantity += 1m;
+        RefreshTotals();
+    }
+
+    public void DecrementItem(CartItemViewModel item)
+    {
+        if (item.Quantity > 1m)
+        {
+            item.Quantity -= 1m;
+        }
+        else
+        {
+            CartItems.Remove(item);
+        }
         RefreshTotals();
     }
 
@@ -173,7 +304,33 @@ public class BillingViewModel : INotifyPropertyChanged
     public void ClearCart()
     {
         CartItems.Clear();
+        StatusMessage = "Cart cleared";
         RefreshTotals();
+    }
+
+    public async Task SyncCatalogWithCloudAsync()
+    {
+        try
+        {
+            StatusMessage = "Syncing catalog with cloud server...";
+            if (App.SyncService != null)
+            {
+                var result = await App.SyncService.PullCatalogUpdatesAsync();
+                if (result.Success)
+                {
+                    await LoadCatalogAsync();
+                    StatusMessage = $"Catalog synced! {result.ProductsUpdated} products updated from cloud.";
+                }
+                else
+                {
+                    StatusMessage = $"Sync notice: {result.ErrorMessage}";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Sync failed: {ex.Message}";
+        }
     }
 
     public void RefreshTotals()

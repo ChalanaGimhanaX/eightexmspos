@@ -61,7 +61,7 @@ def main():
     print("    Connected successfully.")
 
     sftp = c.open_sftp()
-    target_rel = "/srv/enightx/production/releases/v1.0.2"
+    target_rel = "/srv/enightx/production/releases/v1.0.4"
     print(f"--> Uploading source files to {target_rel} via SFTP...")
 
     # Upload apps/api/src
@@ -77,10 +77,25 @@ def main():
     sftp.close()
     print("--> SFTP upload complete.")
 
-    # Finalize permissions, copy .env, and restart systemd service
+    # Finalize permissions, write .env, and restart systemd service
     setup_cmd = f"""
-cp /srv/enightx/production/releases/v1.0.0/apps/api/.env {target_rel}/apps/api/.env 2>/dev/null || true
+cat <<'EOF' > {target_rel}/apps/api/.env
+ENVIRONMENT=production
+DEBUG=false
+HOST=127.0.0.1
+PORT=8010
+SECRET_KEY="production_enightx_pos_api_key_secure_v1"
+ALLOWED_ORIGINS=https://posapi.eightexms.site,https://pos.eightexms.site,http://localhost:3000
+POSTGRES_HOST=127.0.0.1
+POSTGRES_PORT=5432
+POSTGRES_DB=enightx_pos
+POSTGRES_USER=enightx_user
+POSTGRES_PASSWORD=dev_password
+LICENCE_SIGNING_PUBLIC_KEY="PLACEHOLDER_ED25519_PUBLIC_KEY"
+EOF
+cp -f {target_rel}/apps/api/.env {target_rel}/.env
 chown -R enightx-srv:enightx-deploy {target_rel}
+chmod 600 {target_rel}/apps/api/.env {target_rel}/.env
 ln -sfn {target_rel} /srv/enightx/production/current
 systemctl restart enightx-pos-api
 systemctl status enightx-pos-api --no-pager
@@ -94,6 +109,8 @@ systemctl status enightx-pos-api --no-pager
     time.sleep(2)
     st_health, out_health = run_remote(c, "curl -s http://127.0.0.1:8010/health")
     print(f"--> Production Health Check: {out_health}")
+    st_cat, out_cat = run_remote(c, "curl -s http://127.0.0.1:8010/api/v1/sync/catalog")
+    print(f"--> Production Catalog Sync Check: {out_cat}")
     c.close()
     print("\n✅ Production API deployed successfully!")
 

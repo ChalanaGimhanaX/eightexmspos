@@ -1,12 +1,20 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from .routers import health, sync, devices, updates, shifts, customers, inventory, reports, suppliers
 from .dashboard import router as dashboard_router
 from .config import settings
+from .database import engine, Base
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    Base.metadata.create_all(bind=engine)
+    yield
 
 app = FastAPI(
     title="Enightx POS API",
     version="1.0.0",
-    description="Enightx Cloud Synchronization and Device Management API"
+    description="Enightx Cloud Synchronization and Device Management API",
+    lifespan=lifespan
 )
 
 app.include_router(health.router)

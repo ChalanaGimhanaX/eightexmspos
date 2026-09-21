@@ -41,7 +41,7 @@ public class PosDatabase : IDisposable
         conn.Open();
 
         using var cmd = conn.CreateCommand();
-        cmd.CommandText = "PRAGMA foreign_keys = ON;";
+        cmd.CommandText = "PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;";
         cmd.ExecuteNonQuery();
 
         if (!_isInMemory)
@@ -65,6 +65,17 @@ public class PosDatabase : IDisposable
         using var cmd = conn.CreateCommand();
         cmd.CommandText = SchemaDdl;
         cmd.ExecuteNonQuery();
+
+        try
+        {
+            using var alterCmd = conn.CreateCommand();
+            alterCmd.CommandText = "ALTER TABLE products ADD COLUMN category_id TEXT;";
+            alterCmd.ExecuteNonQuery();
+        }
+        catch
+        {
+            // Column already exists or table freshly created
+        }
     }
 
     private const string SchemaDdl = @"
@@ -79,8 +90,17 @@ public class PosDatabase : IDisposable
             created_at_utc TEXT NOT NULL
         );
 
+        CREATE TABLE IF NOT EXISTS categories (
+            category_id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            description TEXT,
+            is_active INTEGER NOT NULL DEFAULT 1,
+            updated_at_utc TEXT NOT NULL
+        );
+
         CREATE TABLE IF NOT EXISTS products (
             product_id TEXT PRIMARY KEY,
+            category_id TEXT,
             barcode TEXT UNIQUE NOT NULL,
             name TEXT NOT NULL,
             name_si TEXT,
@@ -89,7 +109,14 @@ public class PosDatabase : IDisposable
             cost_basis NUMERIC NOT NULL,
             tax_rate NUMERIC NOT NULL DEFAULT 0.0,
             stock_on_hand NUMERIC NOT NULL DEFAULT 0.0,
-            is_active INTEGER NOT NULL DEFAULT 1
+            is_active INTEGER NOT NULL DEFAULT 1,
+            FOREIGN KEY (category_id) REFERENCES categories(category_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS sync_state (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL,
+            updated_at_utc TEXT NOT NULL
         );
 
         CREATE TABLE IF NOT EXISTS receipt_sequences (
