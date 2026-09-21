@@ -1,0 +1,82 @@
+<Window x:Class="Enightx.Pos.Wpf.Views.ShiftCloseDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Shift Reconciliation &amp; Cash Drawer Close" Height="620" Width="520"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize" Background="{StaticResource BackgroundBrush}">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Background="{StaticResource PrimaryDarkBrush}" Padding="16" CornerRadius="6" Margin="0,0,0,16">
+            <StackPanel>
+                <TextBlock Text="CASH DRAWER RECONCILIATION" FontWeight="Bold" FontSize="16" Foreground="White"/>
+                <TextBlock x:Name="ShiftInfoText" Text="Shift ID: ... | Cashier: ..." FontSize="12" Foreground="#BBDEFB" Margin="0,4,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Form / Audit Table -->
+        <Border Grid.Row="1" Background="{StaticResource SurfaceBrush}" Padding="16" CornerRadius="6" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <Grid Margin="0,0,0,8">
+                        <TextBlock Text="Opening Float:" Foreground="{StaticResource TextSecondaryBrush}"/>
+                        <TextBlock x:Name="OpeningFloatText" Text="LKR 0.00" HorizontalAlignment="Right" FontWeight="SemiBold"/>
+                    </Grid>
+                    <Grid Margin="0,0,0,8">
+                        <TextBlock Text="Cash Received:" Foreground="{StaticResource TextSecondaryBrush}"/>
+                        <TextBlock x:Name="CashReceivedText" Text="LKR 0.00" HorizontalAlignment="Right" FontWeight="SemiBold"/>
+                    </Grid>
+                    <Grid Margin="0,0,0,8">
+                        <TextBlock Text="Change Given:" Foreground="{StaticResource TextSecondaryBrush}"/>
+                        <TextBlock x:Name="ChangeGivenText" Text="LKR 0.00" HorizontalAlignment="Right" FontWeight="SemiBold"/>
+                    </Grid>
+                    <Grid Margin="0,0,0,8">
+                        <TextBlock Text="Cash Refunds:" Foreground="{StaticResource TextSecondaryBrush}"/>
+                        <TextBlock x:Name="CashRefundsText" Text="LKR 0.00" HorizontalAlignment="Right" Foreground="#C62828" FontWeight="SemiBold"/>
+                    </Grid>
+                    <Grid Margin="0,0,0,8">
+                        <TextBlock Text="Cash In / Paid In:" Foreground="{StaticResource TextSecondaryBrush}"/>
+                        <TextBlock x:Name="CashInText" Text="LKR 0.00" HorizontalAlignment="Right" FontWeight="SemiBold"/>
+                    </Grid>
+                    <Grid Margin="0,0,0,8">
+                        <TextBlock Text="Cash Out / Paid Out:" Foreground="{StaticResource TextSecondaryBrush}"/>
+                        <TextBlock x:Name="CashOutText" Text="LKR 0.00" HorizontalAlignment="Right" Foreground="#C62828" FontWeight="SemiBold"/>
+                    </Grid>
+
+                    <Separator Margin="0,8,0,12"/>
+
+                    <Grid Margin="0,0,0,16">
+                        <TextBlock Text="EXPECTED CASH:" FontWeight="Bold" FontSize="15" Foreground="{StaticResource PrimaryBrush}"/>
+                        <TextBlock x:Name="ExpectedCashText" Text="LKR 0.00" HorizontalAlignment="Right" FontWeight="Bold" FontSize="16" Foreground="{StaticResource PrimaryBrush}"/>
+                    </Grid>
+
+                    <TextBlock Text="Actual Counted Cash (LKR):" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                    <TextBox x:Name="ActualCashInput" Height="40" FontSize="18" FontWeight="Bold" Padding="8,4"
+                             TextChanged="ActualCashInput_TextChanged" VerticalContentAlignment="Center"/>
+
+                    <Grid Margin="0,12,0,8">
+                        <TextBlock Text="Reconciliation Variance:" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="VarianceText" Text="LKR 0.00 (Balanced)" HorizontalAlignment="Right" FontWeight="Bold" FontSize="14" Foreground="#2E7D32"/>
+                    </Grid>
+
+                    <TextBlock Text="Shift Notes (Optional):" Margin="0,8,0,4" Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <TextBox x:Name="NotesInput" Height="60" TextWrapping="Wrap" AcceptsReturn="True" Padding="6"/>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <!-- Actions -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+            <Button Content="Cancel" Width="100" Height="36" Margin="0,0,12,0" Background="#ECEFF1" Foreground="#37474F"
+                    FontWeight="SemiBold" Click="Cancel_Click"/>
+            <Button x:Name="CloseShiftBtn" Content="Close &amp; Reconcile Shift" Width="190" Height="36"
+                    Background="{StaticResource PrimaryBrush}" Foreground="White" FontWeight="Bold"
+                    Click="CloseShift_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>
+

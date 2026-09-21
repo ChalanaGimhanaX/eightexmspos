@@ -6,6 +6,7 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
@@ -28,7 +29,30 @@
             </DockPanel>
         </Border>
 
-        <Grid x:Name="MainContainer" Grid.Row="1">
+        <!-- Navigation Bar (Visible when logged in) -->
+        <Border x:Name="NavBar" Grid.Row="1" Background="{StaticResource PrimaryDarkBrush}" Padding="12,6" Visibility="Collapsed">
+            <DockPanel>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="ENIGHTX POS" FontWeight="Bold" FontSize="14" Foreground="White" VerticalAlignment="Center" Margin="0,0,20,0"/>
+                    <Button Content="🛒 POS Billing" Height="30" Padding="12,2" Margin="0,0,6,0"
+                            Background="#1565C0" Foreground="White" FontWeight="SemiBold" Click="NavBilling_Click"/>
+                    <Button Content="👥 Customer Ledger" Height="30" Padding="12,2" Margin="0,0,6,0"
+                            Background="#1565C0" Foreground="White" FontWeight="SemiBold" Click="NavCustomers_Click"/>
+                    <Button Content="🔁 Stock Transfers" Height="30" Padding="12,2" Margin="0,0,6,0"
+                            Background="#1565C0" Foreground="White" FontWeight="SemiBold" Click="NavTransfers_Click"/>
+                    <Button Content="📦 Receiving / GRN" Height="30" Padding="12,2" Margin="0,0,6,0"
+                            Background="#1565C0" Foreground="White" FontWeight="SemiBold" Click="NavReceiving_Click"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Button Content="🔒 Close Shift" Height="30" Padding="12,2" Margin="0,0,8,0"
+                            Background="#C62828" Foreground="White" FontWeight="Bold" Click="NavCloseShift_Click"/>
+                    <Button Content="Logout" Height="30" Padding="12,2"
+                            Background="#37474F" Foreground="White" FontWeight="SemiBold" Click="NavLogout_Click"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <Grid x:Name="MainContainer" Grid.Row="2">
             <!-- Content dynamically switches between LoginView and BillingView -->
         </Grid>
     </Grid>

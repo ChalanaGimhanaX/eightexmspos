@@ -1,0 +1,159 @@
+<UserControl x:Class="Enightx.Pos.Wpf.Views.CustomerLedgerView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" 
+             d:DesignHeight="700" d:DesignWidth="1000" Background="{StaticResource BackgroundBrush}">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="60"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Background="{StaticResource PrimaryDarkBrush}" Padding="16,8">
+            <DockPanel>
+                <TextBlock Text="CUSTOMER CREDIT &amp; DEBT LEDGER" FontWeight="Bold" FontSize="18" Foreground="White" VerticalAlignment="Center"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Button Content="← Back to POS (F1)" Height="34" Padding="14,2" Background="#1E88E5" Foreground="White"
+                            FontWeight="Bold" Click="BackToPos_Click" Margin="0,0,12,0"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- Main Content -->
+        <Grid Grid.Row="1" Margin="16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="420"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Customer Search & List -->
+            <Border Grid.Column="0" Background="{StaticResource SurfaceBrush}" Padding="16" CornerRadius="6"
+                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Margin="0,0,16,0">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="CUSTOMERS" FontWeight="Bold" FontSize="15" Foreground="{StaticResource PrimaryBrush}" Margin="0,0,0,8"/>
+                    
+                    <!-- Search Box -->
+                    <Grid DockPanel.Dock="Top" Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="SearchBox" Height="36" FontSize="14" Padding="8,4" TextChanged="SearchBox_TextChanged"
+                                 VerticalContentAlignment="Center"/>
+                        <Button Grid.Column="1" Content="+ New" Height="36" Padding="12,2" Margin="8,0,0,0"
+                                Background="{StaticResource AccentBrush}" Foreground="White" FontWeight="Bold"
+                                Click="NewCustomer_Click"/>
+                    </Grid>
+
+                    <!-- Customer Grid -->
+                    <DataGrid x:Name="CustomersGrid" AutoGenerateColumns="False" CanUserAddRows="False"
+                              SelectionMode="Single" SelectionChanged="CustomersGrid_SelectionChanged"
+                              Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*" IsReadOnly="True"/>
+                            <DataGridTextColumn Header="Phone" Binding="{Binding Phone}" Width="110" IsReadOnly="True"/>
+                            <DataGridTextColumn Header="Balance (Debt)" Binding="{Binding CurrentBalance, StringFormat=LKR {0:F2}}" Width="120" IsReadOnly="True"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </Border>
+
+            <!-- Selected Customer Detail, Settlement & Ledger History -->
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Customer Overview Card -->
+                <Border Grid.Row="0" Background="{StaticResource SurfaceBrush}" Padding="16" CornerRadius="6"
+                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock x:Name="SelectedCustomerName" Text="Select a customer from the list" FontWeight="Bold" FontSize="16"/>
+                        <TextBlock x:Name="SelectedCustomerDetails" Text="Phone: -- | NIC/BRN: --" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,12"/>
+                        
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Credit Limit:" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12"/>
+                                <TextBlock x:Name="CreditLimitText" Text="LKR 0.00" FontWeight="Bold" FontSize="15"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="Outstanding Debt:" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12"/>
+                                <TextBlock x:Name="CurrentBalanceText" Text="LKR 0.00" FontWeight="Bold" FontSize="15" Foreground="#C62828"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="Available Credit:" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12"/>
+                                <TextBlock x:Name="AvailableCreditText" Text="LKR 0.00" FontWeight="Bold" FontSize="15" Foreground="#2E7D32"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Settlement Form Card -->
+                <Border Grid.Row="1" Background="{StaticResource SurfaceBrush}" Padding="16" CornerRadius="6"
+                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock Text="RECORD DEBT SETTLEMENT" FontWeight="Bold" FontSize="14" Foreground="{StaticResource PrimaryBrush}" Margin="0,0,0,8"/>
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="140"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="130"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                <TextBlock Text="Amount (LKR):" FontSize="12" Margin="0,0,0,2"/>
+                                <TextBox x:Name="SettlementAmountInput" Height="36" FontSize="15" FontWeight="Bold" Padding="6,2" VerticalContentAlignment="Center"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Margin="0,0,8,0">
+                                <TextBlock Text="Method:" FontSize="12" Margin="0,0,0,2"/>
+                                <ComboBox x:Name="PaymentMethodCombo" Height="36" SelectedIndex="0">
+                                    <ComboBoxItem Content="CASH"/>
+                                    <ComboBoxItem Content="CARD"/>
+                                    <ComboBoxItem Content="BANK_TRANSFER"/>
+                                    <ComboBoxItem Content="CHEQUE"/>
+                                </ComboBox>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Margin="0,0,8,0">
+                                <TextBlock Text="Reference / Cheque No:" FontSize="12" Margin="0,0,0,2"/>
+                                <TextBox x:Name="ReferenceInput" Height="36" Padding="6,2" VerticalContentAlignment="Center"/>
+                            </StackPanel>
+                            <Button Grid.Column="3" Content="Settle Debt" Height="36" Margin="0,16,0,0"
+                                    Background="{StaticResource AccentBrush}" Foreground="White" FontWeight="Bold"
+                                    Click="SettleDebt_Click"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Ledger History Table -->
+                <Border Grid.Row="2" Background="{StaticResource SurfaceBrush}" Padding="16" CornerRadius="6"
+                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Text="TRANSACTION LEDGER HISTORY" FontWeight="Bold" FontSize="14" Foreground="{StaticResource PrimaryBrush}" Margin="0,0,0,8"/>
+                        <DataGrid x:Name="LedgerGrid" AutoGenerateColumns="False" CanUserAddRows="False"
+                                  Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Date" Binding="{Binding OccurredAtUtc, StringFormat={}{0:yyyy-MM-dd HH:mm}}" Width="140" IsReadOnly="True"/>
+                                <DataGridTextColumn Header="Type" Binding="{Binding EntryType}" Width="100" IsReadOnly="True"/>
+                                <DataGridTextColumn Header="Amount" Binding="{Binding Amount, StringFormat=LKR {0:F2}}" Width="120" IsReadOnly="True"/>
+                                <DataGridTextColumn Header="Balance After" Binding="{Binding BalanceAfter, StringFormat=LKR {0:F2}}" Width="120" IsReadOnly="True"/>
+                                <DataGridTextColumn Header="Method" Binding="{Binding PaymentMethod}" Width="100" IsReadOnly="True"/>
+                                <DataGridTextColumn Header="Reference" Binding="{Binding ReferenceId}" Width="*" IsReadOnly="True"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </DockPanel>
+                </Border>
+            </Grid>
+        </Grid>
+    </Grid>
+</UserControl>
+

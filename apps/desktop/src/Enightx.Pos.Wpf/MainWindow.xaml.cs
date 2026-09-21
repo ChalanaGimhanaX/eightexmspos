@@ -83,8 +83,11 @@ public partial class MainWindow : Window
         UpdateBanner.Visibility = Visibility.Collapsed;
     }
 
+    private BillingView? _billingView;
+
     private void ShowLogin()
     {
+        NavBar.Visibility = Visibility.Collapsed;
         var loginVm = new LoginViewModel(App.AuthService);
         loginVm.LoginSucceeded += async (user) =>
         {
@@ -109,9 +112,9 @@ public partial class MainWindow : Window
         }
 
         var billingVm = new BillingViewModel(_currentUser, _currentShift, App.CatalogService, App.SaleService);
-        var billingView = new BillingView { DataContext = billingVm };
+        _billingView = new BillingView { DataContext = billingVm };
 
-        billingView.RequestPayment += () =>
+        _billingView.RequestPayment += () =>
         {
             if (billingVm.CartItems.Count == 0)
             {
@@ -139,7 +142,72 @@ public partial class MainWindow : Window
             dialog.ShowDialog();
         };
 
+        NavBar.Visibility = Visibility.Visible;
         MainContainer.Children.Clear();
-        MainContainer.Children.Add(billingView);
+        MainContainer.Children.Add(_billingView);
+    }
+
+    private void NavBilling_Click(object sender, RoutedEventArgs e)
+    {
+        if (_billingView != null)
+        {
+            MainContainer.Children.Clear();
+            MainContainer.Children.Add(_billingView);
+        }
+    }
+
+    private void NavCustomers_Click(object sender, RoutedEventArgs e)
+    {
+        if (_currentUser == null) return;
+        var view = new CustomerLedgerView(App.Database, "TENANT_LK_01", "B01", "C01", _currentUser.UserId);
+        view.RequestBackToPos += () => NavBilling_Click(this, new RoutedEventArgs());
+        MainContainer.Children.Clear();
+        MainContainer.Children.Add(view);
+    }
+
+    private void NavTransfers_Click(object sender, RoutedEventArgs e)
+    {
+        var view = new StockTransferView(App.CatalogService, App.TransferService);
+        view.RequestBackToPos += () => NavBilling_Click(this, new RoutedEventArgs());
+        MainContainer.Children.Clear();
+        MainContainer.Children.Add(view);
+    }
+
+    private void NavReceiving_Click(object sender, RoutedEventArgs e)
+    {
+        var view = new ReceivingView(App.Database, App.CatalogService);
+        view.RequestBackToPos += () => NavBilling_Click(this, new RoutedEventArgs());
+        MainContainer.Children.Clear();
+        MainContainer.Children.Add(view);
+    }
+
+    private void NavCloseShift_Click(object sender, RoutedEventArgs e)
+    {
+        if (_currentShift == null || _currentUser == null)
+        {
+            MessageBox.Show("No active shift found to close.", "Shift Reconciliation", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var dialog = new ShiftCloseDialog(_currentShift, App.ShiftService, _currentUser.UserId)
+        {
+            Owner = this
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            _currentShift = null;
+            _billingView = null;
+            ShowLogin();
+        }
+    }
+
+    private void NavLogout_Click(object sender, RoutedEventArgs e)
+    {
+        _currentUser = null;
+        _currentShift = null;
+        _billingView = null;
+        ShowLogin();
     }
 }
+

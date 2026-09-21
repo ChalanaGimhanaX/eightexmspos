@@ -163,3 +163,35 @@ public class OutboxEvent
     public string Status { get; set; } = "PENDING"; // "PENDING", "SENT", "ACKNOWLEDGED"
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 }
+
+public class Customer
+{
+    public required string CustomerId { get; set; }
+    public required string TenantId { get; set; }
+    public required string Name { get; set; }
+    public required string Phone { get; set; }
+    public string? Email { get; set; }
+    public string? NicOrBrn { get; set; }
+    public decimal CreditLimit { get; set; }
+    public decimal CurrentBalance { get; set; }
+    public bool IsActive { get; set; } = true;
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+}
+
+public class CustomerLedgerEntry
+{
+    public Guid EntryId { get; set; } = Guid.NewGuid();
+    public required string TenantId { get; set; }
+    public required string CustomerId { get; set; }
+    public required string BranchId { get; set; }
+    public required string CounterId { get; set; }
+    public required string EntryType { get; set; } // "INVOICE", "SETTLEMENT"
+    public decimal Amount { get; set; }
+    public decimal BalanceAfter { get; set; }
+    public string? ReferenceId { get; set; }
+    public string? PaymentMethod { get; set; }
+    public required string ActorId { get; set; }
+    public string? Notes { get; set; }
+    public DateTime OccurredAtUtc { get; set; } = DateTime.UtcNow;
+}
+

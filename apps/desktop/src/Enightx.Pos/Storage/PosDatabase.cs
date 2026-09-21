@@ -204,6 +204,36 @@ public class PosDatabase : IDisposable
             status TEXT NOT NULL,
             created_at_utc TEXT NOT NULL
         );
+
+        CREATE TABLE IF NOT EXISTS customers (
+            customer_id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            phone TEXT NOT NULL,
+            email TEXT,
+            nic_or_brn TEXT,
+            credit_limit NUMERIC NOT NULL DEFAULT 0,
+            current_balance NUMERIC NOT NULL DEFAULT 0,
+            is_active INTEGER NOT NULL DEFAULT 1,
+            created_at_utc TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS customer_ledger (
+            entry_id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            customer_id TEXT NOT NULL,
+            branch_id TEXT NOT NULL,
+            counter_id TEXT NOT NULL,
+            entry_type TEXT NOT NULL,
+            amount NUMERIC NOT NULL,
+            balance_after NUMERIC NOT NULL,
+            reference_id TEXT,
+            payment_method TEXT,
+            actor_id TEXT NOT NULL,
+            notes TEXT,
+            occurred_at_utc TEXT NOT NULL,
+            FOREIGN KEY (customer_id) REFERENCES customers(customer_id)
+        );
     ";
 
     public void Dispose()
