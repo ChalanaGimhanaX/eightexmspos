@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://enightx.com/schemas/v1/shift-close.json",
+  "title": "ShiftCloseRequest",
+  "type": "object",
+  "required": [
+    "shift_id",
+    "tenant_id",
+    "branch_id",
+    "counter_id",
+    "cashier_id",
+    "opened_at",
+    "closed_at",
+    "opening_float",
+    "actual_counted_cash"
+  ],
+  "properties": {
+    "shift_id": { "type": "string", "format": "uuid" },
+    "tenant_id": { "type": "string" },
+    "branch_id": { "type": "string" },
+    "counter_id": { "type": "string" },
+    "cashier_id": { "type": "string" },
+    "opened_at": { "type": "string", "format": "date-time" },
+    "closed_at": { "type": "string", "format": "date-time" },
+    "opening_float": { "type": "string" },
+    "cash_received": { "type": "string" },
+    "change_given": { "type": "string" },
+    "cash_refunds": { "type": "string" },
+    "cash_in": { "type": "string" },
+    "cash_out": { "type": "string" },
+    "actual_counted_cash": { "type": "string" },
+    "notes": { "type": ["string", "null"] },
+    "actor_id": { "type": ["string", "null"] }
+  }
+}
+

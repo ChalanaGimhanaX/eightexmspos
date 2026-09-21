@@ -81,3 +81,52 @@ class DeviceEnrollmentResponse(BaseModel):
     device_id: str
     device_generation: int
     token: str
+
+class ShiftCloseRequest(BaseModel):
+    shift_id: uuid.UUID
+    tenant_id: str
+    branch_id: str
+    counter_id: str
+    cashier_id: str
+    opened_at: datetime
+    closed_at: datetime
+    opening_float: Decimal
+    cash_received: Decimal = Decimal("0.00")
+    change_given: Decimal = Decimal("0.00")
+    cash_refunds: Decimal = Decimal("0.00")
+    cash_in: Decimal = Decimal("0.00")
+    cash_out: Decimal = Decimal("0.00")
+    actual_counted_cash: Decimal
+    notes: Optional[str] = None
+    actor_id: Optional[str] = None
+
+class ShiftCloseResponse(BaseModel):
+    shift_id: uuid.UUID
+    expected_cash: Decimal
+    actual_counted_cash: Decimal
+    variance: Decimal
+    status: str = "closed"
+    reconciled_at: datetime
+
+class ShiftDetailResponse(BaseModel):
+    shift_id: uuid.UUID
+    tenant_id: str
+    branch_id: str
+    counter_id: str
+    cashier_id: str
+    opened_at: datetime
+    closed_at: datetime
+    opening_float: Decimal
+    cash_received: Decimal
+    change_given: Decimal
+    cash_refunds: Decimal
+    cash_in: Decimal
+    cash_out: Decimal
+    expected_cash: Decimal
+    actual_counted_cash: Decimal
+    variance: Decimal
+    status: str
+    notes: Optional[str] = None
+    actor_id: Optional[str] = None
+    reconciled_at: datetime
+

@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, func
+from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Numeric, func
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from .database import Base
@@ -51,4 +51,29 @@ class SyncEvent(Base):
     created_at = Column(DateTime(timezone=True), nullable=False, default=func.now())
 
     batch = relationship("SyncBatch", back_populates="events")
+
+class Shift(Base):
+    __tablename__ = "shifts"
+
+    shift_id = Column(UUID(as_uuid=True), primary_key=True)
+    tenant_id = Column(String(64), nullable=False, index=True)
+    branch_id = Column(String(64), nullable=False)
+    counter_id = Column(String(64), nullable=False)
+    cashier_id = Column(String(64), nullable=False)
+    opened_at = Column(DateTime(timezone=True), nullable=False)
+    closed_at = Column(DateTime(timezone=True), nullable=False)
+    opening_float = Column(Numeric(12, 2), nullable=False)
+    cash_received = Column(Numeric(12, 2), nullable=False, default=0.00)
+    change_given = Column(Numeric(12, 2), nullable=False, default=0.00)
+    cash_refunds = Column(Numeric(12, 2), nullable=False, default=0.00)
+    cash_in = Column(Numeric(12, 2), nullable=False, default=0.00)
+    cash_out = Column(Numeric(12, 2), nullable=False, default=0.00)
+    expected_cash = Column(Numeric(12, 2), nullable=False)
+    actual_counted_cash = Column(Numeric(12, 2), nullable=False)
+    variance = Column(Numeric(12, 2), nullable=False)
+    status = Column(String(32), nullable=False, default="closed")
+    notes = Column(String(256), nullable=True)
+    actor_id = Column(String(64), nullable=True)
+    reconciled_at = Column(DateTime(timezone=True), nullable=False, default=func.now())
+
 

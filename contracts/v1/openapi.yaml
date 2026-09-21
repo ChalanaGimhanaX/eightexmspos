@@ -76,3 +76,55 @@ paths:
                   status:
                     type: string
                     example: acknowledged
+
+  /api/v1/shifts/close:
+    post:
+      summary: Ingest closed shift cash drawer audit data and calculate reconciliation variance
+      operationId: closeShift
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './schemas/shift-close.json'
+      responses:
+        '200':
+          description: Shift closed and reconciled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  shift_id:
+                    type: string
+                    format: uuid
+                  expected_cash:
+                    type: string
+                  actual_counted_cash:
+                    type: string
+                  variance:
+                    type: string
+                  status:
+                    type: string
+                    example: closed
+                  reconciled_at:
+                    type: string
+                    format: date-time
+
+  /api/v1/shifts/{shift_id}:
+    get:
+      summary: Retrieve shift reconciliation details by shift ID
+      operationId: getShiftDetails
+      parameters:
+        - name: shift_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Shift details retrieved successfully
+        '404':
+          description: Shift not found
+
