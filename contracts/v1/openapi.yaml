@@ -76,3 +76,53 @@ paths:
                   status:
                     type: string
                     example: acknowledged
+
+  /api/v1/suppliers:
+    post:
+      summary: Register a new supplier
+      operationId: createSupplier
+      responses:
+        '201':
+          description: Supplier created
+    get:
+      summary: List suppliers with balance
+      operationId: listSuppliers
+      responses:
+        '200':
+          description: Supplier list
+
+  /api/v1/suppliers/settlement:
+    post:
+      summary: Record payment to supplier
+      operationId: recordSupplierSettlement
+      responses:
+        '201':
+          description: Settlement recorded
+
+  /api/v1/purchases/orders:
+    post:
+      summary: Create purchase order
+      operationId: createPurchaseOrder
+      responses:
+        '201':
+          description: Purchase order created
+    get:
+      summary: List purchase orders
+      operationId: listPurchaseOrders
+      responses:
+        '200':
+          description: Purchase order list
+
+  /api/v1/purchases/grn:
+    post:
+      summary: Receive goods via GRN and update stock/cost basis
+      operationId: createGRN
+      responses:
+        '201':
+          description: GRN recorded and inventory updated
+    get:
+      summary: List Goods Received Notes
+      operationId: listGRNs
+      responses:
+        '200':
+          description: GRN list

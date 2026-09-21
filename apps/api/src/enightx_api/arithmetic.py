@@ -103,3 +103,23 @@ def calculate_tenders(grand_total: Decimal, tenders: List[Dict[str, Any]]) -> Di
         "net_cash_received": cash_total - cash_change
     }
 
+def calculate_moving_average_cost(
+    current_qty: Decimal,
+    current_cost: Decimal,
+    received_qty: Decimal,
+    received_cost: Decimal,
+) -> Decimal:
+    """
+    Calculates the new moving weighted average cost after receiving inventory:
+    New Cost = ((current_qty * current_cost) + (received_qty * received_cost)) / (current_qty + received_qty)
+    If current_qty <= 0: New Cost = received_cost
+    Rounded using strict LKR Half-Up rounding to 2 decimal places.
+    """
+    if current_qty <= Decimal("0.0"):
+        return round_money(received_cost)
+    total_qty = current_qty + received_qty
+    if total_qty <= Decimal("0.0"):
+        return round_money(received_cost)
+    total_cost = (current_qty * current_cost) + (received_qty * received_cost)
+    return round_money(total_cost / total_qty)
+
