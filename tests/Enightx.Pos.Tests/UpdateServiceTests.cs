@@ -144,7 +144,7 @@ public class UpdateServiceTests
     }
 
     [Fact]
-    public void GetBestDownloadUrl_ChoosesZipForModular_AndExeForStandalone()
+    public void GetBestDownloadUrl_AlwaysPrefersUpdateZipWhenAvailable()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), "test_best_url_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempDir);
@@ -159,12 +159,31 @@ public class UpdateServiceTests
                 ZipSizeBytes = 1200000
             };
 
+            // Non-modular install should now also get the fast update zip (~1.2 MB)
             var nonModular = new UpdateService(baseDirectory: tempDir);
-            Assert.Equal("https://mock/EnightxPos-Setup.zip", nonModular.GetBestDownloadUrl(manifest));
+            Assert.Equal("https://mock/EnightxPos-Update.zip", nonModular.GetBestDownloadUrl(manifest));
 
+            // Modular install also gets the update zip
             File.WriteAllText(Path.Combine(tempDir, "coreclr.dll"), "dummy");
             var modular = new UpdateService(baseDirectory: tempDir);
             Assert.Equal("https://mock/EnightxPos-Update.zip", modular.GetBestDownloadUrl(manifest));
+
+            // Without UpdateZipUrl, falls back to setup zip
+            var manifestNoZip = new UpdateManifest
+            {
+                Version = "1.0.3",
+                DownloadUrl = "https://mock/Enightx.Pos.Wpf.exe",
+                SetupZipUrl = "https://mock/EnightxPos-Setup.zip"
+            };
+            Assert.Equal("https://mock/EnightxPos-Setup.zip", modular.GetBestDownloadUrl(manifestNoZip));
+
+            // Without either zip, falls back to standalone exe
+            var manifestExeOnly = new UpdateManifest
+            {
+                Version = "1.0.3",
+                DownloadUrl = "https://mock/Enightx.Pos.Wpf.exe"
+            };
+            Assert.Equal("https://mock/Enightx.Pos.Wpf.exe", modular.GetBestDownloadUrl(manifestExeOnly));
         }
         finally
         {

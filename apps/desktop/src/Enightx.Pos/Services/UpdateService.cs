@@ -77,7 +77,7 @@ public class UpdateService : IUpdateService
         string? currentVersion = null,
         string? baseDirectory = null)
     {
-        _httpClient = httpClient ?? new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+        _httpClient = httpClient ?? new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
         _manifestUrl = manifestUrl;
         _baseDirectory = baseDirectory;
         
@@ -101,7 +101,10 @@ public class UpdateService : IUpdateService
 
     public string GetBestDownloadUrl(UpdateManifest manifest)
     {
-        if (IsModularInstallation() && !string.IsNullOrWhiteSpace(manifest.UpdateZipUrl))
+        // Always prefer the lightweight modular zip (~1.2 MB) if available.
+        // Works for both modular and standalone installations — the bat script
+        // copies DLLs into the app directory in both cases.
+        if (!string.IsNullOrWhiteSpace(manifest.UpdateZipUrl))
         {
             return manifest.UpdateZipUrl;
         }
@@ -259,8 +262,6 @@ if %ERRORLEVEL% == 0 (
     goto wait_loop
 )
 
-timeout /t 1 /nobreak >nul
-
 echo Applying modular update files...
 xcopy /y /e /q %EXTRACTED%\* %TARGET_DIR%\ >nul
 if %ERRORLEVEL% neq 0 (
@@ -288,8 +289,6 @@ if %ERRORLEVEL% == 0 (
     timeout /t 1 /nobreak >nul
     goto wait_loop
 )
-
-timeout /t 1 /nobreak >nul
 
 copy /y %SOURCE% %TARGET% >nul
 if %ERRORLEVEL% neq 0 (
