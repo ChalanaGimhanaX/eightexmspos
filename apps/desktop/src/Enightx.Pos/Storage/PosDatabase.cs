@@ -76,6 +76,50 @@ public class PosDatabase : IDisposable
         {
             // Column already exists or table freshly created
         }
+
+        try
+        {
+            using var alterLineCmd = conn.CreateCommand();
+            alterLineCmd.CommandText = "ALTER TABLE sale_lines ADD COLUMN cost_basis NUMERIC NOT NULL DEFAULT 0;";
+            alterLineCmd.ExecuteNonQuery();
+        }
+        catch
+        {
+            // Column already exists or table freshly created
+        }
+
+        try
+        {
+            using var alterLineCmd2 = conn.CreateCommand();
+            alterLineCmd2.CommandText = "ALTER TABLE sale_lines ADD COLUMN parent_line_id TEXT;";
+            alterLineCmd2.ExecuteNonQuery();
+        }
+        catch
+        {
+            // Column already exists or table freshly created
+        }
+
+        try
+        {
+            using var alterHeldCmd = conn.CreateCommand();
+            alterHeldCmd.CommandText = "ALTER TABLE held_carts ADD COLUMN tenant_id TEXT NOT NULL DEFAULT 'TENANT_LK_01';";
+            alterHeldCmd.ExecuteNonQuery();
+        }
+        catch
+        {
+            // Column already exists or table freshly created
+        }
+
+        try
+        {
+            using var alterShiftCmd = conn.CreateCommand();
+            alterShiftCmd.CommandText = "ALTER TABLE shifts ADD COLUMN tenant_id TEXT NOT NULL DEFAULT 'TENANT_LK_01';";
+            alterShiftCmd.ExecuteNonQuery();
+        }
+        catch
+        {
+            // Column already exists or table freshly created
+        }
     }
 
     private const string SchemaDdl = @"
@@ -128,6 +172,7 @@ public class PosDatabase : IDisposable
 
         CREATE TABLE IF NOT EXISTS shifts (
             shift_id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL DEFAULT 'TENANT_LK_01',
             branch_id TEXT NOT NULL,
             counter_id TEXT NOT NULL,
             cashier_id TEXT NOT NULL,
@@ -139,16 +184,15 @@ public class PosDatabase : IDisposable
             cash_refunds NUMERIC NOT NULL DEFAULT 0,
             cash_in NUMERIC NOT NULL DEFAULT 0,
             cash_out NUMERIC NOT NULL DEFAULT 0,
-            expected_cash NUMERIC NOT NULL DEFAULT 0,
+            expected_cash NUMERIC NOT NULL,
             actual_counted_cash NUMERIC,
             variance NUMERIC,
-            status INTEGER NOT NULL,
-            FOREIGN KEY (cashier_id) REFERENCES users(user_id)
+            status INTEGER NOT NULL DEFAULT 1
         );
 
         CREATE TABLE IF NOT EXISTS sales (
             sale_id TEXT PRIMARY KEY,
-            receipt_number TEXT NOT NULL,
+            receipt_number TEXT UNIQUE NOT NULL,
             shift_id TEXT NOT NULL,
             tenant_id TEXT NOT NULL,
             branch_id TEXT NOT NULL,
@@ -157,10 +201,10 @@ public class PosDatabase : IDisposable
             customer_id TEXT,
             parent_sale_id TEXT,
             subtotal NUMERIC NOT NULL,
-            discount_total NUMERIC NOT NULL DEFAULT 0,
-            tax_total NUMERIC NOT NULL DEFAULT 0,
+            discount_total NUMERIC NOT NULL,
+            tax_total NUMERIC NOT NULL,
             grand_total NUMERIC NOT NULL,
-            status INTEGER NOT NULL,
+            status INTEGER NOT NULL DEFAULT 1,
             reprint_count INTEGER NOT NULL DEFAULT 0,
             created_at_utc TEXT NOT NULL,
             FOREIGN KEY (shift_id) REFERENCES shifts(shift_id),
@@ -175,12 +219,14 @@ public class PosDatabase : IDisposable
             barcode TEXT NOT NULL,
             quantity NUMERIC NOT NULL,
             unit_price NUMERIC NOT NULL,
+            cost_basis NUMERIC NOT NULL DEFAULT 0,
             discount_rate NUMERIC NOT NULL DEFAULT 0,
             discount_fixed NUMERIC NOT NULL DEFAULT 0,
             discount_amount NUMERIC NOT NULL DEFAULT 0,
             tax_rate NUMERIC NOT NULL DEFAULT 0,
             tax_amount NUMERIC NOT NULL DEFAULT 0,
             line_total NUMERIC NOT NULL,
+            parent_line_id TEXT,
             FOREIGN KEY (sale_id) REFERENCES sales(sale_id) ON DELETE CASCADE,
             FOREIGN KEY (product_id) REFERENCES products(product_id)
         );
@@ -230,6 +276,55 @@ public class PosDatabase : IDisposable
             causal_reference TEXT,
             status TEXT NOT NULL,
             created_at_utc TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS held_carts (
+            held_cart_id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL DEFAULT 'TENANT_LK_01',
+            branch_id TEXT NOT NULL,
+            counter_id TEXT NOT NULL,
+            cashier_id TEXT NOT NULL,
+            customer_reference TEXT,
+            subtotal NUMERIC NOT NULL,
+            discount_total NUMERIC NOT NULL,
+            tax_total NUMERIC NOT NULL,
+            grand_total NUMERIC NOT NULL,
+            held_at_utc TEXT NOT NULL,
+            cart_json TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS shift_cash_movements (
+            movement_id TEXT PRIMARY KEY,
+            shift_id TEXT NOT NULL,
+            movement_type TEXT NOT NULL,
+            amount NUMERIC NOT NULL,
+            reason TEXT NOT NULL,
+            actor_id TEXT NOT NULL,
+            occurred_at_utc TEXT NOT NULL,
+            FOREIGN KEY (shift_id) REFERENCES shifts(shift_id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS goods_receipts (
+            receipt_id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            branch_id TEXT NOT NULL,
+            supplier_name TEXT NOT NULL,
+            invoice_reference TEXT NOT NULL,
+            received_by_user_id TEXT NOT NULL,
+            received_at_utc TEXT NOT NULL,
+            total_cost NUMERIC NOT NULL,
+            notes TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS goods_receipt_lines (
+            line_id TEXT PRIMARY KEY,
+            receipt_id TEXT NOT NULL,
+            product_id TEXT NOT NULL,
+            quantity NUMERIC NOT NULL,
+            unit_cost NUMERIC NOT NULL,
+            line_total_cost NUMERIC NOT NULL,
+            FOREIGN KEY (receipt_id) REFERENCES goods_receipts(receipt_id) ON DELETE CASCADE,
+            FOREIGN KEY (product_id) REFERENCES products(product_id)
         );
     ";
 

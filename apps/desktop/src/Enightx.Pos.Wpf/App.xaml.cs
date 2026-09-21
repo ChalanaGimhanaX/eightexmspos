@@ -16,6 +16,9 @@ public partial class App : Application
     public static IReceiptService ReceiptService { get; private set; } = null!;
     public static ISyncService SyncService { get; private set; } = null!;
     public static IUpdateService UpdateService { get; private set; } = null!;
+    public static IHeldCartService HeldCartService { get; private set; } = null!;
+    public static IGoodsReceivingService GoodsReceivingService { get; private set; } = null!;
+    public static IReportService ReportService { get; private set; } = null!;
     public static ISyncBackgroundWorker? SyncWorker { get; private set; }
 
     protected override void OnStartup(StartupEventArgs e)
@@ -51,6 +54,9 @@ public partial class App : Application
         CatalogService = new CatalogService(Database);
         ShiftService = new ShiftService(Database);
         SaleService = new SaleService(Database, CatalogService);
+        HeldCartService = new HeldCartService(Database);
+        GoodsReceivingService = new GoodsReceivingService(Database, CatalogService);
+        ReportService = new ReportService(Database);
         var apiBase = Environment.GetEnvironmentVariable("ENIGHTX_API_URL") ?? "https://posapi.eightexms.site";
         SyncService = new SyncService(Database, CatalogService, apiBaseUrl: apiBase);
         SyncWorker = new SyncBackgroundWorker(SyncService);

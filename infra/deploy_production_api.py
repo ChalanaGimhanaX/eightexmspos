@@ -61,7 +61,7 @@ def main():
     print("    Connected successfully.")
 
     sftp = c.open_sftp()
-    target_rel = "/srv/enightx/production/releases/v1.0.4"
+    target_rel = "/srv/enightx/production/releases/v1.0.7"
     print(f"--> Uploading source files to {target_rel} via SFTP...")
 
     # Upload apps/api/src
@@ -92,6 +92,8 @@ POSTGRES_DB=enightx_pos
 POSTGRES_USER=enightx_user
 POSTGRES_PASSWORD=dev_password
 LICENCE_SIGNING_PUBLIC_KEY="PLACEHOLDER_ED25519_PUBLIC_KEY"
+ENIGHTX_RELEASE_TOKEN="secure_release_token_enightx_2026"
+ENIGHTX_RELEASE_MANIFEST="/srv/enightx/downloads/version-v2.json"
 EOF
 cp -f {target_rel}/apps/api/.env {target_rel}/.env
 chown -R enightx-srv:enightx-deploy {target_rel}

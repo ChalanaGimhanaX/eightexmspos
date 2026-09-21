@@ -23,11 +23,26 @@
                     </Border>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                    <Button Content="🔄 Sync Catalog" Height="34" Padding="12,0" Margin="0,0,16,0"
-                            Background="#1E88E5" Foreground="White" FontWeight="SemiBold" BorderThickness="0"
+                    <Button Content="↩️ Returns" Height="32" Padding="10,0" Margin="0,0,8,0"
+                            Background="#37474F" Foreground="White" FontWeight="SemiBold" FontSize="12" BorderThickness="0"
+                            Cursor="Hand" Click="Refund_Click"/>
+                    <Button Content="💵 Cash In/Out" Height="32" Padding="10,0" Margin="0,0,8,0"
+                            Background="#37474F" Foreground="White" FontWeight="SemiBold" FontSize="12" BorderThickness="0"
+                            Cursor="Hand" Click="CashMovement_Click"/>
+                    <Button Content="📊 Shift Report" Height="32" Padding="10,0" Margin="0,0,8,0"
+                            Background="#37474F" Foreground="White" FontWeight="SemiBold" FontSize="12" BorderThickness="0"
+                            Cursor="Hand" Click="ShiftReport_Click"/>
+                    <Button Content="📦 Receiving" Height="32" Padding="10,0" Margin="0,0,8,0"
+                            Background="#37474F" Foreground="White" FontWeight="SemiBold" FontSize="12" BorderThickness="0"
+                            Cursor="Hand" Click="GoodsReceiving_Click"/>
+                    <Button Content="🔒 Close Shift" Height="32" Padding="10,0" Margin="0,0,12,0"
+                            Background="#C53030" Foreground="White" FontWeight="Bold" FontSize="12" BorderThickness="0"
+                            Cursor="Hand" Click="CloseShift_Click"/>
+                    <Button Content="🔄 Sync" Height="32" Padding="10,0" Margin="0,0,12,0"
+                            Background="#1E88E5" Foreground="White" FontWeight="SemiBold" FontSize="12" BorderThickness="0"
                             Cursor="Hand" Click="SyncCatalog_Click"/>
                     <TextBlock Text="Cashier: " Foreground="#BBDEFB" VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding CurrentUser.DisplayName}" FontWeight="Bold" Foreground="White" Margin="0,0,16,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding CurrentUser.DisplayName}" FontWeight="Bold" Foreground="White" Margin="0,0,12,0" VerticalAlignment="Center"/>
                     <TextBlock Text="Shift: " Foreground="#BBDEFB" VerticalAlignment="Center"/>
                     <Border Background="#004D40" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
                         <TextBlock Text="Open" Foreground="#A7FFEB" FontWeight="Bold" FontSize="12"/>
@@ -219,7 +234,27 @@
                     <Button Content="PAY CASH (F12)" Height="52" Background="{StaticResource AccentBrush}" Foreground="White"
                             FontWeight="Bold" FontSize="18" Cursor="Hand" Click="PayCash_Click"/>
 
-                    <Button Content="Clear Cart" Height="36" Margin="0,12,0,0" Background="#ECEFF1" Foreground="#37474F"
+                    <Grid Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Content="⏸️ Hold Bill" Height="38" Margin="0,0,4,0"
+                                Background="#ECEFF1" Foreground="#37474F" FontWeight="SemiBold" FontSize="13"
+                                Cursor="Hand" Click="HoldCart_Click"/>
+                        <Button Grid.Column="1" Height="38" Margin="4,0,0,0"
+                                Background="#E3F2FD" Foreground="#1565C0" FontWeight="Bold" FontSize="13"
+                                Cursor="Hand" Click="RecallHeldCarts_Click">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <TextBlock Text="📋 Held Bills" VerticalAlignment="Center"/>
+                                <Border Background="#1976D2" CornerRadius="8" Padding="6,1" Margin="6,0,0,0" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding HeldCartsCount}" Foreground="White" FontSize="11" FontWeight="Bold"/>
+                                </Border>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+
+                    <Button Content="Clear Cart" Height="36" Margin="0,10,0,0" Background="#ECEFF1" Foreground="#37474F"
                             FontWeight="SemiBold" Cursor="Hand" Click="ClearCart_Click"/>
                 </StackPanel>
             </Border>

@@ -111,7 +111,7 @@ public partial class MainWindow : Window
             _currentShift = await App.ShiftService.OpenShiftAsync("B01", "C01", _currentUser.UserId, 5000.00m, "TENANT_LK_01");
         }
 
-        var billingVm = new BillingViewModel(_currentUser, _currentShift, App.CatalogService, App.SaleService);
+        var billingVm = new BillingViewModel(_currentUser, _currentShift, App.CatalogService, App.SaleService, App.HeldCartService);
         _billingVm = billingVm;
         var billingView = new BillingView { DataContext = billingVm };
 
@@ -141,6 +141,13 @@ public partial class MainWindow : Window
             };
 
             dialog.ShowDialog();
+        };
+
+        billingView.ShiftClosed += () =>
+        {
+            _currentShift = null;
+            _billingVm = null;
+            ShowLogin();
         };
 
         MainContainer.Children.Clear();

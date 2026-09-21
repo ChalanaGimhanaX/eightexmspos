@@ -9,6 +9,7 @@ namespace Enightx.Pos.Wpf.Views;
 public partial class BillingView : UserControl
 {
     public event Action? RequestPayment;
+    public event Action? ShiftClosed;
 
     public BillingView()
     {
@@ -20,6 +21,7 @@ public partial class BillingView : UserControl
         if (DataContext is BillingViewModel vm)
         {
             await vm.LoadCatalogAsync();
+            await vm.LoadHeldCartsAsync();
         }
     }
 
@@ -107,6 +109,109 @@ public partial class BillingView : UserControl
         if (DataContext is BillingViewModel vm)
         {
             vm.ClearCart();
+        }
+    }
+
+    private void Refund_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is BillingViewModel vm)
+        {
+            var dialog = new RefundDialog(App.SaleService, vm.CurrentUser, vm.CurrentShift)
+            {
+                Owner = Window.GetWindow(this)
+            };
+            dialog.ShowDialog();
+        }
+    }
+
+    private void CashMovement_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is BillingViewModel vm)
+        {
+            var dialog = new CashMovementDialog(App.ShiftService, vm.CurrentUser, vm.CurrentShift)
+            {
+                Owner = Window.GetWindow(this)
+            };
+            dialog.ShowDialog();
+        }
+    }
+
+    private void ShiftReport_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is BillingViewModel vm)
+        {
+            var dialog = new ShiftReportDialog(App.ReportService, vm.CurrentShift.ShiftId)
+            {
+                Owner = Window.GetWindow(this)
+            };
+            dialog.ShowDialog();
+        }
+    }
+
+    private void GoodsReceiving_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is BillingViewModel vm)
+        {
+            if (vm.CurrentUser.Role != Role.Manager && vm.CurrentUser.Role != Role.Owner)
+            {
+                MessageBox.Show("Access Denied: Goods Receiving is restricted to Store Managers and Owners.", "Permission Denied", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var dialog = new GoodsReceivingDialog(App.GoodsReceivingService, App.CatalogService, vm.CurrentUser, vm.CurrentShift.BranchId)
+            {
+                Owner = Window.GetWindow(this)
+            };
+            if (dialog.ShowDialog() == true)
+            {
+                _ = vm.LoadCatalogAsync();
+            }
+        }
+    }
+
+    private void CloseShift_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is BillingViewModel vm)
+        {
+            var dialog = new CloseShiftDialog(App.ShiftService, vm.CurrentUser, vm.CurrentShift)
+            {
+                Owner = Window.GetWindow(this)
+            };
+            if (dialog.ShowDialog() == true)
+            {
+                ShiftClosed?.Invoke();
+            }
+        }
+    }
+
+    private async void HoldCart_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is BillingViewModel vm)
+        {
+            if (vm.CartItems.Count == 0)
+            {
+                MessageBox.Show("Cannot hold an empty cart.", "Empty Cart", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var success = await vm.HoldCurrentCartAsync();
+            if (success)
+            {
+                MessageBox.Show("Current bill has been parked successfully.", "Bill Parked", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+    }
+
+    private async void RecallHeldCarts_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is BillingViewModel vm)
+        {
+            await vm.LoadHeldCartsAsync();
+            var dialog = new HeldCartsDialog(vm)
+            {
+                Owner = Window.GetWindow(this)
+            };
+            dialog.ShowDialog();
         }
     }
 }

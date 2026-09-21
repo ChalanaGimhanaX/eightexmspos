@@ -1,6 +1,6 @@
 from decimal import Decimal
 from enum import Enum
-from typing import List, Optional
+from typing import List, Optional, Union
 from pydantic import BaseModel, Field
 from datetime import datetime
 import uuid
@@ -53,7 +53,7 @@ class SaleEventSchema(BaseModel):
     occurred_at: datetime
     actor_id: str
     causal_reference: Optional[str] = None
-    payload: SalePayload
+    payload: Union[SalePayload, dict]
 
 class SyncBatchRequest(BaseModel):
     batch_id: uuid.UUID

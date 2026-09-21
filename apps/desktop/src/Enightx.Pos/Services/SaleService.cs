@@ -68,6 +68,7 @@ public interface ISaleService
     Task<Sale> RefundSaleAsync(RefundSaleCommand command);
     Task<Sale> CancelSaleAsync(CancelSaleCommand command);
     Task<Sale?> GetSaleByIdAsync(Guid saleId);
+    Task<Sale?> GetSaleByReceiptNumberAsync(string receiptNumber);
     Task<int> GetSaleCountAsync();
 }
 
@@ -144,6 +145,7 @@ public class SaleService : ISaleService
                 Barcode = product.Barcode,
                 Quantity = item.Quantity,
                 UnitPrice = unitPrice,
+                CostBasis = product.CostBasis,
                 DiscountRate = item.DiscountRate,
                 DiscountFixed = item.DiscountFixed,
                 DiscountAmount = calc.DiscountAmount,
@@ -314,10 +316,10 @@ public class SaleService : ISaleService
                 lineCmd.Transaction = tx;
                 lineCmd.CommandText = @"
                     INSERT INTO sale_lines (
-                        line_id, sale_id, product_id, product_name, barcode, quantity, unit_price,
+                        line_id, sale_id, product_id, product_name, barcode, quantity, unit_price, cost_basis,
                         discount_rate, discount_fixed, discount_amount, tax_rate, tax_amount, line_total
                     ) VALUES (
-                        $lid, $sid, $pid, $pname, $bcode, $qty, $uprice, $drate, $dfix, $damt, $trate, $tamt, $ltot
+                        $lid, $sid, $pid, $pname, $bcode, $qty, $uprice, $cbasis, $drate, $dfix, $damt, $trate, $tamt, $ltot
                     );
                 ";
                 lineCmd.Parameters.AddWithValue("$lid", line.LineId.ToString());
@@ -327,6 +329,7 @@ public class SaleService : ISaleService
                 lineCmd.Parameters.AddWithValue("$bcode", line.Barcode);
                 lineCmd.Parameters.AddWithValue("$qty", line.Quantity);
                 lineCmd.Parameters.AddWithValue("$uprice", line.UnitPrice);
+                lineCmd.Parameters.AddWithValue("$cbasis", line.CostBasis);
                 lineCmd.Parameters.AddWithValue("$drate", line.DiscountRate);
                 lineCmd.Parameters.AddWithValue("$dfix", line.DiscountFixed);
                 lineCmd.Parameters.AddWithValue("$damt", line.DiscountAmount);
@@ -499,19 +502,47 @@ public class SaleService : ISaleService
         {
             throw new PosException("At least one item must be specified for a refund.");
         }
+        if (command.Items.GroupBy(x => x.LineId).Any(g => g.Count() > 1))
+        {
+            throw new PosException("Duplicate refund line items are not permitted in a single request.");
+        }
 
         var origSale = await GetSaleByIdAsync(command.OriginalSaleId);
         if (origSale == null)
         {
             throw new PosException($"Original sale '{command.OriginalSaleId}' not found.");
         }
+        if (origSale.ParentSaleId != null)
+        {
+            throw new PosException("Cannot refund a refund transaction.");
+        }
         if (origSale.Status == SaleStatus.Cancelled)
         {
             throw new PosException("Cannot refund a cancelled sale.");
         }
-        if (origSale.Status == SaleStatus.Refunded)
+        // Check if original sale is already fully refunded
+        using (var connCheck = _db.CreateConnection())
+        using (var checkAllCmd = connCheck.CreateCommand())
         {
-            throw new PosException("Sale has already been fully refunded.");
+            checkAllCmd.CommandText = @"
+                SELECT 
+                    (SELECT COALESCE(SUM(quantity), 0) FROM sale_lines WHERE sale_id = $origSaleId) AS orig_qty,
+                    (SELECT COALESCE(SUM(sl.quantity), 0)
+                     FROM sale_lines sl
+                     JOIN sales s ON sl.sale_id = s.sale_id
+                     WHERE s.parent_sale_id = $origSaleId AND s.status = 3) AS refunded_qty;
+            ";
+            checkAllCmd.Parameters.AddWithValue("$origSaleId", origSale.SaleId.ToString());
+            using var reader = await checkAllCmd.ExecuteReaderAsync();
+            if (await reader.ReadAsync())
+            {
+                var origQty = reader.GetDecimal(0);
+                var refQty = reader.GetDecimal(1);
+                if (refQty >= origQty && origQty > 0)
+                {
+                    throw new PosException("Sale has already been fully refunded.");
+                }
+            }
         }
         // Cross-counter refund origin check (A11)
         if (origSale.BranchId != command.BranchId || origSale.CounterId != command.CounterId)
@@ -529,16 +560,43 @@ public class SaleService : ISaleService
             {
                 throw new PosException($"Line '{req.LineId}' not found on original sale.");
             }
-            if (req.QuantityToRefund <= 0 || req.QuantityToRefund > origLine.Quantity)
+            decimal alreadyRefunded = 0m;
+            using (var connCheck = _db.CreateConnection())
+            using (var checkCmd = connCheck.CreateCommand())
             {
-                throw new PosException($"Invalid refund quantity ({req.QuantityToRefund}) for '{origLine.ProductName}'. Original quantity was {origLine.Quantity}.");
+                checkCmd.CommandText = @"
+                    SELECT COALESCE(SUM(sl.quantity), 0)
+                    FROM sale_lines sl
+                    JOIN sales s ON sl.sale_id = s.sale_id
+                    WHERE s.parent_sale_id = $origSaleId
+                      AND (sl.parent_line_id = $lid OR (sl.parent_line_id IS NULL AND sl.product_id = $pid))
+                      AND s.status = 3;
+                ";
+                checkCmd.Parameters.AddWithValue("$origSaleId", origSale.SaleId.ToString());
+                checkCmd.Parameters.AddWithValue("$lid", req.LineId.ToString());
+                checkCmd.Parameters.AddWithValue("$pid", origLine.ProductId);
+                var res = await checkCmd.ExecuteScalarAsync();
+                if (res != null && res != DBNull.Value)
+                {
+                    alreadyRefunded = Convert.ToDecimal(res);
+                }
             }
+
+            var remainingRefundable = origLine.Quantity - alreadyRefunded;
+            if (req.QuantityToRefund <= 0 || req.QuantityToRefund > remainingRefundable)
+            {
+                throw new PosException($"Invalid refund quantity ({req.QuantityToRefund}) for '{origLine.ProductName}'. Original was {origLine.Quantity}, already refunded {alreadyRefunded}, remaining refundable is {remainingRefundable}.");
+            }
+
+            var propFixed = origLine.Quantity > 0
+                ? MoneyCalculator.Round((origLine.DiscountFixed / origLine.Quantity) * req.QuantityToRefund)
+                : 0m;
 
             var calc = MoneyCalculator.CalculateLine(
                 req.QuantityToRefund,
                 origLine.UnitPrice,
                 origLine.DiscountRate,
-                0m,
+                propFixed,
                 origLine.TaxRate
             );
 
@@ -550,12 +608,14 @@ public class SaleService : ISaleService
                 Barcode = origLine.Barcode,
                 Quantity = req.QuantityToRefund,
                 UnitPrice = origLine.UnitPrice,
+                CostBasis = origLine.CostBasis,
                 DiscountRate = origLine.DiscountRate,
-                DiscountFixed = 0m,
+                DiscountFixed = propFixed,
                 DiscountAmount = calc.DiscountAmount,
                 TaxRate = origLine.TaxRate,
                 TaxAmount = calc.TaxAmount,
-                LineTotal = calc.LineTotal
+                LineTotal = calc.LineTotal,
+                ParentLineId = origLine.LineId
             };
             refundLines.Add(line);
 
@@ -679,10 +739,10 @@ public class SaleService : ISaleService
                 lineCmd.Transaction = tx;
                 lineCmd.CommandText = @"
                     INSERT INTO sale_lines (
-                        line_id, sale_id, product_id, product_name, barcode, quantity, unit_price,
-                        discount_rate, discount_fixed, discount_amount, tax_rate, tax_amount, line_total
+                        line_id, sale_id, product_id, product_name, barcode, quantity, unit_price, cost_basis,
+                        discount_rate, discount_fixed, discount_amount, tax_rate, tax_amount, line_total, parent_line_id
                     ) VALUES (
-                        $lid, $sid, $pid, $pname, $bcode, $qty, $uprice, $drate, $dfix, $damt, $trate, $tamt, $ltot
+                        $lid, $sid, $pid, $pname, $bcode, $qty, $uprice, $cbasis, $drate, $dfix, $damt, $trate, $tamt, $ltot, $plid
                     );
                 ";
                 lineCmd.Parameters.AddWithValue("$lid", line.LineId.ToString());
@@ -692,12 +752,14 @@ public class SaleService : ISaleService
                 lineCmd.Parameters.AddWithValue("$bcode", line.Barcode);
                 lineCmd.Parameters.AddWithValue("$qty", line.Quantity);
                 lineCmd.Parameters.AddWithValue("$uprice", line.UnitPrice);
+                lineCmd.Parameters.AddWithValue("$cbasis", line.CostBasis);
                 lineCmd.Parameters.AddWithValue("$drate", line.DiscountRate);
                 lineCmd.Parameters.AddWithValue("$dfix", line.DiscountFixed);
                 lineCmd.Parameters.AddWithValue("$damt", line.DiscountAmount);
                 lineCmd.Parameters.AddWithValue("$trate", line.TaxRate);
                 lineCmd.Parameters.AddWithValue("$tamt", line.TaxAmount);
                 lineCmd.Parameters.AddWithValue("$ltot", line.LineTotal);
+                lineCmd.Parameters.AddWithValue("$plid", (object?)line.ParentLineId?.ToString() ?? DBNull.Value);
                 await lineCmd.ExecuteNonQueryAsync();
             }
 
@@ -850,6 +912,19 @@ public class SaleService : ISaleService
         if (sale.BranchId != command.BranchId || sale.CounterId != command.CounterId)
         {
             throw new PosException("Cross-counter cancellation not permitted offline.");
+        }
+
+        // Check if the sale has any refunds
+        using (var connCheck = _db.CreateConnection())
+        using (var checkRefundCmd = connCheck.CreateCommand())
+        {
+            checkRefundCmd.CommandText = "SELECT COUNT(*) FROM sales WHERE parent_sale_id = $id AND status = 3;";
+            checkRefundCmd.Parameters.AddWithValue("$id", sale.SaleId.ToString());
+            var refundCount = Convert.ToInt32(await checkRefundCmd.ExecuteScalarAsync());
+            if (refundCount > 0)
+            {
+                throw new PosException("Cannot cancel a sale that has existing refunds. Process individual line refunds instead.");
+            }
         }
 
         using var conn = _db.CreateConnection();
@@ -1028,7 +1103,7 @@ public class SaleService : ISaleService
         using var lineCmd = conn.CreateCommand();
         lineCmd.CommandText = @"
             SELECT line_id, product_id, product_name, barcode, quantity, unit_price,
-                   discount_rate, discount_fixed, discount_amount, tax_rate, tax_amount, line_total
+                   discount_rate, discount_fixed, discount_amount, tax_rate, tax_amount, line_total, cost_basis, parent_line_id
             FROM sale_lines WHERE sale_id = $sid;
         ";
         lineCmd.Parameters.AddWithValue("$sid", saleId.ToString());
@@ -1049,7 +1124,9 @@ public class SaleService : ISaleService
                 DiscountAmount = lReader.GetDecimal(8),
                 TaxRate = lReader.GetDecimal(9),
                 TaxAmount = lReader.GetDecimal(10),
-                LineTotal = lReader.GetDecimal(11)
+                LineTotal = lReader.GetDecimal(11),
+                CostBasis = lReader.FieldCount > 12 && !lReader.IsDBNull(12) ? lReader.GetDecimal(12) : 0m,
+                ParentLineId = lReader.FieldCount > 13 && !lReader.IsDBNull(13) ? Guid.Parse(lReader.GetString(13)) : null
             });
         }
 
@@ -1072,6 +1149,20 @@ public class SaleService : ISaleService
         }
 
         return sale;
+    }
+
+    public async Task<Sale?> GetSaleByReceiptNumberAsync(string receiptNumber)
+    {
+        if (string.IsNullOrWhiteSpace(receiptNumber)) return null;
+
+        using var conn = _db.CreateConnection();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT sale_id FROM sales WHERE receipt_number = $rcpt;";
+        cmd.Parameters.AddWithValue("$rcpt", receiptNumber.Trim());
+        var saleIdObj = await cmd.ExecuteScalarAsync();
+        if (saleIdObj == null) return null;
+
+        return await GetSaleByIdAsync(Guid.Parse(saleIdObj.ToString()!));
     }
 
     public async Task<int> GetSaleCountAsync()

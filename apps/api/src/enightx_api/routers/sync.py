@@ -63,7 +63,7 @@ def push_sync_batch(batch: SyncBatchRequest, db: Session = Depends(get_db)):
                 occurred_at=ev.occurred_at,
                 actor_id=ev.actor_id,
                 causal_reference=ev.causal_reference,
-                payload=ev.payload.model_dump(mode="json")
+                payload=ev.payload.model_dump(mode="json") if hasattr(ev.payload, "model_dump") else ev.payload
             ).on_conflict_do_nothing(index_elements=["event_id"])
             db.execute(stmt)
 

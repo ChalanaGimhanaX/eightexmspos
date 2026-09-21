@@ -67,12 +67,14 @@ public class SaleLine
     public required string Barcode { get; set; }
     public decimal Quantity { get; set; }
     public decimal UnitPrice { get; set; }
+    public decimal CostBasis { get; set; }
     public decimal DiscountRate { get; set; }
     public decimal DiscountFixed { get; set; }
     public decimal DiscountAmount { get; set; }
     public decimal TaxRate { get; set; }
     public decimal TaxAmount { get; set; }
     public decimal LineTotal { get; set; }
+    public Guid? ParentLineId { get; set; }
 }
 
 public class Tender
@@ -121,6 +123,7 @@ public class StockMovement
 public class CashShift
 {
     public Guid ShiftId { get; set; } = Guid.NewGuid();
+    public string TenantId { get; set; } = "TENANT_LK_01";
     public required string BranchId { get; set; }
     public required string CounterId { get; set; }
     public required string CashierId { get; set; }
@@ -282,4 +285,172 @@ public class SyncPushApiResponse
     [JsonPropertyName("status")]
     public string Status { get; set; } = "acknowledged";
 }
+
+public class HeldCartItem
+{
+    public required string ProductId { get; set; }
+    public required string Barcode { get; set; }
+    public required string ProductName { get; set; }
+    public decimal Quantity { get; set; }
+    public decimal UnitPrice { get; set; }
+    public decimal DiscountRate { get; set; }
+    public decimal DiscountFixed { get; set; }
+    public decimal TaxRate { get; set; }
+    public decimal LineTotal { get; set; }
+    public string? OverrideReason { get; set; }
+    public bool IsPriceOverridden { get; set; }
+}
+
+public class HeldCart
+{
+    public Guid HeldCartId { get; set; } = Guid.NewGuid();
+    public string TenantId { get; set; } = "TENANT_LK_01";
+    public required string BranchId { get; set; }
+    public required string CounterId { get; set; }
+    public required string CashierId { get; set; }
+    public string? CustomerReference { get; set; }
+    public decimal Subtotal { get; set; }
+    public decimal DiscountTotal { get; set; }
+    public decimal TaxTotal { get; set; }
+    public decimal GrandTotal { get; set; }
+    public DateTime HeldAtUtc { get; set; } = DateTime.UtcNow;
+    public List<HeldCartItem> Items { get; set; } = new();
+}
+
+public class ShiftCashMovement
+{
+    public Guid MovementId { get; set; } = Guid.NewGuid();
+    public Guid ShiftId { get; set; }
+    public required string MovementType { get; set; } // "CASH_IN", "CASH_OUT"
+    public decimal Amount { get; set; }
+    public required string Reason { get; set; }
+    public required string ActorId { get; set; }
+    public DateTime OccurredAtUtc { get; set; } = DateTime.UtcNow;
+}
+
+public class GoodsReceiptLine
+{
+    public Guid LineId { get; set; } = Guid.NewGuid();
+    public Guid ReceiptId { get; set; }
+    public required string ProductId { get; set; }
+    public decimal Quantity { get; set; }
+    public decimal UnitCost { get; set; }
+    public decimal LineTotalCost { get; set; }
+}
+
+public class GoodsReceipt
+{
+    public Guid ReceiptId { get; set; } = Guid.NewGuid();
+    public required string TenantId { get; set; }
+    public required string BranchId { get; set; }
+    public required string SupplierName { get; set; }
+    public required string InvoiceReference { get; set; }
+    public required string ReceivedByUserId { get; set; }
+    public DateTime ReceivedAtUtc { get; set; } = DateTime.UtcNow;
+    public decimal TotalCost { get; set; }
+    public string? Notes { get; set; }
+    public List<GoodsReceiptLine> Lines { get; set; } = new();
+}
+
+public class TenderSummary
+{
+    public TenderType TenderType { get; set; }
+    public int TransactionCount { get; set; }
+    public decimal TotalTendered { get; set; }
+    public decimal ChangeGiven { get; set; }
+    public decimal NetAmount { get; set; }
+}
+
+public class CashDrawerReconciliation
+{
+    public decimal OpeningFloat { get; set; }
+    public decimal CashReceived { get; set; }
+    public decimal ChangeGiven { get; set; }
+    public decimal NetCashSales { get; set; }
+    public decimal CashRefunds { get; set; }
+    public decimal CashIn { get; set; }
+    public decimal CashOut { get; set; }
+    public decimal ExpectedCash { get; set; }
+    public decimal? ActualCountedCash { get; set; }
+    public decimal? Variance { get; set; }
+    public string Status { get; set; } = "Open";
+}
+
+public class GrossProfitSummary
+{
+    public decimal Revenue { get; set; }
+    public decimal CostOfGoodsSold { get; set; }
+    public decimal GrossProfit { get; set; }
+    public decimal GrossMarginPercent { get; set; }
+    public string Disclaimer { get; set; } = "Gross Profit only (excludes operating and store expenses).";
+}
+
+public class ShiftReport
+{
+    public Guid ShiftId { get; set; }
+    public required string BranchId { get; set; }
+    public required string CounterId { get; set; }
+    public required string CashierId { get; set; }
+    public required string CashierName { get; set; }
+    public DateTime OpenedAtUtc { get; set; }
+    public DateTime? ClosedAtUtc { get; set; }
+    public ShiftStatus Status { get; set; }
+
+    public int TotalSalesCount { get; set; }
+    public decimal GrossSales { get; set; }
+    public decimal DiscountTotal { get; set; }
+    public decimal TaxTotal { get; set; }
+    public decimal NetSales { get; set; }
+
+    public int TotalRefundCount { get; set; }
+    public decimal TotalRefundAmount { get; set; }
+
+    public List<TenderSummary> TenderSummaries { get; set; } = new();
+    public CashDrawerReconciliation DrawerReconciliation { get; set; } = new();
+    public List<ShiftCashMovement> CashMovements { get; set; } = new();
+    public GrossProfitSummary ProfitSummary { get; set; } = new();
+}
+
+public class DailyReport
+{
+    public DateTime DateUtc { get; set; }
+    public required string BranchId { get; set; }
+    public int ShiftsCount { get; set; }
+    public int CompletedSalesCount { get; set; }
+    public decimal GrossSales { get; set; }
+    public decimal DiscountTotal { get; set; }
+    public decimal TaxTotal { get; set; }
+    public decimal NetSales { get; set; }
+    public int RefundCount { get; set; }
+    public decimal TotalRefundAmount { get; set; }
+    public List<TenderSummary> TenderSummaries { get; set; } = new();
+    public decimal TotalCashIn { get; set; }
+    public decimal TotalCashOut { get; set; }
+    public decimal NetDrawerCashChange { get; set; }
+    public GrossProfitSummary ProfitSummary { get; set; } = new();
+}
+
+public class InventoryValuationItem
+{
+    public required string ProductId { get; set; }
+    public required string Barcode { get; set; }
+    public required string Name { get; set; }
+    public decimal StockOnHand { get; set; }
+    public decimal CostBasis { get; set; }
+    public decimal UnitPrice { get; set; }
+    public decimal ValuationAtCost { get; set; }
+    public decimal ValuationAtRetail { get; set; }
+}
+
+public class InventorySummaryReport
+{
+    public DateTime GeneratedAtUtc { get; set; } = DateTime.UtcNow;
+    public int TotalProducts { get; set; }
+    public int LowStockProducts { get; set; }
+    public int NegativeStockProducts { get; set; }
+    public decimal TotalValuationAtCost { get; set; }
+    public decimal TotalValuationAtRetail { get; set; }
+    public List<InventoryValuationItem> Items { get; set; } = new();
+}
+
 

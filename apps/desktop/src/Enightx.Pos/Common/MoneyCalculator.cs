@@ -46,4 +46,23 @@ public static class MoneyCalculator
     {
         return Round(openingFloat + cashReceived - changeGiven - cashRefunds + cashIn - cashOut);
     }
+
+    public static decimal CalculateMovingWeightedAverageCost(
+        decimal currentStock,
+        decimal currentCostBasis,
+        decimal receivedQty,
+        decimal unitCost)
+    {
+        var newTotalQty = currentStock + receivedQty;
+        if (newTotalQty <= 0)
+        {
+            return Round(unitCost);
+        }
+        if (currentStock <= 0)
+        {
+            return Round(unitCost);
+        }
+        var totalValue = (currentStock * currentCostBasis) + (receivedQty * unitCost);
+        return Round(totalValue / newTotalQty);
+    }
 }

@@ -94,6 +94,7 @@ public class BillingViewModel : INotifyPropertyChanged
 {
     private readonly ICatalogService _catalogService;
     private readonly ISaleService _saleService;
+    private readonly IHeldCartService? _heldCartService;
     private string _barcodeInput = "";
     private string _statusMessage = "Ready for billing";
     private string _searchQuery = "";
@@ -109,6 +110,9 @@ public class BillingViewModel : INotifyPropertyChanged
     public ObservableCollection<CartItemViewModel> CartItems { get; } = new();
     public ObservableCollection<Product> FilteredProducts { get; } = new();
     public ObservableCollection<Category> Categories { get; } = new();
+    public ObservableCollection<HeldCart> HeldCarts { get; } = new();
+
+    public int HeldCartsCount => HeldCarts.Count;
 
     public decimal Subtotal => MoneyCalculator.Round(CartItems.Sum(i => i.Subtotal));
     public decimal DiscountTotal => MoneyCalculator.Round(CartItems.Sum(i => i.DiscountAmount));
@@ -161,12 +165,18 @@ public class BillingViewModel : INotifyPropertyChanged
         set { _isCatalogLoading = value; OnPropertyChanged(); }
     }
 
-    public BillingViewModel(User user, CashShift shift, ICatalogService catalogService, ISaleService saleService)
+    public BillingViewModel(
+        User user,
+        CashShift shift,
+        ICatalogService catalogService,
+        ISaleService saleService,
+        IHeldCartService? heldCartService = null)
     {
         CurrentUser = user;
         CurrentShift = shift;
         _catalogService = catalogService;
         _saleService = saleService;
+        _heldCartService = heldCartService;
     }
 
     public async Task LoadCatalogAsync()
@@ -306,6 +316,130 @@ public class BillingViewModel : INotifyPropertyChanged
         CartItems.Clear();
         StatusMessage = "Cart cleared";
         RefreshTotals();
+    }
+
+    public async Task<bool> HoldCurrentCartAsync(string? customerReference = null)
+    {
+        if (CartItems.Count == 0)
+        {
+            StatusMessage = "Cannot hold an empty cart.";
+            return false;
+        }
+
+        var svc = _heldCartService ?? App.HeldCartService;
+        if (svc == null)
+        {
+            StatusMessage = "Held cart service unavailable.";
+            return false;
+        }
+
+        var items = CartItems.Select(ci => new HeldCartItem
+        {
+            ProductId = ci.ProductId,
+            Barcode = ci.Barcode,
+            ProductName = ci.ProductName,
+            Quantity = ci.Quantity,
+            UnitPrice = ci.UnitPrice,
+            DiscountRate = ci.DiscountRate,
+            TaxRate = ci.TaxRate,
+            LineTotal = ci.LineTotal,
+            OverrideReason = ci.OverrideReason,
+            IsPriceOverridden = ci.IsPriceOverridden
+        }).ToList();
+
+        var refLabel = string.IsNullOrWhiteSpace(customerReference)
+            ? $"Cart at {DateTime.Now:HH:mm}"
+            : customerReference.Trim();
+
+        var held = await svc.HoldCartAsync(new HoldCartCommand(
+            TenantId: "TENANT_LK_01",
+            BranchId: CurrentShift.BranchId,
+            CounterId: CurrentShift.CounterId,
+            CashierId: CurrentUser.UserId,
+            CustomerReference: refLabel,
+            Items: items
+        ));
+
+        CartItems.Clear();
+        RefreshTotals();
+        await LoadHeldCartsAsync();
+        StatusMessage = $"Cart parked successfully ({held.CustomerReference})";
+        return true;
+    }
+
+    public async Task<bool> RecallHeldCartAsync(Guid heldCartId)
+    {
+        var svc = _heldCartService ?? App.HeldCartService;
+        if (svc == null) return false;
+
+        if (CartItems.Count > 0)
+        {
+            StatusMessage = "Please clear or hold the active cart before recalling another cart.";
+            return false;
+        }
+
+        var heldCart = await svc.RecallCartAsync(heldCartId, CurrentUser.UserId);
+        CartItems.Clear();
+        foreach (var item in heldCart.Items)
+        {
+            var vm = new CartItemViewModel
+            {
+                ProductId = item.ProductId,
+                Barcode = item.Barcode,
+                ProductName = item.ProductName,
+                UnitPrice = item.UnitPrice,
+                DiscountRate = item.DiscountRate,
+                TaxRate = item.TaxRate,
+                Quantity = item.Quantity,
+                OverrideReason = item.OverrideReason,
+                IsPriceOverridden = item.IsPriceOverridden
+            };
+            vm.Recalculate();
+            CartItems.Add(vm);
+        }
+
+        RefreshTotals();
+        await LoadHeldCartsAsync();
+        StatusMessage = $"Recalled cart: {heldCart.CustomerReference ?? heldCartId.ToString()}";
+        return true;
+    }
+
+    public async Task DiscardHeldCartAsync(Guid heldCartId, string? reason = null)
+    {
+        var svc = _heldCartService ?? App.HeldCartService;
+        if (svc == null) return;
+
+        await svc.DeleteHeldCartAsync(heldCartId, CurrentUser.UserId, reason);
+        await LoadHeldCartsAsync();
+        StatusMessage = "Held cart discarded.";
+    }
+
+    public async Task LoadHeldCartsAsync()
+    {
+        var svc = _heldCartService ?? App.HeldCartService;
+        if (svc == null) return;
+
+        try
+        {
+            var list = await svc.GetHeldCartsAsync(CurrentShift.BranchId, CurrentShift.CounterId);
+            HeldCarts.Clear();
+            foreach (var c in list)
+            {
+                HeldCarts.Add(c);
+            }
+            OnPropertyChanged(nameof(HeldCartsCount));
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error loading held carts: {ex.Message}";
+        }
+    }
+
+    public void VoidItem(CartItemViewModel item, string? reason = null)
+    {
+        CartItems.Remove(item);
+        RefreshTotals();
+        StatusMessage = $"Voided: {item.ProductName}" + (!string.IsNullOrEmpty(reason) ? $" ({reason})" : "");
     }
 
     public async Task SyncCatalogWithCloudAsync()

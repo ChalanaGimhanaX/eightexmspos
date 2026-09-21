@@ -11,7 +11,10 @@ public interface IShiftService
     Task<CashShift> OpenShiftAsync(string branchId, string counterId, string cashierId, decimal openingFloat, string tenantId);
     Task<CashShift> CloseShiftAsync(Guid shiftId, decimal actualCountedCash, string actorId, string tenantId);
     Task<CashShift?> GetActiveShiftAsync(string branchId, string counterId);
+    Task<CashShift?> GetShiftByIdAsync(Guid shiftId);
+    Task<List<CashShift>> GetShiftsAsync(string branchId, string? counterId = null, int limit = 20);
     Task RecordCashMovementAsync(Guid shiftId, decimal amount, bool isCashIn, string reason, string actorId, string tenantId, string branchId, string counterId);
+    Task<List<ShiftCashMovement>> GetCashMovementsForShiftAsync(Guid shiftId);
 }
 
 public class ShiftService : IShiftService
@@ -25,15 +28,22 @@ public class ShiftService : IShiftService
 
     public async Task<CashShift> OpenShiftAsync(string branchId, string counterId, string cashierId, decimal openingFloat, string tenantId)
     {
+        if (openingFloat < 0)
+        {
+            throw new ArgumentException("Opening float cannot be negative.", nameof(openingFloat));
+        }
+
         var active = await GetActiveShiftAsync(branchId, counterId);
         if (active != null)
         {
             throw new PosException($"An active shift ({active.ShiftId}) is already open on counter {counterId}.");
         }
 
+        var shiftTenant = string.IsNullOrWhiteSpace(tenantId) ? "TENANT_LK_01" : tenantId;
         var shift = new CashShift
         {
             ShiftId = Guid.NewGuid(),
+            TenantId = shiftTenant,
             BranchId = branchId,
             CounterId = counterId,
             CashierId = cashierId,
@@ -55,13 +65,14 @@ public class ShiftService : IShiftService
         cmd.Transaction = tx;
         cmd.CommandText = @"
             INSERT INTO shifts (
-                shift_id, branch_id, counter_id, cashier_id, opened_at_utc, opening_float,
+                shift_id, tenant_id, branch_id, counter_id, cashier_id, opened_at_utc, opening_float,
                 cash_received, change_given, cash_refunds, cash_in, cash_out, expected_cash, status
             ) VALUES (
-                $id, $bid, $cid, $uid, $opened, $float, 0, 0, 0, 0, 0, $exp, 1
+                $id, $tid, $bid, $cid, $uid, $opened, $float, 0, 0, 0, 0, 0, $exp, 1
             );
         ";
         cmd.Parameters.AddWithValue("$id", shift.ShiftId.ToString());
+        cmd.Parameters.AddWithValue("$tid", shift.TenantId);
         cmd.Parameters.AddWithValue("$bid", shift.BranchId);
         cmd.Parameters.AddWithValue("$cid", shift.CounterId);
         cmd.Parameters.AddWithValue("$uid", shift.CashierId);
@@ -78,7 +89,7 @@ public class ShiftService : IShiftService
             VALUES ($eid, $tid, $bid, $cid, $actor, 'OPEN_SHIFT', $details, $occurred);
         ";
         auditCmd.Parameters.AddWithValue("$eid", Guid.NewGuid().ToString());
-        auditCmd.Parameters.AddWithValue("$tid", tenantId);
+        auditCmd.Parameters.AddWithValue("$tid", shift.TenantId);
         auditCmd.Parameters.AddWithValue("$bid", branchId);
         auditCmd.Parameters.AddWithValue("$cid", counterId);
         auditCmd.Parameters.AddWithValue("$actor", cashierId);
@@ -96,6 +107,11 @@ public class ShiftService : IShiftService
 
     public async Task<CashShift> CloseShiftAsync(Guid shiftId, decimal actualCountedCash, string actorId, string tenantId)
     {
+        if (actualCountedCash < 0)
+        {
+            throw new ArgumentException("Actual counted cash cannot be negative.", nameof(actualCountedCash));
+        }
+
         using var conn = _db.CreateConnection();
         using var tx = conn.BeginTransaction();
 
@@ -105,7 +121,7 @@ public class ShiftService : IShiftService
         getCmd.CommandText = @"
             SELECT shift_id, branch_id, counter_id, cashier_id, opened_at_utc, closed_at_utc,
                    opening_float, cash_received, change_given, cash_refunds, cash_in, cash_out,
-                   expected_cash, actual_counted_cash, variance, status
+                   expected_cash, actual_counted_cash, variance, status, tenant_id
             FROM shifts WHERE shift_id = $id;
         ";
         getCmd.Parameters.AddWithValue("$id", shiftId.ToString());
@@ -121,6 +137,8 @@ public class ShiftService : IShiftService
 
         if (shift == null) throw new PosException("Shift not found.");
         if (shift.Status != ShiftStatus.Open) throw new PosException("Shift is already closed.");
+
+        var effectiveTenant = string.IsNullOrWhiteSpace(tenantId) ? shift.TenantId : tenantId;
 
         // Calculate expected cash and variance (A10)
         var expectedCash = MoneyCalculator.CalculateShiftExpectedCash(
@@ -166,7 +184,7 @@ public class ShiftService : IShiftService
             VALUES ($eid, $tid, $bid, $cid, $actor, 'CLOSE_SHIFT', $details, $occurred);
         ";
         auditCmd.Parameters.AddWithValue("$eid", Guid.NewGuid().ToString());
-        auditCmd.Parameters.AddWithValue("$tid", tenantId);
+        auditCmd.Parameters.AddWithValue("$tid", effectiveTenant);
         auditCmd.Parameters.AddWithValue("$bid", shift.BranchId);
         auditCmd.Parameters.AddWithValue("$cid", shift.CounterId);
         auditCmd.Parameters.AddWithValue("$actor", actorId);
@@ -191,7 +209,7 @@ public class ShiftService : IShiftService
         cmd.CommandText = @"
             SELECT shift_id, branch_id, counter_id, cashier_id, opened_at_utc, closed_at_utc,
                    opening_float, cash_received, change_given, cash_refunds, cash_in, cash_out,
-                   expected_cash, actual_counted_cash, variance, status
+                   expected_cash, actual_counted_cash, variance, status, tenant_id
             FROM shifts WHERE branch_id = $bid AND counter_id = $cid AND status = 1;
         ";
         cmd.Parameters.AddWithValue("$bid", branchId);
@@ -206,6 +224,10 @@ public class ShiftService : IShiftService
     {
         var amt = MoneyCalculator.Round(amount);
         if (amt <= 0) throw new ArgumentException("Amount must be greater than zero.", nameof(amount));
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            throw new ArgumentException("A reason is mandatory for drawer cash movements (A08).", nameof(reason));
+        }
 
         using var conn = _db.CreateConnection();
         using var tx = conn.BeginTransaction();
@@ -226,6 +248,24 @@ public class ShiftService : IShiftService
         var affected = await cmd.ExecuteNonQueryAsync();
         if (affected == 0) throw new ShiftClosedException("Shift is not open or not found.");
 
+        // Record in shift_cash_movements table
+        using var moveCmd = conn.CreateCommand();
+        moveCmd.Transaction = tx;
+        moveCmd.CommandText = @"
+            INSERT INTO shift_cash_movements (movement_id, shift_id, movement_type, amount, reason, actor_id, occurred_at_utc)
+            VALUES ($mid, $sid, $mtype, $amt, $reason, $actor, $occurred);
+        ";
+        var moveId = Guid.NewGuid();
+        var nowUtc = DateTime.UtcNow;
+        moveCmd.Parameters.AddWithValue("$mid", moveId.ToString());
+        moveCmd.Parameters.AddWithValue("$sid", shiftId.ToString());
+        moveCmd.Parameters.AddWithValue("$mtype", isCashIn ? "CASH_IN" : "CASH_OUT");
+        moveCmd.Parameters.AddWithValue("$amt", amt);
+        moveCmd.Parameters.AddWithValue("$reason", reason);
+        moveCmd.Parameters.AddWithValue("$actor", actorId);
+        moveCmd.Parameters.AddWithValue("$occurred", nowUtc.ToString("o"));
+        await moveCmd.ExecuteNonQueryAsync();
+
         // Audit cash movement
         using var auditCmd = conn.CreateCommand();
         auditCmd.Transaction = tx;
@@ -241,14 +281,101 @@ public class ShiftService : IShiftService
         auditCmd.Parameters.AddWithValue("$act", isCashIn ? "SHIFT_CASH_IN" : "SHIFT_CASH_OUT");
         auditCmd.Parameters.AddWithValue("$details", JsonSerializer.Serialize(new
         {
+            MovementId = moveId,
             ShiftId = shiftId,
             Amount = amt,
             Reason = reason
         }));
-        auditCmd.Parameters.AddWithValue("$occurred", DateTime.UtcNow.ToString("o"));
+        auditCmd.Parameters.AddWithValue("$occurred", nowUtc.ToString("o"));
         await auditCmd.ExecuteNonQueryAsync();
 
         tx.Commit();
+    }
+
+    public async Task<CashShift?> GetShiftByIdAsync(Guid shiftId)
+    {
+        using var conn = _db.CreateConnection();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            SELECT shift_id, branch_id, counter_id, cashier_id, opened_at_utc, closed_at_utc,
+                   opening_float, cash_received, change_given, cash_refunds, cash_in, cash_out,
+                   expected_cash, actual_counted_cash, variance, status, tenant_id
+            FROM shifts WHERE shift_id = $id;
+        ";
+        cmd.Parameters.AddWithValue("$id", shiftId.ToString());
+
+        using var reader = await cmd.ExecuteReaderAsync();
+        if (!await reader.ReadAsync()) return null;
+        return MapShift(reader);
+    }
+
+    public async Task<List<CashShift>> GetShiftsAsync(string branchId, string? counterId = null, int limit = 20)
+    {
+        using var conn = _db.CreateConnection();
+        using var cmd = conn.CreateCommand();
+        if (string.IsNullOrEmpty(counterId))
+        {
+            cmd.CommandText = @"
+                SELECT shift_id, branch_id, counter_id, cashier_id, opened_at_utc, closed_at_utc,
+                       opening_float, cash_received, change_given, cash_refunds, cash_in, cash_out,
+                       expected_cash, actual_counted_cash, variance, status, tenant_id
+                FROM shifts WHERE branch_id = $bid
+                ORDER BY opened_at_utc DESC LIMIT $lim;
+            ";
+            cmd.Parameters.AddWithValue("$bid", branchId);
+            cmd.Parameters.AddWithValue("$lim", limit);
+        }
+        else
+        {
+            cmd.CommandText = @"
+                SELECT shift_id, branch_id, counter_id, cashier_id, opened_at_utc, closed_at_utc,
+                       opening_float, cash_received, change_given, cash_refunds, cash_in, cash_out,
+                       expected_cash, actual_counted_cash, variance, status, tenant_id
+                FROM shifts WHERE branch_id = $bid AND counter_id = $cid
+                ORDER BY opened_at_utc DESC LIMIT $lim;
+            ";
+            cmd.Parameters.AddWithValue("$bid", branchId);
+            cmd.Parameters.AddWithValue("$cid", counterId);
+            cmd.Parameters.AddWithValue("$lim", limit);
+        }
+
+        var list = new List<CashShift>();
+        using var reader = await cmd.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            list.Add(MapShift(reader));
+        }
+        return list;
+    }
+
+    public async Task<List<ShiftCashMovement>> GetCashMovementsForShiftAsync(Guid shiftId)
+    {
+        using var conn = _db.CreateConnection();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            SELECT movement_id, shift_id, movement_type, amount, reason, actor_id, occurred_at_utc
+            FROM shift_cash_movements
+            WHERE shift_id = $sid
+            ORDER BY occurred_at_utc ASC;
+        ";
+        cmd.Parameters.AddWithValue("$sid", shiftId.ToString());
+
+        var list = new List<ShiftCashMovement>();
+        using var reader = await cmd.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            list.Add(new ShiftCashMovement
+            {
+                MovementId = Guid.Parse(reader.GetString(0)),
+                ShiftId = Guid.Parse(reader.GetString(1)),
+                MovementType = reader.GetString(2),
+                Amount = reader.GetDecimal(3),
+                Reason = reader.GetString(4),
+                ActorId = reader.GetString(5),
+                OccurredAtUtc = DateTime.Parse(reader.GetString(6), null, System.Globalization.DateTimeStyles.AdjustToUniversal)
+            });
+        }
+        return list;
     }
 
     private static CashShift MapShift(SqliteDataReader reader)
@@ -270,7 +397,8 @@ public class ShiftService : IShiftService
             ExpectedCash = reader.GetDecimal(12),
             ActualCountedCash = reader.IsDBNull(13) ? null : reader.GetDecimal(13),
             Variance = reader.IsDBNull(14) ? null : reader.GetDecimal(14),
-            Status = (ShiftStatus)reader.GetInt32(15)
+            Status = (ShiftStatus)reader.GetInt32(15),
+            TenantId = reader.FieldCount > 16 && !reader.IsDBNull(16) ? reader.GetString(16) : "TENANT_LK_01"
         };
     }
 }

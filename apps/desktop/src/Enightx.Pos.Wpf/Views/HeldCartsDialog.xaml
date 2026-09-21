@@ -1,0 +1,51 @@
+<Window x:Class="Enightx.Pos.Wpf.Views.HeldCartsDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Held Bills - Park &amp; Recall" Height="500" Width="680"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        Background="#F5F7FA">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Margin="0,0,0,16">
+            <StackPanel>
+                <TextBlock Text="📋 Parked / Held Bills" FontSize="20" FontWeight="Bold" Foreground="#1A365D"/>
+                <TextBlock Text="Select a held bill to recall into active cart or discard." FontSize="13" Foreground="#718096" Margin="0,4,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Held Carts List -->
+        <Border Grid.Row="1" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="8">
+            <DataGrid x:Name="HeldCartsGrid" ItemsSource="{Binding HeldCarts}" AutoGenerateColumns="False"
+                      CanUserAddRows="False" IsReadOnly="True" SelectionMode="Single"
+                      HeadersVisibility="Column" GridLinesVisibility="Horizontal" RowHeight="44">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Customer / Reference" Binding="{Binding CustomerReference}" Width="*" FontWeight="SemiBold"/>
+                    <DataGridTextColumn Header="Held Time" Binding="{Binding HeldAtUtc, StringFormat={}{0:HH:mm:ss}}" Width="90"/>
+                    <DataGridTextColumn Header="Items" Binding="{Binding Items.Count}" Width="60"/>
+                    <DataGridTextColumn Header="Total (LKR)" Binding="{Binding GrandTotal, StringFormat={}{0:N2}}" Width="110" FontWeight="Bold"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+
+        <!-- Footer Buttons -->
+        <Border Grid.Row="2" Margin="0,16,0,0">
+            <DockPanel>
+                <Button Content="🗑️ Discard Selected" Width="140" Height="38" Background="#FED7D7" Foreground="#C53030"
+                        FontWeight="SemiBold" BorderThickness="0" Cursor="Hand" Click="Discard_Click"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="Close" Width="90" Height="38" Margin="0,0,10,0" Background="#EDF2F7" Foreground="#4A5568"
+                            FontWeight="SemiBold" BorderThickness="0" Cursor="Hand" Click="Close_Click"/>
+                    <Button Content="⚡ Resume Bill" Width="130" Height="38" Background="#2B6CB0" Foreground="White"
+                            FontWeight="Bold" BorderThickness="0" Cursor="Hand" Click="Resume_Click"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+    </Grid>
+</Window>
+
