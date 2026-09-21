@@ -51,6 +51,41 @@ paths:
                   token:
                     type: string
 
+  /api/v1/devices/heartbeat:
+    post:
+      summary: Send periodic heartbeat and telemetry from a counter terminal
+      operationId: deviceHeartbeat
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './schemas/device-heartbeat.json'
+      responses:
+        '200':
+          description: Heartbeat recorded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  server_time_utc:
+                    type: string
+                    format: date-time
+                  acknowledged_sequence:
+                    type: integer
+                  command:
+                    type: string
+                    nullable: true
+        '401':
+          description: Invalid device credentials or missing token
+
+
   /api/v1/sync/push:
     post:
       summary: Push an authenticated batch of events from counter or relay

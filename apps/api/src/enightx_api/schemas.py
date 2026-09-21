@@ -81,3 +81,20 @@ class DeviceEnrollmentResponse(BaseModel):
     device_id: str
     device_generation: int
     token: str
+
+class DeviceHeartbeatRequest(BaseModel):
+    device_id: str
+    device_generation: int = Field(ge=1)
+    hardware_fingerprint: str
+    app_version: str
+    db_size_bytes: Optional[int] = None
+    last_sync_sequence: Optional[int] = 0
+    status: Optional[str] = "online"
+    sent_at: datetime
+
+class DeviceHeartbeatResponse(BaseModel):
+    status: str = "ok"
+    server_time_utc: datetime
+    acknowledged_sequence: int = 0
+    command: Optional[str] = None
+

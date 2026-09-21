@@ -17,6 +17,25 @@ class Device(Base):
     device_generation = Column(Integer, nullable=False, default=1)
     token = Column(String, nullable=False)
     created_at = Column(DateTime(timezone=True), nullable=False, default=func.now())
+    last_seen_at = Column(DateTime(timezone=True), nullable=True)
+    status = Column(String(32), nullable=False, default="online")
+    last_sync_sequence = Column(Integer, nullable=False, default=0)
+    db_size_bytes = Column(Integer, nullable=True)
+
+    heartbeats = relationship("DeviceHeartbeat", back_populates="device", cascade="all, delete-orphan")
+
+class DeviceHeartbeat(Base):
+    __tablename__ = "device_heartbeats"
+
+    heartbeat_id = Column(UUID(as_uuid=True), primary_key=True)
+    device_id = Column(String, ForeignKey("devices.device_id", ondelete="CASCADE"), nullable=False)
+    received_at = Column(DateTime(timezone=True), nullable=False, default=func.now())
+    app_version = Column(String, nullable=False)
+    db_size_bytes = Column(Integer, nullable=True)
+    last_sync_sequence = Column(Integer, nullable=True)
+    status = Column(String(32), nullable=False, default="online")
+
+    device = relationship("Device", back_populates="heartbeats")
 
 class SyncBatch(Base):
     __tablename__ = "sync_batches"

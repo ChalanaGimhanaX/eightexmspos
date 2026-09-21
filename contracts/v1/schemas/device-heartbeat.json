@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://enightx.com/schemas/v1/device-heartbeat.json",
+  "title": "DeviceHeartbeatRequest",
+  "type": "object",
+  "required": [
+    "device_id",
+    "device_generation",
+    "hardware_fingerprint",
+    "app_version",
+    "sent_at"
+  ],
+  "properties": {
+    "device_id": { "type": "string" },
+    "device_generation": { "type": "integer", "minimum": 1 },
+    "hardware_fingerprint": { "type": "string" },
+    "app_version": { "type": "string" },
+    "db_size_bytes": { "type": ["integer", "null"] },
+    "last_sync_sequence": { "type": ["integer", "null"] },
+    "status": { "type": "string" },
+    "sent_at": { "type": "string", "format": "date-time" }
+  }
+}
