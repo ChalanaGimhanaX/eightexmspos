@@ -1,279 +1,90 @@
 #!/usr/bin/env python3
+"""Build an immutable signed v2 release from a complete Windows folder publish.
+
+Does not deploy, edit source versions, or broadcast. Requires cryptography.
+Private signing key stays in the release environment, never in the public output.
 """
-release_desktop.py:
-Automates building and deploying desktop updates for Enightx POS.
-1. Cleans build caches and previous artifacts
-2. Updates version in Enightx.Pos.csproj & Enightx.Pos.Wpf.csproj
-3. Builds modular folder distribution (win-x64)
-4. Packages lightweight modular update zip (~1.2 MB)
-5. Packages full setup zip (~68 MB)
-6. Builds standalone single-file executable fallback (157 MB)
-7. Verifies embedded version metadata in binaries
-8. Generates version.json manifest with dual-channel metadata
-9. Deploys all packages to VPS /srv/enightx/downloads/ via SFTP
-10. Broadcasts real-time WebSocket update push to live terminals
-11. Verifies public download & manifest URLs
-"""
-import os
-import sys
-import re
-import time
-import shutil
+import argparse
+import base64
 import hashlib
 import json
-import zipfile
-import subprocess
-from datetime import datetime, timezone
+import re
+from pathlib import Path
+from urllib.parse import urlparse
 
-TARGET_HOST = "5.189.170.180"
-TARGET_DIR = "/srv/enightx/downloads"
-WORKSPACE = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-CSPROJ_PATH = os.path.join(WORKSPACE, "apps/desktop/src/Enightx.Pos.Wpf/Enightx.Pos.Wpf.csproj")
-CORE_CSPROJ_PATH = os.path.join(WORKSPACE, "apps/desktop/src/Enightx.Pos/Enightx.Pos.csproj")
-OUTPUT_DIR = "/tmp/enightx-desktop-release"
-FOLDER_PUBLISH_DIR = os.path.join(OUTPUT_DIR, "folder")
-SINGLE_PUBLISH_DIR = os.path.join(OUTPUT_DIR, "single")
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import padding, rsa
 
-def clean_build_artifacts():
-    print("--> Cleaning build caches and previous artifacts...")
-    shutil.rmtree(OUTPUT_DIR, ignore_errors=True)
-    for p in ["apps/desktop/src/Enightx.Pos", "apps/desktop/src/Enightx.Pos.Wpf"]:
-        for d in ["bin", "obj"]:
-            target = os.path.join(WORKSPACE, p, d)
-            if os.path.exists(target):
-                shutil.rmtree(target, ignore_errors=True)
-    subprocess.run(["dotnet", "clean", CSPROJ_PATH, "-c", "Release"], cwd=WORKSPACE, capture_output=True)
-    subprocess.run(["dotnet", "clean", CORE_CSPROJ_PATH, "-c", "Release"], cwd=WORKSPACE, capture_output=True)
-    print("    Clean completed.")
 
-def update_csproj_version(version: str):
-    for path in [CSPROJ_PATH, CORE_CSPROJ_PATH]:
-        print(f"--> Updating {path} to version {version}...")
-        with open(path, "r", encoding="utf-8") as f:
-            content = f.read()
-
-        content = re.sub(r"<Version>.*?</Version>", f"<Version>{version}</Version>", content)
-        content = re.sub(r"<AssemblyVersion>.*?</AssemblyVersion>", f"<AssemblyVersion>{version}.0</AssemblyVersion>", content)
-        content = re.sub(r"<FileVersion>.*?</FileVersion>", f"<FileVersion>{version}.0</FileVersion>", content)
-
-        with open(path, "w", encoding="utf-8") as f:
-            f.write(content)
-        print(f"    {os.path.basename(path)} updated.")
-
-def build_folder_release():
-    print(f"--> Building modular folder publish to {FOLDER_PUBLISH_DIR}...")
-    os.makedirs(FOLDER_PUBLISH_DIR, exist_ok=True)
-    env = os.environ.copy()
-    env["DOTNET_ReadyToRun"] = "0"
-    
-    cmd = [
-        "dotnet", "publish", CSPROJ_PATH,
-        "-c", "Release",
-        "-r", "win-x64",
-        "--self-contained", "true",
-        "-p:PublishSingleFile=false",
-        "-o", FOLDER_PUBLISH_DIR
-    ]
-    res = subprocess.run(cmd, env=env, cwd=WORKSPACE, capture_output=True, text=True)
-    if res.returncode != 0:
-        print("ERROR: Folder build failed!")
-        print(res.stderr)
-        print(res.stdout)
-        sys.exit(1)
-    print("    Folder build completed.")
-
-def package_update_zip(version: str) -> str:
-    zip_path = os.path.join(OUTPUT_DIR, "EnightxPos-Update.zip")
-    print(f"--> Packaging modular update zip to {zip_path}...")
-    
-    # We include all application assemblies, app configs, localization DLLs, and custom libraries,
-    # skipping bulky static runtime DLLs (coreclr, clrjit, system runtime libs)
-    with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as z:
-        for root, dirs, files in os.walk(FOLDER_PUBLISH_DIR):
-            for f in files:
-                full_p = os.path.join(root, f)
-                rel_p = os.path.relpath(full_p, FOLDER_PUBLISH_DIR)
-                if f.startswith("Enightx.") or f.endswith(".json") or "sqlite" in f.lower() or "resources.dll" in f.lower():
-                    z.write(full_p, rel_p)
-                
-    size_mb = os.path.getsize(zip_path) / (1024 * 1024)
-    print(f"    Modular update zip created! Size: {size_mb:.2f} MB (~{os.path.getsize(zip_path) // 1024} KB)")
-    return zip_path
-
-def package_setup_zip(version: str) -> str:
-    zip_path = os.path.join(OUTPUT_DIR, "EnightxPos-Setup.zip")
-    print(f"--> Packaging full setup zip to {zip_path}...")
-    with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as z:
-        for root, dirs, files in os.walk(FOLDER_PUBLISH_DIR):
-            for f in files:
-                full_p = os.path.join(root, f)
-                rel_p = os.path.relpath(full_p, FOLDER_PUBLISH_DIR)
-                z.write(full_p, rel_p)
-    size_mb = os.path.getsize(zip_path) / (1024 * 1024)
-    print(f"    Full setup zip created! Size: {size_mb:.2f} MB")
-    return zip_path
-
-def build_standalone_executable() -> str:
-    print(f"--> Compiling standalone Windows single-file executable to {SINGLE_PUBLISH_DIR}...")
-    os.makedirs(SINGLE_PUBLISH_DIR, exist_ok=True)
-    env = os.environ.copy()
-    env["DOTNET_ReadyToRun"] = "0"
-    
-    cmd = [
-        "dotnet", "publish", CSPROJ_PATH,
-        "-c", "Release",
-        "-r", "win-x64",
-        "--self-contained", "true",
-        "-p:PublishSingleFile=true",
-        "-p:IncludeNativeLibrariesForSelfExtract=true",
-        "-o", SINGLE_PUBLISH_DIR
-    ]
-    res = subprocess.run(cmd, env=env, cwd=WORKSPACE, capture_output=True, text=True)
-    if res.returncode != 0:
-        print("ERROR: Standalone single-file build failed!")
-        print(res.stderr)
-        print(res.stdout)
-        sys.exit(1)
-    
-    exe_path = os.path.join(SINGLE_PUBLISH_DIR, "Enightx.Pos.Wpf.exe")
-    size_mb = os.path.getsize(exe_path) / (1024 * 1024)
-    print(f"    Standalone build succeeded! Executable size: {size_mb:.2f} MB")
-    return exe_path
-
-def verify_version(file_path: str, expected_version: str):
-    print(f"--> Verifying version {expected_version} in {os.path.basename(file_path)}...")
-    with open(file_path, "rb") as f:
-        data = f.read()
-    v8 = f"{expected_version}.0".encode("utf-8")
-    v16 = f"{expected_version}.0".encode("utf-16-le")
-    if v8 not in data and v16 not in data:
-        raise ValueError(f"CRITICAL: Version {expected_version}.0 NOT found in {file_path}! Build used stale cache.")
-    print(f"    [OK] Version {expected_version}.0 verified in {os.path.basename(file_path)}")
-
-def compute_sha256(file_path: str) -> str:
-    h = hashlib.sha256()
-    with open(file_path, "rb") as f:
-        for chunk in iter(lambda: f.read(65536), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-def create_manifest(version: str, notes: str, exe_sha256: str, update_zip_path: str) -> str:
-    manifest_path = os.path.join(OUTPUT_DIR, "version.json")
-    zip_sha256 = compute_sha256(update_zip_path)
-    zip_size = os.path.getsize(update_zip_path)
-
-    manifest_data = {
-        "version": version,
-        "releaseNotes": notes,
-        "downloadUrl": "https://posapi.eightexms.site/downloads/Enightx.Pos.Wpf.exe",
-        "updateZipUrl": "https://posapi.eightexms.site/downloads/EnightxPos-Update.zip",
-        "setupZipUrl": "https://posapi.eightexms.site/downloads/EnightxPos-Setup.zip",
-        "sha256": exe_sha256,
-        "zipSha256": zip_sha256,
-        "zipSizeBytes": zip_size,
-        "publishedAtUtc": datetime.now(timezone.utc).isoformat(),
-        "mandatory": False
-    }
-    with open(manifest_path, "w", encoding="utf-8") as f:
-        json.dump(manifest_data, f, indent=2)
-    print(f"    Generated manifest version.json at {manifest_path}")
+def build_release(publish: Path, output: Path, version: str, supported_from: list[str],
+                  base_url: str, signing_key: Path, notes: str = "") -> Path:
+    publish, output, signing_key = publish.resolve(), output.resolve(), signing_key.resolve()
+    if not re.fullmatch(r"\d+\.\d+\.\d+", version) or not supported_from:
+        raise ValueError("Specify major.minor.patch and explicitly certified source versions")
+    if any(not re.fullmatch(r"\d+\.\d+\.\d+", v) or tuple(map(int, v.split('.'))) >= tuple(map(int, version.split('.'))) for v in supported_from):
+        raise ValueError("Source versions must precede the target version")
+    uri = urlparse(base_url)
+    if uri.scheme != "https" or not uri.netloc or uri.username or uri.query or uri.fragment:
+        raise ValueError("Public base URL must use HTTPS without credentials/query")
+    if output == publish or output.is_relative_to(publish) or signing_key.is_relative_to(publish) or signing_key.is_relative_to(output):
+        raise ValueError("Keep output and signing keys outside the publish tree; keys outside public output")
+    for name in ("Enightx.Pos.Wpf.exe", "Enightx.Pos.Wpf.dll", "ApplyUpdate.ps1"):
+        if not (publish / name).is_file():
+            raise ValueError(f"Missing {name}; provide a complete folder publish")
+    deps = json.loads((publish / "Enightx.Pos.Wpf.deps.json").read_text())
+    if f"Enightx.Pos.Wpf/{version}" not in deps.get("libraries", {}) or f"Enightx.Pos/{version}" not in deps.get("libraries", {}):
+        raise ValueError("Published dependency metadata does not match the target version. Rebuild both projects with explicit version properties.")
+    key = serialization.load_pem_private_key(signing_key.read_bytes(), password=None)
+    if not isinstance(key, rsa.RSAPrivateKey) or key.key_size < 3072:
+        raise ValueError("Use an RSA release signing key of at least 3072 bits")
+    destination = output / "releases" / version
+    destination.mkdir(parents=True, exist_ok=False)  # Never overwrite a published release identity.
+    files = []
+    for source in sorted(publish.rglob("*")):
+        if source.is_symlink():
+            raise ValueError("Publish tree must not contain symlinks")
+        if not source.is_file():
+            continue
+        relative = source.relative_to(publish).as_posix()
+        if relative == "release-public-key.pem":
+            continue  # Provision the trust anchor with the initial installation, not by remote replacement.
+        if any(part.startswith('.') for part in relative.split('/')) or source.suffix.lower() in {".db", ".sqlite", ".pem", ".key"} or relative in {"release.json", "installed-release.json"}:
+            raise ValueError(f"Unexpected private/runtime file in publish tree: {relative}")
+        content = source.read_bytes()
+        digest = hashlib.sha256(content).hexdigest()
+        blob = output / "objects" / digest
+        blob.parent.mkdir(parents=True, exist_ok=True)
+        if blob.exists():
+            if hashlib.sha256(blob.read_bytes()).hexdigest() != digest:
+                raise ValueError("Existing object has incorrect contents")
+        else:
+            blob.write_bytes(content)
+        files.append({"path": relative, "sha256": digest, "size": len(content), "url": f"{base_url.rstrip('/')}/objects/{digest}"})
+    manifest = {"protocolVersion": 2, "releaseId": version, "version": version,
+                "releaseNotes": notes, "supportedFrom": supported_from, "databaseSchema": 1, "files": files}
+    payload = json.dumps(manifest, sort_keys=True, separators=(",", ":")).encode()
+    signature = key.sign(payload, padding.PKCS1v15(), hashes.SHA256())
+    envelope = {"payload": base64.b64encode(payload).decode(), "signature": base64.b64encode(signature).decode()}
+    manifest_path = destination / "version-v2.json"
+    manifest_path.write_text(json.dumps(envelope), encoding="utf-8")
+    # Public key is supplied to bootstrap installer separately; never a private key.
+    (destination / "release-public-key.pem").write_bytes(key.public_key().public_bytes(serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo))
     return manifest_path
 
-def deploy_to_vps(exe_path: str, update_zip_path: str, setup_zip_path: str, manifest_path: str):
-    print(f"--> Uploading packages to {TARGET_HOST}:{TARGET_DIR} via Paramiko SFTP...")
-    import paramiko
-    c = paramiko.SSHClient()
-    c.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    c.connect(TARGET_HOST, username="root", password="@0517eighte@ft0517", timeout=20)
-
-    sftp = c.open_sftp()
-    print("    Uploading EnightxPos-Update.zip (~1.2 MB)...")
-    sftp.put(update_zip_path, f"{TARGET_DIR}/EnightxPos-Update.zip")
-    print("    Uploading EnightxPos-Setup.zip (~68 MB)...")
-    sftp.put(setup_zip_path, f"{TARGET_DIR}/EnightxPos-Setup.zip")
-    print("    Uploading Enightx.Pos.Wpf.exe (~157 MB)...")
-    sftp.put(exe_path, f"{TARGET_DIR}/Enightx.Pos.Wpf.exe")
-    print("    Uploading version.json...")
-    sftp.put(manifest_path, f"{TARGET_DIR}/version.json")
-    sftp.close()
-
-    # Copy alias EnightxPos.exe & fix permissions
-    chan = c.get_transport().open_session()
-    chan.exec_command(f"cp -f {TARGET_DIR}/Enightx.Pos.Wpf.exe {TARGET_DIR}/EnightxPos.exe && chmod 644 {TARGET_DIR}/* && ls -lh {TARGET_DIR}/")
-    while not chan.exit_status_ready():
-        time.sleep(0.2)
-    print(chan.recv(4096).decode("utf-8", errors="replace"))
-    c.close()
-
-def broadcast_realtime_update(manifest_data: dict):
-    print("--> Triggering real-time WebSocket broadcast to live terminals...")
-    broadcast_url = "https://posapi.eightexms.site/api/v1/updates/broadcast"
-    try:
-        import urllib.request
-        req = urllib.request.Request(
-            broadcast_url,
-            data=json.dumps(manifest_data).encode("utf-8"),
-            headers={"Content-Type": "application/json"}
-        )
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-            print(f"    Broadcast sent! Active live terminals notified: {data.get('recipient_count', 0)}")
-    except Exception as ex:
-        print(f"    Notice: Broadcast trigger returned: {ex}")
-
-def verify_public_urls():
-    print("--> Verifying public HTTPS endpoints...")
-    urls = [
-        "https://posapi.eightexms.site/downloads/version.json",
-        "https://posapi.eightexms.site/downloads/EnightxPos-Update.zip",
-        "https://posapi.eightexms.site/downloads/EnightxPos-Setup.zip",
-        "https://posapi.eightexms.site/downloads/Enightx.Pos.Wpf.exe",
-        "https://posapi.eightexms.site/downloads/EnightxPos.exe"
-    ]
-    for url in urls:
-        res = subprocess.run(["curl", "-s", "-I", url], capture_output=True, text=True)
-        first_line = res.stdout.splitlines()[0] if res.stdout else "No response"
-        print(f"    {url} -> {first_line}")
 
 def main():
-    version = sys.argv[1] if len(sys.argv) > 1 else "1.0.6"
-    notes = sys.argv[2] if len(sys.argv) > 2 else "Enightx POS v1.0.6: Product Catalog Quick-Pick Tiles, Category Chips, Instant Search, and 1-Click Cloud Sync"
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--publish", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--version", required=True)
+    parser.add_argument("--supported-from", nargs="+", required=True)
+    parser.add_argument("--base-url", required=True)
+    parser.add_argument("--signing-key", type=Path, required=True)
+    parser.add_argument("--notes", default="")
+    args = parser.parse_args()
+    result = build_release(args.publish, args.output, args.version, args.supported_from, args.base_url, args.signing_key, args.notes)
+    print(f"Prepared {result}. Upload objects and immutable release first; atomically promote version-v2.json last.")
 
-    print(f"==================================================")
-    print(f" Enightx POS Desktop Release - Version {version}")
-    print(f" Release Notes: {notes}")
-    print(f"==================================================")
-
-    # 1. Clean build artifacts and caches
-    clean_build_artifacts()
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-    update_csproj_version(version)
-    
-    # 2. Build modular folder and packages
-    build_folder_release()
-    verify_version(os.path.join(FOLDER_PUBLISH_DIR, "Enightx.Pos.Wpf.dll"), version)
-    update_zip_path = package_update_zip(version)
-    setup_zip_path = package_setup_zip(version)
-
-    # 3. Build standalone single-file executable fallback
-    exe_path = build_standalone_executable()
-    verify_version(exe_path, version)
-    exe_sha256 = compute_sha256(exe_path)
-
-    # 4. Create manifest
-    manifest_path = create_manifest(version, notes, exe_sha256, update_zip_path)
-    with open(manifest_path, "r", encoding="utf-8") as f:
-        manifest_data = json.load(f)
-
-    # 5. Deploy to VPS
-    deploy_to_vps(exe_path, update_zip_path, setup_zip_path, manifest_path)
-
-    # 6. Broadcast to connected terminals
-    broadcast_realtime_update(manifest_data)
-
-    # 7. Verify endpoints
-    verify_public_urls()
-    print("\n✅ Desktop modular release completed successfully!")
 
 if __name__ == "__main__":
     main()

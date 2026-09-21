@@ -11,6 +11,8 @@ public partial class MainWindow : Window
     private User? _currentUser;
     private CashShift? _currentShift;
     private UpdateManifest? _latestManifest;
+    private BillingViewModel? _billingVm;
+    private bool _updateDialogOpen;
 
     public MainWindow()
     {
@@ -18,6 +20,7 @@ public partial class MainWindow : Window
         Loaded += MainWindow_Loaded;
         App.UpdateService.LiveUpdateReceived += OnLiveUpdateReceived;
         App.UpdateService.StartListeningForLiveUpdates();
+        Closed += (_, _) => { App.UpdateService.LiveUpdateReceived -= OnLiveUpdateReceived; App.UpdateService.StopListeningForLiveUpdates(); };
         ShowLogin();
     }
 
@@ -30,15 +33,7 @@ public partial class MainWindow : Window
     {
         Dispatcher.InvokeAsync(() =>
         {
-            _latestManifest = manifest;
-            UpdateBannerText.Text = $"🚀 LIVE UPDATE: Version {manifest.Version} is available! Click to install.";
-            UpdateBanner.Visibility = Visibility.Visible;
-
-            var dialog = new UpdateDialog(_latestManifest, App.UpdateService.CurrentVersion, App.UpdateService)
-            {
-                Owner = this
-            };
-            dialog.ShowDialog();
+            ShowUpdateBanner(manifest);
         });
     }
 
@@ -49,15 +44,7 @@ public partial class MainWindow : Window
             var check = await App.UpdateService.CheckForUpdatesAsync();
             if (check.UpdateAvailable && check.Manifest != null)
             {
-                _latestManifest = check.Manifest;
-                UpdateBannerText.Text = $"A new update (v{_latestManifest.Version}) is available! Click to install.";
-                UpdateBanner.Visibility = Visibility.Visible;
-
-                var dialog = new UpdateDialog(_latestManifest, App.UpdateService.CurrentVersion, App.UpdateService)
-                {
-                    Owner = this
-                };
-                dialog.ShowDialog();
+                ShowUpdateBanner(check.Manifest);
             }
         }
         catch
@@ -68,14 +55,30 @@ public partial class MainWindow : Window
 
     private void OpenUpdateDialog_Click(object sender, RoutedEventArgs e)
     {
+        if (_updateDialogOpen) return;
+        if (_billingVm?.CartItems.Count > 0)
+        {
+            MessageBox.Show("Finish or clear the current bill before installing an update.", "Update available");
+            return;
+        }
         if (_latestManifest != null)
         {
             var dialog = new UpdateDialog(_latestManifest, App.UpdateService.CurrentVersion, App.UpdateService)
             {
                 Owner = this
             };
-            dialog.ShowDialog();
+            _updateDialogOpen = true;
+            try { dialog.ShowDialog(); }
+            finally { _updateDialogOpen = false; }
         }
+    }
+
+    private void ShowUpdateBanner(UpdateManifest manifest)
+    {
+        if (_latestManifest != null && !UpdateService.IsVersionNewer(manifest.Version, _latestManifest.Version)) return;
+        _latestManifest = manifest;
+        UpdateBannerText.Text = $"Version {manifest.Version} is available. Install when billing is finished.";
+        UpdateBanner.Visibility = Visibility.Visible;
     }
 
     private void DismissUpdateBanner_Click(object sender, RoutedEventArgs e)
@@ -109,6 +112,7 @@ public partial class MainWindow : Window
         }
 
         var billingVm = new BillingViewModel(_currentUser, _currentShift, App.CatalogService, App.SaleService);
+        _billingVm = billingVm;
         var billingView = new BillingView { DataContext = billingVm };
 
         billingView.RequestPayment += () =>

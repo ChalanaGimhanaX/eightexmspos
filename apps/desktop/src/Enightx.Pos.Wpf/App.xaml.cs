@@ -22,6 +22,26 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        // A power loss during replacement requires recovery before opening business data.
+        var installResult = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "EnightxPOS", "updates-v2", "install-result.json");
+        if (System.IO.File.Exists(installResult))
+        {
+            using var state = System.Text.Json.JsonDocument.Parse(System.IO.File.ReadAllText(installResult));
+            var status = state.RootElement.GetProperty("status").GetString();
+            if (status == "installing")
+            {
+                MessageBox.Show($"An update was interrupted. Restore the saved application backup before starting billing. Recovery details: {installResult}", "Update recovery required");
+                Shutdown();
+                return;
+            }
+            if (status == "installed" && state.RootElement.GetProperty("version").GetString() != typeof(App).Assembly.GetName().Version?.ToString(3))
+            {
+                MessageBox.Show($"The running version does not match the installed release. Check your shortcut and installation. Details: {installResult}", "Update verification failed");
+                Shutdown();
+                return;
+            }
+        }
+
         // Standard local SQLite database path per counter
         var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         var dbPath = System.IO.Path.Combine(appData, "EnightxPOS", "enightx_local.db");

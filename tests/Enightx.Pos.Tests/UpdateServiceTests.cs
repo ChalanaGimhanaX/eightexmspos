@@ -1,196 +1,145 @@
 using System.Net;
+using System.Net.Http.Headers;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
-using Xunit;
 using Enightx.Pos.Services;
+using Xunit;
 
 namespace Enightx.Pos.Tests;
 
-public class UpdateServiceTests
+public class UpdateServiceTests : IDisposable
 {
+    private readonly string _root = Path.Combine(Path.GetTempPath(), "enightx-update-test-" + Guid.NewGuid().ToString("N"));
+    private readonly RSA _key = RSA.Create(3072);
+    private string Installed => Path.Combine(_root, "installed");
+    private string Cache => Path.Combine(_root, "cache");
+    private static readonly byte[] Exe = Encoding.UTF8.GetBytes("target executable");
+    private static readonly byte[] Dll = Encoding.UTF8.GetBytes("target assembly");
+    public UpdateServiceTests() { Directory.CreateDirectory(Installed); }
+    private static ReleaseFile FileEntry(string name, byte[] data) => new() { Path = name, Size = data.Length,
+        Sha256 = Convert.ToHexString(SHA256.HashData(data)), Url = "https://mock/" + name };
+    private static UpdateManifest Manifest() => new() { ProtocolVersion = 2, ReleaseId = "1.0.4", Version = "1.0.4",
+        SupportedFrom = ["1.0.1"], Files = [FileEntry("Enightx.Pos.Wpf.exe", Exe), FileEntry("Enightx.Pos.Wpf.dll", Dll)] };
+    private byte[] Envelope(UpdateManifest manifest)
+    {
+        var payload = JsonSerializer.SerializeToUtf8Bytes(manifest, UpdateService.JsonOptions);
+        return JsonSerializer.SerializeToUtf8Bytes(new { payload = Convert.ToBase64String(payload),
+            signature = Convert.ToBase64String(_key.SignData(payload, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1)) });
+    }
+    private UpdateService Service(Handler handler) => new(new HttpClient(handler), "https://mock/version-v2.json", "1.0.1", Installed, Cache, _key.ExportSubjectPublicKeyInfoPem());
+    private Handler Transport(UpdateManifest? manifest = null) => new(Envelope(manifest ?? Manifest()));
+
     [Theory]
-    [InlineData("1.0.1", "1.0.0", true)]
-    [InlineData("1.1.0", "1.0.9", true)]
-    [InlineData("2.0.0", "1.9.9", true)]
+    [InlineData("1.0.10", "1.0.9", true)]
+    [InlineData("1.0.1.0", "1.0.1", false)]
     [InlineData("v1.0.2", "1.0.1", true)]
-    [InlineData("1.0.0", "1.0.0", false)]
-    [InlineData("1.0.0", "1.0.1", false)]
-    [InlineData("0.9.9", "1.0.0", false)]
-    public void IsVersionNewer_CalculatesCorrectly(string serverVer, string currentVer, bool expected)
-    {
-        var result = UpdateService.IsVersionNewer(serverVer, currentVer);
-        Assert.Equal(expected, result);
-    }
+    [InlineData("broken", "1.0.1", false)]
+    [InlineData("1.0.1", "1.0.4", false)]
+    public void VersionsAreNumericAndNormalized(string next, string current, bool expected) => Assert.Equal(expected, UpdateService.IsVersionNewer(next, current));
 
     [Fact]
-    public async Task CheckForUpdates_NewerVersionAvailable_ReturnsTrue()
+    public async Task RepeatedAndConcurrentHintsNotifyOnceWithoutDownloading()
     {
-        var manifest = new UpdateManifest
-        {
-            Version = "1.0.2",
-            ReleaseNotes = "Auto update feature added",
-            DownloadUrl = "https://posapi.eightexms.site/downloads/Enightx.Pos.Wpf.exe",
-            Mandatory = false
-        };
-
-        var handler = new MockHttpMessageHandler(HttpStatusCode.OK, JsonSerializer.Serialize(manifest));
-        var client = new HttpClient(handler);
-        var service = new UpdateService(client, "https://mock/version.json", "1.0.1");
-
+        var handler = Transport(); var service = Service(handler); int notifications = 0;
+        service.LiveUpdateReceived += _ => Interlocked.Increment(ref notifications);
+        await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => service.NotifyFromServerAsync()));
+        Assert.Equal(1, notifications); Assert.Equal(0, handler.FileRequests);
+    }
+    [Fact]
+    public async Task AToDReusesUnchangedFilesAndConcurrentPreparationDownloadsOnlyOnce()
+    {
+        await File.WriteAllBytesAsync(Path.Combine(Installed, "Enightx.Pos.Wpf.exe"), Exe);
+        var handler = Transport(); var service = Service(handler);
+        var check = await service.CheckForUpdatesAsync(); Assert.True(check.UpdateAvailable);
+        var results = await Task.WhenAll(service.PrepareUpdateAsync(check.Manifest!), service.PrepareUpdateAsync(check.Manifest!));
+        Assert.Equal(results[0], results[1]); Assert.Equal(1, handler.FileRequests);
+        Assert.Equal(Dll, await File.ReadAllBytesAsync(Path.Combine(results[0], "Enightx.Pos.Wpf.dll")));
+        // Persisted stage/cache survives a new application process/service instance.
+        var restarted = Service(handler); var again = await restarted.CheckForUpdatesAsync();
+        await restarted.PrepareUpdateAsync(again.Manifest!);
+        Assert.Equal(1, handler.FileRequests);
+    }
+    [Fact]
+    public async Task ResumePartialFileUsesRangeAndRetainsWholeRelease()
+    {
+        var manifest = Manifest(); var handler = Transport(manifest); var service = Service(handler);
+        Directory.CreateDirectory(Path.Combine(Cache, "objects"));
+        await File.WriteAllBytesAsync(Path.Combine(Cache, "objects", manifest.Files[0].Sha256.ToLowerInvariant() + ".part"), Exe[..5]);
         var check = await service.CheckForUpdatesAsync();
-
-        Assert.True(check.UpdateAvailable);
-        Assert.NotNull(check.Manifest);
-        Assert.Equal("1.0.2", check.Manifest.Version);
-        Assert.Equal("Auto update feature added", check.Manifest.ReleaseNotes);
+        var stage = await service.PrepareUpdateAsync(check.Manifest!);
+        Assert.Contains(5L, handler.Offsets); Assert.Equal(Exe, await File.ReadAllBytesAsync(Path.Combine(stage, "Enightx.Pos.Wpf.exe")));
     }
-
     [Fact]
-    public async Task CheckForUpdates_SameOrOlderVersion_ReturnsFalse()
+    public async Task ServerIgnoringRangeRestartsOnlyThatFile()
     {
-        var manifest = new UpdateManifest
-        {
-            Version = "1.0.0",
-            ReleaseNotes = "Old release",
-            DownloadUrl = "https://mock/app.exe"
-        };
-
-        var handler = new MockHttpMessageHandler(HttpStatusCode.OK, JsonSerializer.Serialize(manifest));
-        var client = new HttpClient(handler);
-        var service = new UpdateService(client, "https://mock/version.json", "1.0.0");
-
-        var check = await service.CheckForUpdatesAsync();
-
-        Assert.False(check.UpdateAvailable);
+        var manifest = Manifest(); var handler = Transport(manifest); handler.IgnoreRange = true;
+        Directory.CreateDirectory(Path.Combine(Cache, "objects"));
+        await File.WriteAllBytesAsync(Path.Combine(Cache, "objects", manifest.Files[0].Sha256.ToLowerInvariant() + ".part"), Exe[..5]);
+        var service = Service(handler); var check = await service.CheckForUpdatesAsync();
+        var stage = await service.PrepareUpdateAsync(check.Manifest!);
+        Assert.Equal(Exe, await File.ReadAllBytesAsync(Path.Combine(stage, "Enightx.Pos.Wpf.exe")));
     }
-
     [Fact]
-    public async Task CheckForUpdates_NetworkOffline_FailsSilently()
+    public async Task CorruptPayloadDoesNotStageOrRetryAutomatically()
     {
-        var handler = new MockHttpMessageHandler(HttpStatusCode.ServiceUnavailable, "");
-        var client = new HttpClient(handler);
-        var service = new UpdateService(client, "https://mock/version.json", "1.0.0");
-
-        var check = await service.CheckForUpdatesAsync();
-
-        Assert.False(check.UpdateAvailable);
-        Assert.Equal("1.0.0", check.CurrentVersion);
+        var handler = Transport(); handler.Corrupt = true;
+        var service = Service(handler); var check = await service.CheckForUpdatesAsync();
+        await Assert.ThrowsAsync<InvalidDataException>(() => service.PrepareUpdateAsync(check.Manifest!));
+        Assert.Equal(1, handler.FileRequests);
+        Assert.False(File.Exists(Path.Combine(Cache, "staged", "1.0.4", "release.json")));
     }
-
     [Fact]
-    public void ProcessWebSocketMessage_NewerVersion_FiresLiveUpdateReceived()
+    public async Task NewDependencyIsIncludedEvenWhenNameDoesNotMatchApplication()
     {
-        var service = new UpdateService(currentVersion: "1.0.1");
-        UpdateManifest? received = null;
-        service.LiveUpdateReceived += m => received = m;
-
-        var json = """
-        {
-            "event": "update_available",
-            "manifest": {
-                "version": "1.0.2",
-                "releaseNotes": "Real-time push works!",
-                "downloadUrl": "https://mock/app.exe"
-            }
-        }
-        """;
-
-        service.ProcessWebSocketMessage(json);
-
-        Assert.NotNull(received);
-        Assert.Equal("1.0.2", received.Version);
-        Assert.Equal("Real-time push works!", received.ReleaseNotes);
+        var manifest = Manifest(); manifest.Files.Add(FileEntry("ThirdParty.dll", Dll));
+        var handler = Transport(manifest); var service = Service(handler); var check = await service.CheckForUpdatesAsync();
+        var stage = await service.PrepareUpdateAsync(check.Manifest!);
+        Assert.True(File.Exists(Path.Combine(stage, "ThirdParty.dll")));
     }
-
     [Fact]
-    public void ProcessWebSocketMessage_SameOrOlderVersion_DoesNotFire()
+    public async Task UnsupportedJumpAndSchemaChangeAreBlocked()
     {
-        var service = new UpdateService(currentVersion: "1.0.2");
-        UpdateManifest? received = null;
-        service.LiveUpdateReceived += m => received = m;
-
-        var json = """
-        {
-            "event": "update_available",
-            "manifest": {
-                "version": "1.0.1",
-                "releaseNotes": "Older version"
-            }
-        }
-        """;
-
-        service.ProcessWebSocketMessage(json);
-
-        Assert.Null(received);
+        var manifest = Manifest(); manifest.SupportedFrom = ["1.0.3"];
+        Assert.False((await Service(Transport(manifest)).CheckForUpdatesAsync()).UpdateAvailable);
+        manifest.SupportedFrom = ["1.0.1"]; manifest.DatabaseSchema = 2;
+        Assert.False((await Service(Transport(manifest)).CheckForUpdatesAsync()).UpdateAvailable);
     }
-
     [Fact]
-    public void IsModularInstallation_DetectsBasedOnCoreClr()
+    public async Task WrongSigningKeyAndMutatedManifestAreBlocked()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), "test_modular_" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(tempDir);
-        try
-        {
-            var nonModularService = new UpdateService(baseDirectory: tempDir);
-            Assert.False(nonModularService.IsModularInstallation());
+        var handler = Transport(); using var wrongKey = RSA.Create(3072);
+        var wrong = new UpdateService(new HttpClient(handler), "https://mock/version-v2.json", "1.0.1", Installed, Cache, wrongKey.ExportSubjectPublicKeyInfoPem());
+        Assert.False((await wrong.CheckForUpdatesAsync()).UpdateAvailable);
+        var service = Service(handler); var check = await service.CheckForUpdatesAsync();
+        check.Manifest!.Files[0].Url = "https://mock/injected";
+        await Assert.ThrowsAsync<InvalidDataException>(() => service.PrepareUpdateAsync(check.Manifest));
+    }
+    [Theory]
+    [InlineData("../escape.dll")]
+    [InlineData("/absolute.dll")]
+    [InlineData("C:/absolute.dll")]
+    [InlineData("aux.dll")]
+    [InlineData("dir/../file.dll")]
+    [InlineData("data.db")]
+    public void RejectUnsafePaths(string path) => Assert.Throws<InvalidDataException>(() => UpdateService.SafePath(Installed, path));
 
-            File.WriteAllText(Path.Combine(tempDir, "coreclr.dll"), "dummy");
-            var modularService = new UpdateService(baseDirectory: tempDir);
-            Assert.True(modularService.IsModularInstallation());
-        }
-        finally
+    private sealed class Handler(byte[] envelope) : HttpMessageHandler
+    {
+        public int FileRequests;
+        public bool Corrupt, IgnoreRange;
+        public List<long> Offsets = [];
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
         {
-            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+            if (request.RequestUri!.AbsolutePath.EndsWith("version-v2.json")) return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(envelope) });
+            Interlocked.Increment(ref FileRequests);
+            byte[] data = request.RequestUri.AbsolutePath.EndsWith(".exe") ? Exe : Dll;
+            long offset = request.Headers.Range?.Ranges.First().From ?? 0; Offsets.Add(offset);
+            var content = new ByteArrayContent(Corrupt ? new byte[data.Length] : IgnoreRange ? data : data[(int)offset..]);
+            var status = offset > 0 && !IgnoreRange ? HttpStatusCode.PartialContent : HttpStatusCode.OK;
+            if (status == HttpStatusCode.PartialContent) content.Headers.ContentRange = new ContentRangeHeaderValue(offset, data.Length - 1, data.Length);
+            return Task.FromResult(new HttpResponseMessage(status) { Content = content });
         }
     }
-
-    [Fact]
-    public void GetBestDownloadUrl_ChoosesZipForModular_AndExeForStandalone()
-    {
-        var tempDir = Path.Combine(Path.GetTempPath(), "test_best_url_" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(tempDir);
-        try
-        {
-            var manifest = new UpdateManifest
-            {
-                Version = "1.0.3",
-                DownloadUrl = "https://mock/Enightx.Pos.Wpf.exe",
-                UpdateZipUrl = "https://mock/EnightxPos-Update.zip",
-                SetupZipUrl = "https://mock/EnightxPos-Setup.zip",
-                ZipSizeBytes = 1200000
-            };
-
-            var nonModular = new UpdateService(baseDirectory: tempDir);
-            Assert.Equal("https://mock/EnightxPos-Setup.zip", nonModular.GetBestDownloadUrl(manifest));
-
-            File.WriteAllText(Path.Combine(tempDir, "coreclr.dll"), "dummy");
-            var modular = new UpdateService(baseDirectory: tempDir);
-            Assert.Equal("https://mock/EnightxPos-Update.zip", modular.GetBestDownloadUrl(manifest));
-        }
-        finally
-        {
-            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
-        }
-    }
-
-    private class MockHttpMessageHandler : HttpMessageHandler
-    {
-        private readonly HttpStatusCode _code;
-        private readonly string _content;
-
-        public MockHttpMessageHandler(HttpStatusCode code, string content)
-        {
-            _code = code;
-            _content = content;
-        }
-
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-        {
-            var response = new HttpResponseMessage(_code)
-            {
-                Content = new StringContent(_content, System.Text.Encoding.UTF8, "application/json")
-            };
-            return Task.FromResult(response);
-        }
-    }
+    public void Dispose() { _key.Dispose(); Directory.Delete(_root, true); }
 }
-
