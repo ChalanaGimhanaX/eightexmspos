@@ -1,3 +1,6 @@
+using System.Net.Http.Json;
+using System.Text;
+using System.Text.Json;
 using Microsoft.Data.Sqlite;
 using Enightx.Pos.Domain;
 using Enightx.Pos.Storage;
@@ -9,15 +12,27 @@ public interface ISyncService
     Task<List<OutboxEvent>> GetPendingEventsAsync(int limit = 50);
     Task MarkEventsAcknowledgedAsync(IEnumerable<Guid> eventIds);
     Task<long> GetLastAcknowledgedSequenceAsync(string branchId, string deviceId);
+    Task<SyncPushResult> PushPendingBatchesAsync(int batchSize = 50, CancellationToken ct = default);
+    Task<CatalogSyncResult> PullCatalogUpdatesAsync(CancellationToken ct = default);
 }
 
 public class SyncService : ISyncService
 {
     private readonly PosDatabase _db;
+    private readonly ICatalogService _catalogService;
+    private readonly HttpClient _httpClient;
+    private readonly string _apiBaseUrl;
 
-    public SyncService(PosDatabase db)
+    public SyncService(
+        PosDatabase db,
+        ICatalogService? catalogService = null,
+        HttpClient? httpClient = null,
+        string apiBaseUrl = "https://posapi.eightexms.site")
     {
         _db = db;
+        _catalogService = catalogService ?? new CatalogService(db);
+        _httpClient = httpClient ?? new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+        _apiBaseUrl = apiBaseUrl;
     }
 
     public async Task<List<OutboxEvent>> GetPendingEventsAsync(int limit = 50)
@@ -89,6 +104,184 @@ public class SyncService : ISyncService
         cmd.Parameters.AddWithValue("$did", deviceId);
         var result = await cmd.ExecuteScalarAsync();
         return Convert.ToInt64(result);
+    }
+
+    public async Task<SyncPushResult> PushPendingBatchesAsync(int batchSize = 50, CancellationToken ct = default)
+    {
+        var pendingEvents = await GetPendingEventsAsync(batchSize);
+        if (pendingEvents.Count == 0)
+        {
+            return new SyncPushResult { Success = true, PushedCount = 0 };
+        }
+
+        try
+        {
+            var first = pendingEvents[0];
+            var batchId = Guid.NewGuid();
+            var maxSeq = pendingEvents.Max(e => e.SourceSequence);
+
+            var batchObj = new
+            {
+                batch_id = batchId,
+                tenant_id = first.TenantId,
+                source_device_id = first.DeviceId,
+                source_generation = first.DeviceGeneration,
+                batch_sequence = (int)maxSeq,
+                sent_at = DateTime.UtcNow.ToString("o"),
+                events = pendingEvents.Select(e => new
+                {
+                    event_id = e.EventId,
+                    tenant_id = e.TenantId,
+                    branch_id = e.BranchId,
+                    device_id = e.DeviceId,
+                    device_generation = e.DeviceGeneration,
+                    source_sequence = (int)e.SourceSequence,
+                    schema_version = e.SchemaVersion,
+                    occurred_at = e.OccurredAtUtc.ToString("o"),
+                    actor_id = e.ActorId,
+                    causal_reference = e.CausalReference,
+                    payload = JsonDocument.Parse(e.PayloadJson).RootElement
+                }).ToList()
+            };
+
+            var url = $"{_apiBaseUrl.TrimEnd('/')}/api/v1/sync/push";
+            using var resp = await _httpClient.PostAsJsonAsync(url, batchObj, ct);
+
+            if (!resp.IsSuccessStatusCode)
+            {
+                var err = await resp.Content.ReadAsStringAsync(ct);
+                return new SyncPushResult
+                {
+                    Success = false,
+                    PushedCount = 0,
+                    ErrorMessage = $"Server returned {resp.StatusCode}: {err}"
+                };
+            }
+
+            var res = await resp.Content.ReadFromJsonAsync<SyncPushApiResponse>(cancellationToken: ct);
+            if (res != null && res.Status.Equals("acknowledged", StringComparison.OrdinalIgnoreCase))
+            {
+                await MarkEventsAcknowledgedAsync(pendingEvents.Select(e => e.EventId));
+                return new SyncPushResult
+                {
+                    Success = true,
+                    PushedCount = pendingEvents.Count,
+                    AcknowledgedSequence = res.AcknowledgedSequence
+                };
+            }
+
+            return new SyncPushResult
+            {
+                Success = false,
+                PushedCount = 0,
+                ErrorMessage = "Sync server did not acknowledge batch."
+            };
+        }
+        catch (HttpRequestException ex)
+        {
+            return new SyncPushResult
+            {
+                Success = false,
+                PushedCount = 0,
+                NetworkOffline = true,
+                ErrorMessage = ex.Message
+            };
+        }
+        catch (TaskCanceledException) when (!ct.IsCancellationRequested)
+        {
+            return new SyncPushResult
+            {
+                Success = false,
+                PushedCount = 0,
+                NetworkOffline = true,
+                ErrorMessage = "Push request timed out."
+            };
+        }
+        catch (Exception ex)
+        {
+            return new SyncPushResult
+            {
+                Success = false,
+                PushedCount = 0,
+                ErrorMessage = ex.Message
+            };
+        }
+    }
+
+    public async Task<CatalogSyncResult> PullCatalogUpdatesAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var lastSync = await _catalogService.GetLastCatalogSyncTimeAsync();
+            var query = new List<string>();
+            if (lastSync.HasValue)
+            {
+                query.Add($"since={Uri.EscapeDataString(lastSync.Value.ToString("o"))}");
+            }
+            query.Add("limit=200");
+            var queryString = string.Join("&", query);
+
+            var url = $"{_apiBaseUrl.TrimEnd('/')}/api/v1/sync/catalog?{queryString}";
+            using var resp = await _httpClient.GetAsync(url, ct);
+
+            if (!resp.IsSuccessStatusCode)
+            {
+                var err = await resp.Content.ReadAsStringAsync(ct);
+                return new CatalogSyncResult
+                {
+                    Success = false,
+                    ErrorMessage = $"Server returned {resp.StatusCode}: {err}"
+                };
+            }
+
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var data = await resp.Content.ReadFromJsonAsync<CatalogSyncResponseDto>(options, ct);
+            if (data == null)
+            {
+                return new CatalogSyncResult
+                {
+                    Success = false,
+                    ErrorMessage = "Received empty response from catalog sync endpoint."
+                };
+            }
+
+            await _catalogService.ApplyCatalogUpdatesAsync(data);
+
+            return new CatalogSyncResult
+            {
+                Success = true,
+                ProductsUpdated = data.Products.Count,
+                CategoriesUpdated = data.Categories.Count,
+                ItemsDeleted = data.DeletedItemIds.Count,
+                ServerTimeUtc = data.ServerTime
+            };
+        }
+        catch (HttpRequestException ex)
+        {
+            return new CatalogSyncResult
+            {
+                Success = false,
+                NetworkOffline = true,
+                ErrorMessage = ex.Message
+            };
+        }
+        catch (TaskCanceledException) when (!ct.IsCancellationRequested)
+        {
+            return new CatalogSyncResult
+            {
+                Success = false,
+                NetworkOffline = true,
+                ErrorMessage = "Catalog sync timed out."
+            };
+        }
+        catch (Exception ex)
+        {
+            return new CatalogSyncResult
+            {
+                Success = false,
+                ErrorMessage = ex.Message
+            };
+        }
     }
 }
 

@@ -81,3 +81,31 @@ class DeviceEnrollmentResponse(BaseModel):
     device_id: str
     device_generation: int
     token: str
+
+class CategorySchema(BaseModel):
+    category_id: str
+    name: str
+    description: Optional[str] = None
+    is_active: bool = True
+    updated_at: datetime
+
+class CatalogProductSchema(BaseModel):
+    product_id: str
+    category_id: Optional[str] = None
+    barcode: str
+    name: str
+    name_si: Optional[str] = None
+    name_ta: Optional[str] = None
+    unit_price: Decimal
+    cost_basis: Decimal = Decimal("0.00")
+    tax_rate: Decimal = Decimal("0.0000")
+    is_active: bool = True
+    updated_at: datetime
+
+class CatalogSyncResponse(BaseModel):
+    server_time: datetime
+    products: List[CatalogProductSchema] = []
+    categories: List[CategorySchema] = []
+    deleted_item_ids: List[str] = []
+    has_more: bool = False
+

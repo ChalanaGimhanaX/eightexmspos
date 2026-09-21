@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, func
+from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Boolean, Numeric, func
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from .database import Base
@@ -51,4 +51,38 @@ class SyncEvent(Base):
     created_at = Column(DateTime(timezone=True), nullable=False, default=func.now())
 
     batch = relationship("SyncBatch", back_populates="events")
+
+
+class Category(Base):
+    __tablename__ = "categories"
+
+    category_id = Column(String, primary_key=True)
+    tenant_id = Column(String, nullable=False, default="TENANT_LK_01")
+    name = Column(String, nullable=False)
+    description = Column(String, nullable=True)
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+
+
+class Product(Base):
+    __tablename__ = "products"
+
+    product_id = Column(String, primary_key=True)
+    tenant_id = Column(String, nullable=False, default="TENANT_LK_01")
+    category_id = Column(String, ForeignKey("categories.category_id", ondelete="SET NULL"), nullable=True)
+    barcode = Column(String, nullable=False, index=True)
+    name = Column(String, nullable=False)
+    name_si = Column(String, nullable=True)
+    name_ta = Column(String, nullable=True)
+    unit_price = Column(Numeric(12, 2), nullable=False)
+    cost_basis = Column(Numeric(12, 2), nullable=False, default=0)
+    tax_rate = Column(Numeric(6, 4), nullable=False, default=0)
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+
+    category = relationship("Category", backref="products")
 

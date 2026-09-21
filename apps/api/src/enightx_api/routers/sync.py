@@ -1,10 +1,18 @@
-from fastapi import APIRouter, Depends
+from datetime import datetime, timezone
+from typing import Optional
+from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
-from ..schemas import SyncBatchRequest, SyncBatchResponse
+from ..schemas import (
+    SyncBatchRequest,
+    SyncBatchResponse,
+    CatalogSyncResponse,
+    CatalogProductSchema,
+    CategorySchema,
+)
 from ..database import get_db
-from ..models import SyncBatch, SyncEvent
+from ..models import SyncBatch, SyncEvent, Product, Category
 
 router = APIRouter(prefix="/api/v1/sync", tags=["Sync"])
 
@@ -76,3 +84,94 @@ def push_sync_batch(batch: SyncBatchRequest, db: Session = Depends(get_db)):
         acknowledged_sequence=max_seq,
         status="acknowledged"
     )
+
+
+@router.get("/catalog", response_model=CatalogSyncResponse)
+def get_catalog_sync(
+    since: Optional[str] = Query(default=None, description="ISO UTC timestamp"),
+    limit: int = Query(default=100, ge=1, le=1000),
+    db: Session = Depends(get_db)
+):
+    now = datetime.now(timezone.utc)
+    since_dt: Optional[datetime] = None
+
+    if since:
+        try:
+            cleaned = since.strip().replace(" ", "+")
+            if cleaned.endswith("Z") or cleaned.endswith("z"):
+                cleaned = cleaned[:-1] + "+00:00"
+            since_dt = datetime.fromisoformat(cleaned)
+            if since_dt.tzinfo is None:
+                since_dt = since_dt.replace(tzinfo=timezone.utc)
+        except Exception:
+            raise HTTPException(status_code=422, detail="Invalid ISO timestamp format for 'since'")
+
+    prod_query = db.query(Product)
+    cat_query = db.query(Category)
+    deleted_item_ids: list[str] = []
+
+    if since_dt is not None:
+        prod_query = prod_query.filter(
+            Product.updated_at >= since_dt,
+            Product.deleted_at.is_(None)
+        )
+        cat_query = cat_query.filter(
+            Category.updated_at >= since_dt,
+            Category.deleted_at.is_(None)
+        )
+
+        del_prods = db.query(Product.product_id).filter(
+            Product.deleted_at.isnot(None),
+            Product.deleted_at >= since_dt
+        ).all()
+        del_cats = db.query(Category.category_id).filter(
+            Category.deleted_at.isnot(None),
+            Category.deleted_at >= since_dt
+        ).all()
+
+        deleted_item_ids = [r[0] for r in del_prods] + [r[0] for r in del_cats]
+    else:
+        prod_query = prod_query.filter(Product.deleted_at.is_(None))
+        cat_query = cat_query.filter(Category.deleted_at.is_(None))
+
+    products = prod_query.order_by(Product.updated_at.asc()).limit(limit).all()
+    categories = cat_query.order_by(Category.updated_at.asc()).limit(limit).all()
+
+    has_more = len(products) == limit
+
+    product_items = [
+        CatalogProductSchema(
+            product_id=p.product_id,
+            category_id=p.category_id,
+            barcode=p.barcode,
+            name=p.name,
+            name_si=p.name_si,
+            name_ta=p.name_ta,
+            unit_price=p.unit_price,
+            cost_basis=p.cost_basis,
+            tax_rate=p.tax_rate,
+            is_active=p.is_active,
+            updated_at=p.updated_at
+        )
+        for p in products
+    ]
+
+    category_items = [
+        CategorySchema(
+            category_id=c.category_id,
+            name=c.name,
+            description=c.description,
+            is_active=c.is_active,
+            updated_at=c.updated_at
+        )
+        for c in categories
+    ]
+
+    return CatalogSyncResponse(
+        server_time=now,
+        products=product_items,
+        categories=category_items,
+        deleted_item_ids=deleted_item_ids,
+        has_more=has_more
+    )
+

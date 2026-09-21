@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Enightx.Pos.Domain;
 
 public enum Role
@@ -44,6 +46,7 @@ public class User
 public class Product
 {
     public required string ProductId { get; set; }
+    public string? CategoryId { get; set; }
     public required string Barcode { get; set; }
     public required string Name { get; set; }
     public string? NameSi { get; set; }
@@ -163,3 +166,117 @@ public class OutboxEvent
     public string Status { get; set; } = "PENDING"; // "PENDING", "SENT", "ACKNOWLEDGED"
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 }
+
+public class Category
+{
+    public required string CategoryId { get; set; }
+    public required string Name { get; set; }
+    public string? Description { get; set; }
+    public bool IsActive { get; set; } = true;
+    public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
+}
+
+public class CatalogProductDto
+{
+    [JsonPropertyName("product_id")]
+    public required string ProductId { get; set; }
+
+    [JsonPropertyName("category_id")]
+    public string? CategoryId { get; set; }
+
+    [JsonPropertyName("barcode")]
+    public required string Barcode { get; set; }
+
+    [JsonPropertyName("name")]
+    public required string Name { get; set; }
+
+    [JsonPropertyName("name_si")]
+    public string? NameSi { get; set; }
+
+    [JsonPropertyName("name_ta")]
+    public string? NameTa { get; set; }
+
+    [JsonPropertyName("unit_price")]
+    public decimal UnitPrice { get; set; }
+
+    [JsonPropertyName("cost_basis")]
+    public decimal CostBasis { get; set; }
+
+    [JsonPropertyName("tax_rate")]
+    public decimal TaxRate { get; set; }
+
+    [JsonPropertyName("is_active")]
+    public bool IsActive { get; set; } = true;
+
+    [JsonPropertyName("updated_at")]
+    public DateTime UpdatedAt { get; set; }
+}
+
+public class CategoryDto
+{
+    [JsonPropertyName("category_id")]
+    public required string CategoryId { get; set; }
+
+    [JsonPropertyName("name")]
+    public required string Name { get; set; }
+
+    [JsonPropertyName("description")]
+    public string? Description { get; set; }
+
+    [JsonPropertyName("is_active")]
+    public bool IsActive { get; set; } = true;
+
+    [JsonPropertyName("updated_at")]
+    public DateTime UpdatedAt { get; set; }
+}
+
+public class CatalogSyncResponseDto
+{
+    [JsonPropertyName("server_time")]
+    public DateTime ServerTime { get; set; }
+
+    [JsonPropertyName("products")]
+    public List<CatalogProductDto> Products { get; set; } = new();
+
+    [JsonPropertyName("categories")]
+    public List<CategoryDto> Categories { get; set; } = new();
+
+    [JsonPropertyName("deleted_item_ids")]
+    public List<string> DeletedItemIds { get; set; } = new();
+
+    [JsonPropertyName("has_more")]
+    public bool HasMore { get; set; }
+}
+
+public class CatalogSyncResult
+{
+    public bool Success { get; set; }
+    public int ProductsUpdated { get; set; }
+    public int CategoriesUpdated { get; set; }
+    public int ItemsDeleted { get; set; }
+    public DateTime? ServerTimeUtc { get; set; }
+    public bool NetworkOffline { get; set; }
+    public string? ErrorMessage { get; set; }
+}
+
+public class SyncPushResult
+{
+    public bool Success { get; set; }
+    public int PushedCount { get; set; }
+    public long AcknowledgedSequence { get; set; }
+    public bool NetworkOffline { get; set; }
+    public string? ErrorMessage { get; set; }
+}
+
+public class SyncPushApiResponse
+{
+    [JsonPropertyName("batch_id")]
+    public Guid BatchId { get; set; }
+
+    [JsonPropertyName("acknowledged_sequence")]
+    public long AcknowledgedSequence { get; set; }
+
+    [JsonPropertyName("status")]
+    public string Status { get; set; } = "acknowledged";
+}
+

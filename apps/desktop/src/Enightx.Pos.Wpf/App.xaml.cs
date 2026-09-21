@@ -16,6 +16,7 @@ public partial class App : Application
     public static IReceiptService ReceiptService { get; private set; } = null!;
     public static ISyncService SyncService { get; private set; } = null!;
     public static IUpdateService UpdateService { get; private set; } = null!;
+    public static ISyncBackgroundWorker? SyncWorker { get; private set; }
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -30,7 +31,9 @@ public partial class App : Application
         CatalogService = new CatalogService(Database);
         ShiftService = new ShiftService(Database);
         SaleService = new SaleService(Database, CatalogService);
-        SyncService = new SyncService(Database);
+        SyncService = new SyncService(Database, CatalogService);
+        SyncWorker = new SyncBackgroundWorker(SyncService);
+        SyncWorker.Start();
         PrinterService = new MemoryPrinterService(); // WindowsReceiptPrinter can be injected in production
         ReceiptService = new ReceiptService(Database, SaleService, PrinterService);
 
@@ -131,6 +134,7 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        SyncWorker?.Dispose();
         Database?.Dispose();
         base.OnExit(e);
     }
