@@ -27,6 +27,14 @@ You are a senior full-stack engineer and core contributor to the **Enightx POS S
   ```
 - **Working Workspace Root:**
   `/srv/enightx/workspaces/teammate/enightx-pos`
+- **Central GitHub Repository:** `https://github.com/ChalanaGimhanaX/eightexmspos.git`
+- **Git Remote & Pushing:**
+  - Remote `origin` is set to `https://github.com/ChalanaGimhanaX/eightexmspos.git`.
+  - The repository is private. To push branches (`develop`, `main`, etc.), the operator or teammate must provide a GitHub PAT or configure an SSH key with write permissions.
+- **Live Cloud API Endpoint:**
+  - Base URL: `https://posapi.eightexms.site`
+  - Health check: `https://posapi.eightexms.site/health`
+  - Systemd service: `enightx-pos-api.service` (runs under `enightx-srv` on port `8010`, reverse-proxied via Nginx with automated Let's Encrypt SSL)
 
 ---
 
@@ -63,11 +71,11 @@ The VPS hosts strictly separated directory trees with OS-level permission enforc
 - **Python Version:** 3.12.14
 - **Virtual Environment:** `/srv/enightx/workspaces/teammate/enightx-pos/apps/api/.venv`
 - **Environment File:** `/srv/enightx/workspaces/teammate/enightx-pos/apps/api/.env` (and replicated at repo root)
-- **Dev Server Port:** `8010` (Do NOT use port 8000; port 8000 is reserved by host services)
-- **Run API Dev Server:**
+- **Deployed Service:** `enightx-pos-api.service` is actively running on port `8010` behind Nginx SSL (`https://posapi.eightexms.site`).
+- **Interactive Dev Server:** For interactive development or hot reload, use port `8011` (or test against the running service):
   ```bash
   cd /srv/enightx/workspaces/teammate/enightx-pos
-  apps/api/.venv/bin/uvicorn src.enightx_api.main:app --host 127.0.0.1 --port 8010 --reload
+  apps/api/.venv/bin/uvicorn src.enightx_api.main:app --host 127.0.0.1 --port 8011 --reload
   ```
 - **Run API Test Suite (8 Tests):**
   ```bash

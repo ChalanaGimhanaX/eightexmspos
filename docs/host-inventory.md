@@ -92,3 +92,52 @@
   - `enightx-dev` reading `/srv/enightx/staging`: **Permission denied** (exit code 255).
   - `enightx-dev` reading `/srv/enightx/shared/production`: **Permission denied** (exit code 255).
   - `enightx-dev` writing to `/srv/enightx/review/submissions`: **Permitted** (exit code 0).
+
+---
+
+## 5. Central GitHub Remote, Public Cloud API & SSL Deployment
+
+### A. Central GitHub Remote Repository
+- **Central Remote URL:** `https://github.com/ChalanaGimhanaX/eightexmspos.git`
+- **Configured Locations:**
+  1. Local Dev Host (`/root/workspace/enightx Pos System`): `origin` set to `https://github.com/ChalanaGimhanaX/eightexmspos.git`
+  2. VPS Teammate Workspace (`/srv/enightx/workspaces/teammate/enightx-pos`): `origin` set to `https://github.com/ChalanaGimhanaX/eightexmspos.git`
+- **Branches Tracked & Checked Out:**
+  - `main`
+  - `develop`
+  - `codex/dev/phase0-phase1-sale`
+  - `codex/teammate/workspace-init`
+- **Remote Access & Credential Requirements:**
+  - `eightexmspos` is a private GitHub repository.
+  - Public unauthenticated requests receive HTTP 404 / terminal prompt disabled (`fatal: could not read Username for 'https://github.com'`).
+  - Deploy keys for other repositories (e.g. `ChalanaGimhanaX/Nimal-Morters-system`) are strictly rejected by GitHub with `ERROR: Repository not found`.
+  - **Required for Push:** The repository owner must provide a GitHub Personal Access Token (PAT) with `repo` scope or register a dedicated SSH Deploy Key with write permissions for `eightexmspos`.
+
+### B. Production Service Deployment (`enightx-pos-api.service`)
+- **Release Directory:** `/srv/enightx/production/releases/v1.0.0`
+- **Current Symlink:** `/srv/enightx/production/current -> releases/v1.0.0`
+- **Dedicated Python Virtualenv:** `/srv/enightx/production/venv` (Python 3.12.14)
+- **Service User:** `enightx-srv:enightx-deploy` (system user with `/usr/sbin/nologin`)
+- **Systemd Unit File:** `/etc/systemd/system/enightx-pos-api.service`
+  - Active and enabled (`systemctl is-active enightx-pos-api` -> `active`)
+  - Running Uvicorn on `127.0.0.1:8010`
+  - Automatic restart on failure (`RestartSec=5`)
+
+### C. Nginx Reverse Proxy & SSL Configuration
+- **Public FQDN:** `posapi.eightexms.site`
+- **DNS Resolution:** `5.189.170.180` (Contabo VPS)
+- **Nginx Configuration:** `/etc/nginx/conf.d/posapi.eightexms.site.conf`
+  - Port 80: HTTP 301 permanent redirect to `https://posapi.eightexms.site$request_uri`
+  - Port 443: SSL reverse proxy to upstream `http://127.0.0.1:8010`
+  - SSL Certificates: Let's Encrypt automated certificate (`/etc/letsencrypt/live/posapi.eightexms.site/fullchain.pem`, expires 2026-12-20)
+  - Security Headers & Protocols: Modern TLS ciphers, WebSocket upgrade support, client max body size 50M
+
+### D. Public Endpoint Verification
+- `GET https://posapi.eightexms.site/health`
+  - Response: `HTTP/2 200 OK`
+  - Body: `{"status":"ok","service":"enightx-api","version":"1.0.0","timestamp":"..."}`
+- `POST https://posapi.eightexms.site/api/v1/devices/enroll`
+  - Response: `HTTP/2 200 OK`, issues persistent `device_id`, `device_generation: 1`, and security token.
+- `POST https://posapi.eightexms.site/api/v1/sync/push`
+  - Response: `HTTP/2 200 OK`, validates Pydantic UUID / batch schema and acknowledges sequence.
+
