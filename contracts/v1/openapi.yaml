@@ -245,4 +245,60 @@ paths:
         '400':
           description: Invalid transfer status
 
+  /api/v1/reports/sales/summary:
+    get:
+      summary: Retrieve aggregated sales and tender breakdown
+      operationId: getSalesSummaryReport
+      parameters:
+        - name: tenant_id
+          in: query
+          required: false
+          schema:
+            type: string
+            default: TENANT_LK_01
+        - name: branch_id
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Sales summary report retrieved successfully
+
+  /api/v1/reports/top-products:
+    get:
+      summary: Retrieve top-selling products by revenue
+      operationId: getTopProductsReport
+      parameters:
+        - name: tenant_id
+          in: query
+          required: false
+          schema:
+            type: string
+            default: TENANT_LK_01
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Top products retrieved successfully
+
+  /api/v1/reports/dashboard:
+    get:
+      summary: Retrieve unified dashboard metrics for back-office portal
+      operationId: getDashboardSummary
+      parameters:
+        - name: tenant_id
+          in: query
+          required: false
+          schema:
+            type: string
+            default: TENANT_LK_01
+      responses:
+        '200':
+          description: Dashboard metrics retrieved successfully
+
 
