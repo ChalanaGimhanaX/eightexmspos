@@ -45,8 +45,8 @@ def compute_sha256(path: str) -> str:
     return h.hexdigest()
 
 def main():
-    ver = "1.0.12"
-    notes = "Enightx POS v1.0.12: Full Phase 2 & 3 - Held Bills (Park/Recall), Cashier Shift Control & Drawer Reconciliation, Returns & Refunds, Goods Receiving, and Financial Shift/Daily Reports."
+    ver = "1.0.13"
+    notes = "Enightx POS v1.0.13: Customer Credit ('Naya' Ledger), Debt Collections, Customer Management, and Manager Role PIN Authorization Gate."
 
     print(f"==================================================")
     print(f" Building & Deploying Enightx POS v{ver}")
