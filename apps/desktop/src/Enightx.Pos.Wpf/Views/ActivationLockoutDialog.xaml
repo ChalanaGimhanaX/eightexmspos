@@ -1,0 +1,97 @@
+<Window x:Class="Enightx.Pos.Wpf.Views.ActivationLockoutDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="License &amp; Activation Management" Height="620" Width="560"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize" Background="{StaticResource BackgroundBrush}">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Background="{StaticResource PrimaryDarkBrush}" Padding="16" CornerRadius="6" Margin="0,0,0,14">
+            <StackPanel>
+                <TextBlock Text="TERMINAL LICENSE &amp; ACTIVATION" FontWeight="Bold" FontSize="16" Foreground="White"/>
+                <TextBlock Text="Enightx POS Entitlement and Lockout Status" FontSize="12" Foreground="#BBDEFB" Margin="0,4,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Main Body -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <!-- Lockout Alert Banner (Visible when locked out) -->
+                <Border x:Name="LockoutAlertBanner" Background="#FFEBEE" BorderBrush="#EF5350" BorderThickness="1"
+                        Padding="12" CornerRadius="6" Margin="0,0,0,14" Visibility="Collapsed">
+                    <StackPanel>
+                        <TextBlock Text="⚠️ BUSINESS FUNCTIONS LOCKED OUT" FontWeight="Bold" FontSize="13" Foreground="#C62828"/>
+                        <TextBlock x:Name="LockoutAlertMessage" Text="Your license has expired or been frozen. Committing new transactions is blocked until a valid entitlement is applied. All historical data remains safely preserved."
+                                   FontSize="12" Foreground="#B71C1C" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Current Status Card -->
+                <Border Background="{StaticResource SurfaceBrush}" Padding="16" CornerRadius="6"
+                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Margin="0,0,0,14">
+                    <StackPanel>
+                        <TextBlock Text="CURRENT ENTITLEMENT" FontWeight="Bold" FontSize="13" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,10"/>
+
+                        <Grid Margin="0,0,0,6">
+                            <TextBlock Text="License Plan:" Foreground="{StaticResource TextSecondaryBrush}"/>
+                            <TextBlock x:Name="PlanTypeText" Text="2-Day Trial" HorizontalAlignment="Right" FontWeight="Bold"/>
+                        </Grid>
+                        <Grid Margin="0,0,0,6">
+                            <TextBlock Text="Status:" Foreground="{StaticResource TextSecondaryBrush}"/>
+                            <TextBlock x:Name="StatusText" Text="ACTIVE" HorizontalAlignment="Right" FontWeight="Bold" Foreground="#2E7D32"/>
+                        </Grid>
+                        <Grid Margin="0,0,0,6">
+                            <TextBlock Text="Tenant ID:" Foreground="{StaticResource TextSecondaryBrush}"/>
+                            <TextBlock x:Name="TenantIdText" Text="TENANT_LK_01" HorizontalAlignment="Right"/>
+                        </Grid>
+                        <Grid Margin="0,0,0,6">
+                            <TextBlock Text="Device ID:" Foreground="{StaticResource TextSecondaryBrush}"/>
+                            <TextBlock x:Name="DeviceIdText" Text="C01" HorizontalAlignment="Right"/>
+                        </Grid>
+                        <Grid Margin="0,0,0,6">
+                            <TextBlock Text="Expires At (UTC):" Foreground="{StaticResource TextSecondaryBrush}"/>
+                            <TextBlock x:Name="ExpiresAtText" Text="2026-09-23 12:00:00 UTC" HorizontalAlignment="Right" FontWeight="SemiBold"/>
+                        </Grid>
+                        <Grid x:Name="FreezeReasonRow" Margin="0,0,0,6" Visibility="Collapsed">
+                            <TextBlock Text="Freeze Reason:" Foreground="{StaticResource TextSecondaryBrush}"/>
+                            <TextBlock x:Name="FreezeReasonText" Text="-" HorizontalAlignment="Right" Foreground="#C62828" FontWeight="SemiBold"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Renewal / Entitlement Input Card -->
+                <Border Background="{StaticResource SurfaceBrush}" Padding="16" CornerRadius="6"
+                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="RENEW / ACTIVATE LICENSE" FontWeight="Bold" FontSize="13" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,6"/>
+                        <TextBlock Text="Paste your signed license entitlement JSON or renewal key provided by Enightx:"
+                                   FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+
+                        <TextBox x:Name="EntitlementJsonInput" Height="100" TextWrapping="Wrap" AcceptsReturn="True"
+                                 Padding="8" FontSize="11" FontFamily="Consolas" VerticalScrollBarVisibility="Auto"/>
+
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+                            <Button Content="Quick Trial (48h)" Padding="10,4" Margin="0,0,8,0" Background="#ECEFF1" BorderThickness="0"
+                                    FontWeight="SemiBold" Click="QuickTrial_Click"/>
+                            <Button Content="Apply &amp; Activate" Width="140" Height="34"
+                                    Background="{StaticResource PrimaryBrush}" Foreground="White" FontWeight="Bold"
+                                    Click="ApplyEntitlement_Click"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Footer Actions -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+            <Button Content="Close" Width="100" Height="36" Background="#ECEFF1" Foreground="#37474F"
+                    FontWeight="SemiBold" Click="Close_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>
+

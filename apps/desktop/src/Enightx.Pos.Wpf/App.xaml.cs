@@ -33,8 +33,19 @@ public partial class App : Application
         CatalogService = new CatalogService(Database);
         ShiftService = new ShiftService(Database);
         SaleService = new SaleService(Database, CatalogService);
-        TransferService = new TransferService();
         LicenseService = new LicenseService();
+        var defaultTrial = new LicenseEntitlement
+        {
+            TenantId = "TENANT_LK_01",
+            DeviceId = "C01",
+            PlanType = LicensePlanType.Trial,
+            IssuedAtUtc = DateTime.UtcNow,
+            ExpiresAtUtc = DateTime.UtcNow.AddHours(48),
+            IsFrozen = false
+        };
+        defaultTrial.Signature = LicenseService.ComputeSignature(defaultTrial, "enightx_licence_secret_key_prod_2026");
+        LicenseService.LoadLicense(defaultTrial, "enightx_licence_secret_key_prod_2026");
+
         var apiBase = Environment.GetEnvironmentVariable("ENIGHTX_API_URL") ?? "https://posapi.eightexms.site";
         SyncService = new SyncService(Database, CatalogService, apiBaseUrl: apiBase);
         SyncWorker = new SyncBackgroundWorker(SyncService);

@@ -1,7 +1,8 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from .routers import health, sync, devices, updates, shifts, customers, inventory, reports, suppliers
+from .routers import health, sync, devices, updates, shifts, customers, inventory, reports, suppliers, provider
 from .dashboard import router as dashboard_router
+from .provider_dashboard import router as provider_dashboard_router
 from .config import settings
 from .database import engine, Base
 
@@ -27,6 +28,8 @@ app.include_router(inventory.router)
 app.include_router(reports.router)
 app.include_router(suppliers.router)
 app.include_router(dashboard_router)
+app.include_router(provider.router)
+app.include_router(provider_dashboard_router)
 
 if __name__ == "__main__":
     import uvicorn

@@ -33,22 +33,45 @@
         <Border x:Name="NavBar" Grid.Row="1" Background="{StaticResource PrimaryDarkBrush}" Padding="12,6" Visibility="Collapsed">
             <DockPanel>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="ENIGHTX POS" FontWeight="Bold" FontSize="14" Foreground="White" VerticalAlignment="Center" Margin="0,0,20,0"/>
-                    <Button Content="🛒 POS Billing" Height="30" Padding="12,2" Margin="0,0,6,0"
+                    <TextBlock Text="ENIGHTX POS" FontWeight="Bold" FontSize="14" Foreground="White" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                    <Button Content="🛒 Billing" Height="30" Padding="10,2" Margin="0,0,4,0"
                             Background="#1565C0" Foreground="White" FontWeight="SemiBold" Click="NavBilling_Click"/>
-                    <Button Content="👥 Customer Ledger" Height="30" Padding="12,2" Margin="0,0,6,0"
+                    <Button Content="🧾 Sales &amp; Returns" Height="30" Padding="10,2" Margin="0,0,4,0"
+                            Background="#1565C0" Foreground="White" FontWeight="SemiBold" Click="NavSalesHistory_Click"/>
+                    <Button Content="👥 Customers" Height="30" Padding="10,2" Margin="0,0,4,0"
                             Background="#1565C0" Foreground="White" FontWeight="SemiBold" Click="NavCustomers_Click"/>
-                    <Button Content="🔁 Stock Transfers" Height="30" Padding="12,2" Margin="0,0,6,0"
+                    <Button Content="🔁 Transfers" Height="30" Padding="10,2" Margin="0,0,4,0"
                             Background="#1565C0" Foreground="White" FontWeight="SemiBold" Click="NavTransfers_Click"/>
-                    <Button Content="📦 Receiving / GRN" Height="30" Padding="12,2" Margin="0,0,6,0"
+                    <Button Content="📦 GRN" Height="30" Padding="10,2" Margin="0,0,4,0"
                             Background="#1565C0" Foreground="White" FontWeight="SemiBold" Click="NavReceiving_Click"/>
-                    <Button Content="📊 Manager Dashboard" Height="30" Padding="12,2" Margin="0,0,6,0"
+                    <Button Content="📊 Dashboard" Height="30" Padding="10,2" Margin="0,0,4,0"
                             Background="#00897B" Foreground="White" FontWeight="Bold" Click="NavDashboard_Click"/>
+                    <Button Content="🔑 License" Height="30" Padding="10,2" Margin="0,0,4,0"
+                            Background="#455A64" Foreground="White" FontWeight="SemiBold" Click="NavLicense_Click"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                    <Button Content="🔒 Close Shift" Height="30" Padding="12,2" Margin="0,0,8,0"
+                    <!-- Language Switcher -->
+                    <Border Background="#263238" CornerRadius="4" Padding="2" Margin="0,0,10,0">
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="EN" Width="28" Height="24" Background="Transparent" Foreground="White" BorderThickness="0"
+                                    FontWeight="Bold" FontSize="11" Click="LangEn_Click"/>
+                            <Button Content="සිං" Width="28" Height="24" Background="Transparent" Foreground="White" BorderThickness="0"
+                                    FontWeight="Bold" FontSize="11" Click="LangSi_Click"/>
+                            <Button Content="த" Width="28" Height="24" Background="Transparent" Foreground="White" BorderThickness="0"
+                                    FontWeight="Bold" FontSize="11" Click="LangTa_Click"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Sync Status Badge -->
+                    <Button x:Name="SyncStatusBadge" Height="26" Padding="8,0" Margin="0,0,10,0"
+                            Background="#2E7D32" Foreground="White" BorderThickness="0" FontWeight="Bold" FontSize="11"
+                            ToolTip="Click to trigger manual cloud sync" Click="ManualSync_Click">
+                        <TextBlock x:Name="SyncStatusText" Text="🟢 ONLINE"/>
+                    </Button>
+
+                    <Button Content="🔒 Close Shift" Height="30" Padding="10,2" Margin="0,0,6,0"
                             Background="#C62828" Foreground="White" FontWeight="Bold" Click="NavCloseShift_Click"/>
-                    <Button Content="Logout" Height="30" Padding="12,2"
+                    <Button Content="Logout" Height="30" Padding="10,2"
                             Background="#37474F" Foreground="White" FontWeight="SemiBold" Click="NavLogout_Click"/>
                 </StackPanel>
             </DockPanel>

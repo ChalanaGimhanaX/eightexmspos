@@ -69,6 +69,7 @@ public interface ISaleService
     Task<Sale> CancelSaleAsync(CancelSaleCommand command);
     Task<Sale?> GetSaleByIdAsync(Guid saleId);
     Task<int> GetSaleCountAsync();
+    Task<List<Sale>> GetRecentSalesAsync(int limit = 50);
 }
 
 public class SaleService : ISaleService
@@ -1080,5 +1081,99 @@ public class SaleService : ISaleService
         using var cmd = conn.CreateCommand();
         cmd.CommandText = "SELECT COUNT(*) FROM sales;";
         return Convert.ToInt32(await cmd.ExecuteScalarAsync());
+    }
+
+    public async Task<List<Sale>> GetRecentSalesAsync(int limit = 50)
+    {
+        using var conn = _db.CreateConnection();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            SELECT sale_id, receipt_number, shift_id, tenant_id, branch_id, counter_id,
+                   cashier_id, customer_id, parent_sale_id, subtotal, discount_total, tax_total, grand_total,
+                   status, reprint_count, created_at_utc
+            FROM sales
+            ORDER BY created_at_utc DESC
+            LIMIT $limit;
+        ";
+        cmd.Parameters.AddWithValue("$limit", limit);
+
+        var sales = new List<Sale>();
+        using var reader = await cmd.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            sales.Add(new Sale
+            {
+                SaleId = Guid.Parse(reader.GetString(0)),
+                ReceiptNumber = reader.GetString(1),
+                ShiftId = Guid.Parse(reader.GetString(2)),
+                TenantId = reader.GetString(3),
+                BranchId = reader.GetString(4),
+                CounterId = reader.GetString(5),
+                CashierId = reader.GetString(6),
+                CustomerId = reader.IsDBNull(7) ? null : reader.GetString(7),
+                ParentSaleId = reader.IsDBNull(8) ? null : Guid.Parse(reader.GetString(8)),
+                Subtotal = reader.GetDecimal(9),
+                DiscountTotal = reader.GetDecimal(10),
+                TaxTotal = reader.GetDecimal(11),
+                GrandTotal = reader.GetDecimal(12),
+                Status = (SaleStatus)reader.GetInt32(13),
+                ReprintCount = reader.GetInt32(14),
+                CreatedAtUtc = DateTime.Parse(reader.GetString(15), null, System.Globalization.DateTimeStyles.AdjustToUniversal)
+            });
+        }
+        reader.Close();
+
+        // Populate lines and tenders for each sale
+        foreach (var sale in sales)
+        {
+            using var lineCmd = conn.CreateCommand();
+            lineCmd.CommandText = @"
+                SELECT line_id, product_id, product_name, barcode, quantity, unit_price,
+                       discount_rate, discount_fixed, discount_amount, tax_rate, tax_amount, line_total
+                FROM sale_lines WHERE sale_id = $sid;
+            ";
+            lineCmd.Parameters.AddWithValue("$sid", sale.SaleId.ToString());
+            using var lReader = await lineCmd.ExecuteReaderAsync();
+            while (await lReader.ReadAsync())
+            {
+                sale.Lines.Add(new SaleLine
+                {
+                    LineId = Guid.Parse(lReader.GetString(0)),
+                    SaleId = sale.SaleId,
+                    ProductId = lReader.GetString(1),
+                    ProductName = lReader.GetString(2),
+                    Barcode = lReader.GetString(3),
+                    Quantity = lReader.GetDecimal(4),
+                    UnitPrice = lReader.GetDecimal(5),
+                    DiscountRate = lReader.GetDecimal(6),
+                    DiscountFixed = lReader.GetDecimal(7),
+                    DiscountAmount = lReader.GetDecimal(8),
+                    TaxRate = lReader.GetDecimal(9),
+                    TaxAmount = lReader.GetDecimal(10),
+                    LineTotal = lReader.GetDecimal(11)
+                });
+            }
+            lReader.Close();
+
+            using var tCmd = conn.CreateCommand();
+            tCmd.CommandText = "SELECT tender_id, tender_type, amount_tendered, change_given, payment_reference FROM tenders WHERE sale_id = $sid;";
+            tCmd.Parameters.AddWithValue("$sid", sale.SaleId.ToString());
+            using var tReader = await tCmd.ExecuteReaderAsync();
+            while (await tReader.ReadAsync())
+            {
+                sale.Tenders.Add(new Tender
+                {
+                    TenderId = Guid.Parse(tReader.GetString(0)),
+                    SaleId = sale.SaleId,
+                    TenderType = Enum.Parse<TenderType>(tReader.GetString(1)),
+                    AmountTendered = tReader.GetDecimal(2),
+                    ChangeGiven = tReader.GetDecimal(3),
+                    PaymentReference = tReader.IsDBNull(4) ? null : tReader.GetString(4)
+                });
+            }
+            tReader.Close();
+        }
+
+        return sales;
     }
 }

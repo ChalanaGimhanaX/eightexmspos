@@ -104,11 +104,25 @@ public partial class MainWindow : Window
     {
         if (_currentUser == null) return;
 
-        // Check or open shift
+        // Check or prompt shift opening
         _currentShift = await App.ShiftService.GetActiveShiftAsync("B01", "C01");
         if (_currentShift == null)
         {
-            _currentShift = await App.ShiftService.OpenShiftAsync("B01", "C01", _currentUser.UserId, 5000.00m, "TENANT_LK_01");
+            var openDialog = new ShiftOpenDialog(App.ShiftService, _currentUser, "B01", "C01", "TENANT_LK_01")
+            {
+                Owner = this
+            };
+
+            if (openDialog.ShowDialog() == true && openDialog.OpenedShift != null)
+            {
+                _currentShift = openDialog.OpenedShift;
+            }
+            else
+            {
+                // User cancelled shift opening -> return to login
+                ShowLogin();
+                return;
+            }
         }
 
         var billingVm = new BillingViewModel(_currentUser, _currentShift, App.CatalogService, App.SaleService);
@@ -120,6 +134,24 @@ public partial class MainWindow : Window
             {
                 MessageBox.Show("Cannot proceed to payment with an empty cart.", "Empty Cart", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
+            }
+
+            // Pre-checkout license lockout check (A13-A16, A21)
+            try
+            {
+                App.LicenseService.VerifyEntitlement();
+            }
+            catch (Exception)
+            {
+                var lockDialog = new ActivationLockoutDialog(App.LicenseService)
+                {
+                    Owner = this
+                };
+                lockDialog.ShowDialog();
+                if (!lockDialog.IsEntitled)
+                {
+                    return;
+                }
             }
 
             var paymentVm = new PaymentViewModel(billingVm, App.SaleService, App.ReceiptService);
@@ -142,9 +174,68 @@ public partial class MainWindow : Window
             dialog.ShowDialog();
         };
 
+        // Wire up sync worker status badge
+        if (App.SyncWorker != null)
+        {
+            App.SyncWorker.OnlineStatusChanged += isOnline =>
+            {
+                Dispatcher.InvokeAsync(() => UpdateSyncBadge(isOnline));
+            };
+            UpdateSyncBadge(App.SyncWorker.IsOnline);
+        }
+
         NavBar.Visibility = Visibility.Visible;
         MainContainer.Children.Clear();
         MainContainer.Children.Add(_billingView);
+    }
+
+    private void UpdateSyncBadge(bool isOnline)
+    {
+        if (SyncStatusBadge == null || SyncStatusText == null) return;
+        if (isOnline)
+        {
+            SyncStatusBadge.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x2E, 0x7D, 0x32));
+            SyncStatusText.Text = "🟢 ONLINE";
+        }
+        else
+        {
+            SyncStatusBadge.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xD8, 0x43, 0x15));
+            SyncStatusText.Text = "🟠 OFFLINE";
+        }
+    }
+
+    private async void ManualSync_Click(object sender, RoutedEventArgs e)
+    {
+        if (App.SyncWorker == null) return;
+        SyncStatusText.Text = "⏳ SYNCING...";
+        try
+        {
+            await App.SyncWorker.SyncCycleAsync();
+            UpdateSyncBadge(App.SyncWorker.IsOnline);
+        }
+        catch
+        {
+            UpdateSyncBadge(false);
+        }
+    }
+
+    private void LangEn_Click(object sender, RoutedEventArgs e) => SwitchLanguage("en");
+    private void LangSi_Click(object sender, RoutedEventArgs e) => SwitchLanguage("si");
+    private void LangTa_Click(object sender, RoutedEventArgs e) => SwitchLanguage("ta");
+
+    private void SwitchLanguage(string cultureCode)
+    {
+        try
+        {
+            var culture = new System.Globalization.CultureInfo(cultureCode);
+            System.Threading.Thread.CurrentThread.CurrentCulture = culture;
+            System.Threading.Thread.CurrentThread.CurrentUICulture = culture;
+            MessageBox.Show($"Interface language switched to {culture.NativeName}.", "Language Switch", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Language switch error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
     }
 
     private void NavBilling_Click(object sender, RoutedEventArgs e)
@@ -154,6 +245,15 @@ public partial class MainWindow : Window
             MainContainer.Children.Clear();
             MainContainer.Children.Add(_billingView);
         }
+    }
+
+    private void NavSalesHistory_Click(object sender, RoutedEventArgs e)
+    {
+        if (_currentUser == null || _currentShift == null) return;
+        var view = new SalesHistoryView(App.SaleService, App.ReceiptService, _currentUser, _currentShift.ShiftId);
+        view.RequestBackToPos += () => NavBilling_Click(this, new RoutedEventArgs());
+        MainContainer.Children.Clear();
+        MainContainer.Children.Add(view);
     }
 
     private void NavCustomers_Click(object sender, RoutedEventArgs e)
@@ -188,6 +288,15 @@ public partial class MainWindow : Window
         view.RequestBackToPos += () => NavBilling_Click(this, new RoutedEventArgs());
         MainContainer.Children.Clear();
         MainContainer.Children.Add(view);
+    }
+
+    private void NavLicense_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new ActivationLockoutDialog(App.LicenseService)
+        {
+            Owner = this
+        };
+        dialog.ShowDialog();
     }
 
     private void NavCloseShift_Click(object sender, RoutedEventArgs e)

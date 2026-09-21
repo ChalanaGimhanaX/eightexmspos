@@ -21,6 +21,8 @@ class Device(Base):
     status = Column(String(32), nullable=False, default="online")
     last_sync_sequence = Column(Integer, nullable=False, default=0)
     db_size_bytes = Column(Integer, nullable=True)
+    is_frozen = Column(Boolean, nullable=True, default=False)
+    freeze_reason = Column(String, nullable=True)
 
     heartbeats = relationship("DeviceHeartbeat", back_populates="device", cascade="all, delete-orphan")
 
@@ -310,4 +312,32 @@ class SupplierSettlement(Base):
     created_at = Column(DateTime(timezone=True), nullable=False, default=func.now())
 
     supplier = relationship("Supplier")
+ 
+ 
+class License(Base):
+    __tablename__ = "licenses"
+
+    license_id = Column(String(64), primary_key=True)
+    tenant_id = Column(String(64), nullable=False)
+    device_id = Column(String(64), nullable=False)
+    plan_type = Column(String(32), nullable=False)
+    issued_at = Column(DateTime(timezone=True), nullable=False, default=func.now())
+    expires_at = Column(DateTime(timezone=True), nullable=True)
+    is_frozen = Column(Boolean, nullable=False, default=False)
+    freeze_reason = Column(String, nullable=True)
+    signature = Column(String, nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=func.now())
+
+
+class ProviderPayment(Base):
+    __tablename__ = "provider_payments"
+
+    payment_id = Column(String(64), primary_key=True)
+    tenant_id = Column(String(64), nullable=False)
+    amount = Column(Numeric(12, 2), nullable=False)
+    currency = Column(String(8), nullable=False, default="LKR")
+    payment_method = Column(String(32), nullable=False)
+    reference = Column(String(128), nullable=True)
+    verified_by = Column(String(64), nullable=False)
+    verified_at = Column(DateTime(timezone=True), nullable=False, default=func.now())
 
