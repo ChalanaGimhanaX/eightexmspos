@@ -34,24 +34,26 @@
             <DockPanel>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="ENIGHTX POS" FontWeight="Bold" FontSize="14" Foreground="White" VerticalAlignment="Center" Margin="0,0,16,0"/>
-                    <Button Content="🛒 Billing" Height="30" Padding="10,2" Margin="0,0,4,0"
+                    <Button Content="📊 Dashboard" Height="30" Padding="10,2" Margin="0,0,4,0"
+                            Background="#00897B" Foreground="White" FontWeight="Bold" Click="NavDashboard_Click"/>
+                    <Button Content="🛒 Retail" Height="30" Padding="10,2" Margin="0,0,4,0"
                             Background="#1565C0" Foreground="White" FontWeight="SemiBold" Click="NavBilling_Click"/>
-                    <Button Content="🧾 Sales &amp; Returns" Height="30" Padding="10,2" Margin="0,0,4,0"
-                            Background="#1565C0" Foreground="White" FontWeight="SemiBold" Click="NavSalesHistory_Click"/>
-                    <Button Content="👥 Customers" Height="30" Padding="10,2" Margin="0,0,4,0"
-                            Background="#1565C0" Foreground="White" FontWeight="SemiBold" Click="NavCustomers_Click"/>
-                    <Button Content="🔁 Transfers" Height="30" Padding="10,2" Margin="0,0,4,0"
+                    <Button Content="📦 Inventory" Height="30" Padding="10,2" Margin="0,0,4,0"
                             Background="#1565C0" Foreground="White" FontWeight="SemiBold" Click="NavTransfers_Click"/>
                     <Button Content="📦 GRN" Height="30" Padding="10,2" Margin="0,0,4,0"
                             Background="#1565C0" Foreground="White" FontWeight="SemiBold" Click="NavReceiving_Click"/>
-                    <Button Content="📊 Dashboard" Height="30" Padding="10,2" Margin="0,0,4,0"
-                            Background="#00897B" Foreground="White" FontWeight="Bold" Click="NavDashboard_Click"/>
-                    <Button Content="🔑 License" Height="30" Padding="10,2" Margin="0,0,4,0"
-                            Background="#455A64" Foreground="White" FontWeight="SemiBold" Click="NavLicense_Click"/>
+                    <Button Content="👥 Customers" Height="30" Padding="10,2" Margin="0,0,4,0"
+                            Background="#1565C0" Foreground="White" FontWeight="SemiBold" Click="NavCustomers_Click"/>
+                    <Button Content="🧾 Sales Report" Height="30" Padding="10,2" Margin="0,0,4,0"
+                            Background="#1565C0" Foreground="White" FontWeight="SemiBold" Click="NavSalesHistory_Click"/>
+                    <Button Content="💵 Cashier Balance" Height="30" Padding="10,2" Margin="0,0,4,0"
+                            Background="#2E7D32" Foreground="White" FontWeight="SemiBold" Click="NavCashierBalance_Click"/>
                     <Button Content="💵 Cash In/Out" Height="30" Padding="10,2" Margin="0,0,4,0"
                             Background="#455A64" Foreground="White" FontWeight="SemiBold" Click="NavCashMovement_Click"/>
                     <Button Content="💾 Backup" Height="30" Padding="10,2" Margin="0,0,4,0"
                             Background="#455A64" Foreground="White" FontWeight="SemiBold" Click="NavBackup_Click"/>
+                    <Button Content="🔑 License" Height="30" Padding="10,2" Margin="0,0,4,0"
+                            Background="#455A64" Foreground="White" FontWeight="SemiBold" Click="NavLicense_Click"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                     <!-- Language Switcher -->

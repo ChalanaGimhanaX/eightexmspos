@@ -284,8 +284,23 @@ public partial class MainWindow : Window
     private void NavDashboard_Click(object sender, RoutedEventArgs e)
     {
         if (_currentUser == null) return;
-        var view = new ManagerDashboardView(_currentUser, App.Database, App.CatalogService, App.ShiftService);
+        var view = new ManagerDashboardView(
+            _currentUser,
+            App.Database,
+            App.CatalogService,
+            App.ShiftService,
+            App.SaleService,
+            App.AuthService,
+            App.ReceiptService);
+
         view.RequestBackToPos += () => NavBilling_Click(this, new RoutedEventArgs());
+        view.RequestOpenBilling += () => NavBilling_Click(this, new RoutedEventArgs());
+        view.RequestOpenCustomers += () => NavCustomers_Click(this, new RoutedEventArgs());
+        view.RequestOpenTransfers += () => NavTransfers_Click(this, new RoutedEventArgs());
+        view.RequestOpenReceiving += () => NavReceiving_Click(this, new RoutedEventArgs());
+        view.RequestOpenSalesHistory += () => NavSalesHistory_Click(this, new RoutedEventArgs());
+        view.RequestOpenCloseShift += () => NavCloseShift_Click(this, new RoutedEventArgs());
+
         MainContainer.Children.Clear();
         MainContainer.Children.Add(view);
     }
@@ -321,6 +336,27 @@ public partial class MainWindow : Window
             Owner = this
         };
         dialog.ShowDialog();
+    }
+
+    private void NavCashierBalance_Click(object sender, RoutedEventArgs e)
+    {
+        if (_currentShift == null || _currentUser == null)
+        {
+            MessageBox.Show("No active cashier shift found on this counter.\nPlease log in or open a shift first.", "Cashier Balance", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var dialog = new ShiftCloseDialog(_currentShift, App.ShiftService, _currentUser.UserId)
+        {
+            Owner = this
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            _currentShift = null;
+            _billingView = null;
+            ShowLogin();
+        }
     }
 
     private void NavCloseShift_Click(object sender, RoutedEventArgs e)

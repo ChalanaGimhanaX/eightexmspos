@@ -4,7 +4,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" 
-             d:DesignHeight="800" d:DesignWidth="1100" Background="{StaticResource BackgroundBrush}">
+             d:DesignHeight="850" d:DesignWidth="1150" Background="{StaticResource BackgroundBrush}">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="60"/>
@@ -29,189 +29,431 @@
             </DockPanel>
         </Border>
 
-        <!-- Main Content -->
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-            <StackPanel Margin="16">
-                <!-- Section 1: KPI Cards -->
-                <Grid Margin="0,0,0,16">
+        <!-- Main Tabbed Interface -->
+        <TabControl x:Name="DashboardTabs" Grid.Row="1" Margin="8" Background="Transparent" BorderThickness="0">
+            <!-- TAB 1: Overview & Cashier Day Balance -->
+            <TabItem Header="📊 Overview &amp; Cashier Day Balance" FontSize="13" FontWeight="SemiBold" Padding="12,6">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="12">
+                        <!-- KPI Cards -->
+                        <Grid Margin="0,0,0,16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Border Grid.Column="0" Background="{StaticResource SurfaceBrush}" Padding="16" CornerRadius="6"
+                                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Margin="0,0,8,0">
+                                <StackPanel>
+                                    <TextBlock Text="TODAY'S REVENUE" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" FontWeight="SemiBold"/>
+                                    <TextBlock x:Name="TodayRevenueText" Text="LKR 0.00" FontWeight="Bold" FontSize="22" Foreground="{StaticResource PrimaryBrush}" Margin="0,6,0,0"/>
+                                    <TextBlock x:Name="OrdersCountText" Text="0 Transactions" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" Margin="0,4,0,0"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Grid.Column="1" Background="{StaticResource SurfaceBrush}" Padding="16" CornerRadius="6"
+                                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Margin="0,0,8,0">
+                                <StackPanel>
+                                    <TextBlock Text="AVG TICKET SIZE" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" FontWeight="SemiBold"/>
+                                    <TextBlock x:Name="AvgTicketText" Text="LKR 0.00" FontWeight="Bold" FontSize="22" Margin="0,6,0,0"/>
+                                    <TextBlock Text="Per Completed Sale" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" Margin="0,4,0,0"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Grid.Column="2" Background="{StaticResource SurfaceBrush}" Padding="16" CornerRadius="6"
+                                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Margin="0,0,8,0">
+                                <StackPanel>
+                                    <TextBlock Text="OUTSTANDING DEBT" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" FontWeight="SemiBold"/>
+                                    <TextBlock x:Name="CustomerDebtText" Text="LKR 0.00" FontWeight="Bold" FontSize="22" Foreground="#C62828" Margin="0,6,0,0"/>
+                                    <TextBlock Text="Across All Customers" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" Margin="0,4,0,0"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Grid.Column="3" Background="{StaticResource SurfaceBrush}" Padding="16" CornerRadius="6"
+                                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="DRAWER BALANCE" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" FontWeight="SemiBold"/>
+                                    <TextBlock x:Name="DrawerCashText" Text="LKR 0.00" FontWeight="Bold" FontSize="22" Foreground="#2E7D32" Margin="0,6,0,0"/>
+                                    <TextBlock x:Name="DrawerShiftText" Text="Shift: Active" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" Margin="0,4,0,0"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <!-- Row 2: Cashier Day Balance & Tender Breakdown -->
+                        <Grid Margin="0,0,0,16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="480"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Left: Detailed Cashier Day Balance Card -->
+                            <Border Grid.Column="0" Background="{StaticResource SurfaceBrush}" Padding="16" CornerRadius="6"
+                                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Margin="0,0,16,0">
+                                <StackPanel>
+                                    <DockPanel Margin="0,0,0,12">
+                                        <TextBlock Text="💵 CASHIER DAY BALANCE &amp; DRAWER" FontWeight="Bold" FontSize="14" Foreground="{StaticResource PrimaryBrush}" VerticalAlignment="Center"/>
+                                        <Border x:Name="ShiftStatusBadge" Background="#2E7D32" CornerRadius="4" Padding="6,2" HorizontalAlignment="Right">
+                                            <TextBlock x:Name="ShiftStatusText" Text="SHIFT ACTIVE" Foreground="White" FontWeight="Bold" FontSize="10"/>
+                                        </Border>
+                                    </DockPanel>
+
+                                    <TextBlock x:Name="ActiveCashierInfoText" Text="Cashier: ... | Opened: ..." Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,12"/>
+
+                                    <Grid Margin="0,0,0,6">
+                                        <TextBlock Text="Opening Float:" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                        <TextBlock x:Name="DayOpeningFloatText" Text="LKR 0.00" HorizontalAlignment="Right" FontWeight="SemiBold"/>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,6">
+                                        <TextBlock Text="(+) Cash Received (Sales):" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                        <TextBlock x:Name="DayCashReceivedText" Text="LKR 0.00" HorizontalAlignment="Right" FontWeight="SemiBold"/>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,6">
+                                        <TextBlock Text="(-) Change Given:" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                        <TextBlock x:Name="DayChangeGivenText" Text="LKR 0.00" HorizontalAlignment="Right" FontWeight="SemiBold"/>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,6">
+                                        <TextBlock Text="(-) Cash Refunds:" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                        <TextBlock x:Name="DayCashRefundsText" Text="LKR 0.00" HorizontalAlignment="Right" Foreground="#C62828" FontWeight="SemiBold"/>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,6">
+                                        <TextBlock Text="(+) Cash In (Float Top-up):" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                        <TextBlock x:Name="DayCashInText" Text="LKR 0.00" HorizontalAlignment="Right" FontWeight="SemiBold"/>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,6">
+                                        <TextBlock Text="(-) Cash Out (Petty / Drop):" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                        <TextBlock x:Name="DayCashOutText" Text="LKR 0.00" HorizontalAlignment="Right" Foreground="#C62828" FontWeight="SemiBold"/>
+                                    </Grid>
+
+                                    <Separator Margin="0,8,0,10"/>
+
+                                    <Grid Margin="0,0,0,16">
+                                        <TextBlock Text="EXPECTED CASH IN DRAWER:" FontWeight="Bold" FontSize="14" Foreground="{StaticResource PrimaryBrush}"/>
+                                        <TextBlock x:Name="DayExpectedCashText" Text="LKR 0.00" HorizontalAlignment="Right" FontWeight="Bold" FontSize="16" Foreground="#2E7D32"/>
+                                    </Grid>
+
+                                    <!-- Quick Cashier Actions -->
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Button x:Name="CloseShiftDirectBtn" Grid.Column="0" Content="🔒 Count Money &amp; Close" Height="38" Margin="0,0,6,0"
+                                                Background="#C62828" Foreground="White" FontWeight="Bold" Click="CountMoneyCloseShift_Click"/>
+                                        <Button Grid.Column="1" Content="💵 Cash In / Out" Height="38" Margin="6,0,0,0"
+                                                Background="#1565C0" Foreground="White" FontWeight="SemiBold" Click="OpenCashMovement_Click"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Right: Tender Breakdown & Navigation Hub -->
+                            <StackPanel Grid.Column="1">
+                                <Border Background="{StaticResource SurfaceBrush}" Padding="16" CornerRadius="6"
+                                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Margin="0,0,0,16">
+                                    <StackPanel>
+                                        <TextBlock Text="TENDER BREAKDOWN" FontWeight="Bold" FontSize="14" Foreground="{StaticResource PrimaryBrush}" Margin="0,0,0,12"/>
+                                        <Grid Margin="0,0,0,8">
+                                            <TextBlock Text="💵 Cash:" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                            <TextBlock x:Name="TenderCashText" Text="LKR 0.00" HorizontalAlignment="Right" FontWeight="SemiBold"/>
+                                        </Grid>
+                                        <Grid Margin="0,0,0,8">
+                                            <TextBlock Text="💳 Card (POS Terminal):" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                            <TextBlock x:Name="TenderCardText" Text="LKR 0.00" HorizontalAlignment="Right" FontWeight="SemiBold"/>
+                                        </Grid>
+                                        <Grid Margin="0,0,0,8">
+                                            <TextBlock Text="📱 QR (LANKAQR):" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                            <TextBlock x:Name="TenderQrText" Text="LKR 0.00" HorizontalAlignment="Right" FontWeight="SemiBold"/>
+                                        </Grid>
+                                        <Grid Margin="0,0,0,8">
+                                            <TextBlock Text="📝 Credit / Customer Debt:" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                            <TextBlock x:Name="TenderCreditText" Text="LKR 0.00" HorizontalAlignment="Right" FontWeight="SemiBold"/>
+                                        </Grid>
+                                        <Separator Margin="0,8,0,12"/>
+                                        <Button Content="🖨️ Print End-of-Day Z-Report" Height="36" Background="#ECEFF1" Foreground="#37474F"
+                                                FontWeight="SemiBold" Click="PrintZReport_Click"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Navigation Quick-Links Hub -->
+                                <Border Background="{StaticResource SurfaceBrush}" Padding="16" CornerRadius="6"
+                                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                                    <StackPanel>
+                                        <TextBlock Text="QUICK MODULE SHORTCUTS" FontWeight="Bold" FontSize="14" Foreground="{StaticResource PrimaryBrush}" Margin="0,0,0,12"/>
+                                        <WrapPanel>
+                                            <Button Content="🛒 Retail Billing (F1)" Height="34" Padding="12,2" Margin="0,0,8,8"
+                                                    Background="#1565C0" Foreground="White" FontWeight="SemiBold" Click="QuickNavBilling_Click"/>
+                                            <Button Content="👥 Customers (F2)" Height="34" Padding="12,2" Margin="0,0,8,8"
+                                                    Background="#1565C0" Foreground="White" FontWeight="SemiBold" Click="QuickNavCustomers_Click"/>
+                                            <Button Content="🔁 Stock Transfers (F3)" Height="34" Padding="12,2" Margin="0,0,8,8"
+                                                    Background="#1565C0" Foreground="White" FontWeight="SemiBold" Click="QuickNavTransfers_Click"/>
+                                            <Button Content="📦 Receiving / GRN (F4)" Height="34" Padding="12,2" Margin="0,0,8,8"
+                                                    Background="#1565C0" Foreground="White" FontWeight="SemiBold" Click="QuickNavReceiving_Click"/>
+                                            <Button Content="📋 Stock Count (A12)" Height="34" Padding="12,2" Margin="0,0,8,8"
+                                                    Background="#00897B" Foreground="White" FontWeight="SemiBold" Click="QuickNavStockCount_Click"/>
+                                        </WrapPanel>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- TAB 2: Sales Bills & Transactions -->
+            <TabItem Header="🧾 Sales Bills &amp; History" FontSize="13" FontWeight="SemiBold" Padding="12,6">
+                <Grid Margin="12">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <!-- Today's Revenue -->
-                    <Border Grid.Column="0" Background="{StaticResource SurfaceBrush}" Padding="16" CornerRadius="6"
-                            BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Margin="0,0,8,0">
-                        <StackPanel>
-                            <TextBlock Text="TODAY'S REVENUE" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" FontWeight="SemiBold"/>
-                            <TextBlock x:Name="TodayRevenueText" Text="LKR 0.00" FontWeight="Bold" FontSize="22" Foreground="{StaticResource PrimaryBrush}" Margin="0,6,0,0"/>
-                            <TextBlock x:Name="OrdersCountText" Text="0 Transactions" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" Margin="0,4,0,0"/>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- Average Ticket Size -->
-                    <Border Grid.Column="1" Background="{StaticResource SurfaceBrush}" Padding="16" CornerRadius="6"
-                            BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Margin="0,0,8,0">
-                        <StackPanel>
-                            <TextBlock Text="AVG TICKET SIZE" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" FontWeight="SemiBold"/>
-                            <TextBlock x:Name="AvgTicketText" Text="LKR 0.00" FontWeight="Bold" FontSize="22" Margin="0,6,0,0"/>
-                            <TextBlock Text="Per Completed Sale" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" Margin="0,4,0,0"/>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- Customer Debt -->
-                    <Border Grid.Column="2" Background="{StaticResource SurfaceBrush}" Padding="16" CornerRadius="6"
-                            BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Margin="0,0,8,0">
-                        <StackPanel>
-                            <TextBlock Text="OUTSTANDING DEBT" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" FontWeight="SemiBold"/>
-                            <TextBlock x:Name="CustomerDebtText" Text="LKR 0.00" FontWeight="Bold" FontSize="22" Foreground="#C62828" Margin="0,6,0,0"/>
-                            <TextBlock Text="Across All Customers" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" Margin="0,4,0,0"/>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- Drawer Status -->
-                    <Border Grid.Column="3" Background="{StaticResource SurfaceBrush}" Padding="16" CornerRadius="6"
-                            BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
-                        <StackPanel>
-                            <TextBlock Text="DRAWER BALANCE" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" FontWeight="SemiBold"/>
-                            <TextBlock x:Name="DrawerCashText" Text="LKR 0.00" FontWeight="Bold" FontSize="22" Foreground="#2E7D32" Margin="0,6,0,0"/>
-                            <TextBlock x:Name="DrawerShiftText" Text="Shift: Active" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" Margin="0,4,0,0"/>
-                        </StackPanel>
-                    </Border>
-                </Grid>
-
-                <!-- Section 2: Tender Breakdown & Inventory Alerts -->
-                <Grid Margin="0,0,0,16">
-                    <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="380"/>
-                        <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- Tender Breakdown Card -->
+                    <!-- Left: Sales Bills Table -->
                     <Border Grid.Column="0" Background="{StaticResource SurfaceBrush}" Padding="16" CornerRadius="6"
                             BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Margin="0,0,16,0">
-                        <StackPanel>
-                            <TextBlock Text="TENDER BREAKDOWN" FontWeight="Bold" FontSize="14" Foreground="{StaticResource PrimaryBrush}" Margin="0,0,0,12"/>
-                            
-                            <Grid Margin="0,0,0,8">
-                                <TextBlock Text="💵 Cash:" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                <TextBlock x:Name="TenderCashText" Text="LKR 0.00" HorizontalAlignment="Right" FontWeight="SemiBold"/>
-                            </Grid>
-                            <Grid Margin="0,0,0,8">
-                                <TextBlock Text="💳 Card (POS Terminal):" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                <TextBlock x:Name="TenderCardText" Text="LKR 0.00" HorizontalAlignment="Right" FontWeight="SemiBold"/>
-                            </Grid>
-                            <Grid Margin="0,0,0,8">
-                                <TextBlock Text="📱 QR (LANKAQR):" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                <TextBlock x:Name="TenderQrText" Text="LKR 0.00" HorizontalAlignment="Right" FontWeight="SemiBold"/>
-                            </Grid>
-                            <Grid Margin="0,0,0,8">
-                                <TextBlock Text="📝 Credit / Customer Debt:" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                <TextBlock x:Name="TenderCreditText" Text="LKR 0.00" HorizontalAlignment="Right" FontWeight="SemiBold"/>
-                            </Grid>
+                        <DockPanel>
+                            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,12">
+                                <TextBlock Text="RECENT COMPLETED SALES BILLS" FontWeight="Bold" FontSize="14" Foreground="{StaticResource PrimaryBrush}" VerticalAlignment="Center"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <TextBox x:Name="SalesSearchInput" Width="200" Height="32" Padding="6,2" VerticalContentAlignment="Center"
+                                             Text="Search receipt / cashier..." GotFocus="SalesSearch_GotFocus" TextChanged="SalesSearch_TextChanged" Margin="0,0,8,0"/>
+                                    <Button Content="🔄 Refresh" Height="32" Padding="10,2" Background="#1565C0" Foreground="White" FontWeight="SemiBold" Click="RefreshSales_Click"/>
+                                </StackPanel>
+                            </DockPanel>
 
-                            <Separator Margin="0,8,0,12"/>
-
-                            <Button Content="Print End-of-Day Z-Report" Height="36" Background="#ECEFF1" Foreground="#37474F"
-                                    FontWeight="SemiBold" Click="PrintZReport_Click"/>
-                        </StackPanel>
+                            <DataGrid x:Name="SalesBillsGrid" AutoGenerateColumns="False" CanUserAddRows="False"
+                                      SelectionMode="Single" SelectionChanged="SalesBillsGrid_SelectionChanged"
+                                      Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Receipt #" Binding="{Binding ReceiptNumber}" Width="160" FontWeight="Bold"/>
+                                    <DataGridTextColumn Header="Date &amp; Time" Binding="{Binding OccurredAtUtc, StringFormat={}{0:yyyy-MM-dd HH:mm}}" Width="140"/>
+                                    <DataGridTextColumn Header="Cashier" Binding="{Binding CashierId}" Width="100"/>
+                                    <DataGridTextColumn Header="Items" Binding="{Binding Items.Count}" Width="60"/>
+                                    <DataGridTextColumn Header="Gross Total" Binding="{Binding GrossTotal, StringFormat=LKR {0:F2}}" Width="110"/>
+                                    <DataGridTextColumn Header="Discount" Binding="{Binding DiscountTotal, StringFormat=LKR {0:F2}}" Width="90"/>
+                                    <DataGridTextColumn Header="Grand Total" Binding="{Binding GrandTotal, StringFormat=LKR {0:F2}}" Width="120" FontWeight="Bold"/>
+                                    <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </DockPanel>
                     </Border>
 
-                    <!-- Low Stock Alerts Card -->
+                    <!-- Right: Bill Details Preview -->
                     <Border Grid.Column="1" Background="{StaticResource SurfaceBrush}" Padding="16" CornerRadius="6"
                             BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
                         <DockPanel>
-                            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                            <TextBlock DockPanel.Dock="Top" Text="BILL DETAILS PREVIEW" FontWeight="Bold" FontSize="14" Foreground="{StaticResource PrimaryBrush}" Margin="0,0,0,12"/>
+
+                            <StackPanel DockPanel.Dock="Bottom" Margin="0,12,0,0">
+                                <Button x:Name="ReprintBillBtn" Content="🖨️ Reprint Receipt" Height="36" Margin="0,0,0,8"
+                                        Background="#1565C0" Foreground="White" FontWeight="Bold" Click="ReprintBill_Click"/>
+                                <Button Content="↩️ Jump to Refunds &amp; Voids" Height="36"
+                                        Background="#C62828" Foreground="White" FontWeight="SemiBold" Click="JumpToRefunds_Click"/>
+                            </StackPanel>
+
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <StackPanel>
+                                    <TextBlock x:Name="PreviewReceiptNum" Text="Select a bill from the left to preview" FontWeight="Bold" FontSize="15" Margin="0,0,0,4"/>
+                                    <TextBlock x:Name="PreviewBillMeta" Text="" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,8"/>
+                                    <Separator Margin="0,0,0,8"/>
+
+                                    <TextBlock Text="Line Items:" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <ItemsControl x:Name="PreviewItemsList">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="0,2,0,4">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Grid.Column="0">
+                                                        <Run Text="{Binding ProductNameSnapshot, Mode=OneWay}" FontWeight="SemiBold"/>
+                                                        <LineBreak/>
+                                                        <Run Text="{Binding Quantity, StringFormat={}{0:F0}x, Mode=OneWay}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                        <Run Text="{Binding UnitPriceSnapshot, StringFormat=@ LKR {0:F2}, Mode=OneWay}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                    </TextBlock>
+                                                    <TextBlock Grid.Column="1" Text="{Binding LineTotal, StringFormat=LKR {0:F2}, Mode=OneWay}"
+                                                               FontWeight="Bold" VerticalAlignment="Center"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <Separator Margin="0,8,0,8"/>
+                                    <TextBlock Text="Tenders &amp; Payments:" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <ItemsControl x:Name="PreviewTendersList">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="0,2,0,2">
+                                                    <TextBlock Text="{Binding TenderType}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                    <TextBlock Text="{Binding AmountTendered, StringFormat=LKR {0:F2}}" HorizontalAlignment="Right" FontWeight="SemiBold"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </DockPanel>
+                    </Border>
+                </Grid>
+            </TabItem>
+
+            <!-- TAB 3: Inventory & Stock Controls -->
+            <TabItem Header="📦 Inventory &amp; Stock Controls" FontSize="13" FontWeight="SemiBold" Padding="12,6">
+                <Grid Margin="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="440"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Left: Manual Stock Adjustment (A09) & Count Session (A12) -->
+                    <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                        <Border Background="{StaticResource SurfaceBrush}" Padding="16" CornerRadius="6"
+                                BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Margin="0,0,0,16">
+                            <StackPanel>
+                                <TextBlock Text="MANUAL STOCK ADJUSTMENT (A09)" FontWeight="Bold" FontSize="14" Foreground="{StaticResource PrimaryBrush}" Margin="0,0,0,12"/>
+                                <TextBlock Text="Select Product:" Margin="0,0,0,4" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                <ComboBox x:Name="AdjustProductCombo" DisplayMemberPath="Name" SelectedValuePath="ProductId" Height="34" Margin="0,0,0,12"/>
+
+                                <TextBlock Text="New Target Stock Quantity:" Margin="0,0,0,4" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                <TextBox x:Name="AdjustQtyInput" Height="34" Padding="6,2" VerticalContentAlignment="Center" Margin="0,0,0,12"/>
+
+                                <TextBlock Text="Reason for Adjustment (Mandatory):" Margin="0,0,0,4" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                <ComboBox x:Name="AdjustReasonCombo" Height="34" Margin="0,0,0,12">
+                                    <ComboBoxItem Content="Damaged Stock Write-Off" IsSelected="True"/>
+                                    <ComboBoxItem Content="Inventory Count Correction"/>
+                                    <ComboBoxItem Content="Supplier Return"/>
+                                    <ComboBoxItem Content="Shrinkage / Discrepancy"/>
+                                </ComboBox>
+
+                                <TextBlock Text="Notes / Authorization:" Margin="0,0,0,4" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                <TextBox x:Name="AdjustNotesInput" Height="50" TextWrapping="Wrap" AcceptsReturn="True" Padding="6" Margin="0,0,0,16"/>
+
+                                <Button Content="Commit Stock Adjustment" Height="38" Background="#1565C0" Foreground="White"
+                                        FontWeight="Bold" Click="CommitStockAdjustment_Click"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Stock Count Session Card (A12) -->
+                        <Border Background="{StaticResource SurfaceBrush}" Padding="16" CornerRadius="6"
+                                BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                            <StackPanel>
+                                <TextBlock Text="PHYSICAL STOCK COUNT SESSION (A12)" FontWeight="Bold" FontSize="14" Foreground="#00897B" Margin="0,0,0,8"/>
+                                <TextBlock Text="Perform a full physical inventory count with cutoff timestamps and additive reconciliation preserving concurrent sales."
+                                           TextWrapping="Wrap" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,14"/>
+                                <Button Content="📋 Start Stock Count Session (A12)" Height="38" Background="#00897B" Foreground="White"
+                                        FontWeight="Bold" Click="StartStockCountSession_Click"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Right: Low Stock Alerts -->
+                    <Border Grid.Column="1" Background="{StaticResource SurfaceBrush}" Padding="16" CornerRadius="6"
+                            BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                        <DockPanel>
+                            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,12">
                                 <TextBlock Text="LOW &amp; NEGATIVE STOCK ALERTS (A06)" FontWeight="Bold" FontSize="14" Foreground="#C62828" VerticalAlignment="Center"/>
                                 <TextBlock x:Name="LowStockCountBadge" Text="0 items" HorizontalAlignment="Right" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
                             </DockPanel>
-                            
+
                             <DataGrid x:Name="LowStockGrid" AutoGenerateColumns="False" CanUserAddRows="False"
-                                      Height="160" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}">
+                                      Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}">
                                 <DataGrid.Columns>
-                                    <DataGridTextColumn Header="Barcode" Binding="{Binding Barcode}" Width="120" IsReadOnly="True"/>
+                                    <DataGridTextColumn Header="Barcode" Binding="{Binding Barcode}" Width="140" IsReadOnly="True"/>
                                     <DataGridTextColumn Header="Product Name" Binding="{Binding Name}" Width="*" IsReadOnly="True"/>
-                                    <DataGridTextColumn Header="Stock on Hand" Binding="{Binding StockOnHand, StringFormat={}{0:F0}}" Width="120" IsReadOnly="True"/>
+                                    <DataGridTextColumn Header="Stock on Hand" Binding="{Binding StockOnHand, StringFormat={}{0:F0}}" Width="120" IsReadOnly="True" FontWeight="Bold"/>
                                     <DataGridTextColumn Header="Unit Price" Binding="{Binding UnitPrice, StringFormat=LKR {0:F2}}" Width="120" IsReadOnly="True"/>
                                 </DataGrid.Columns>
                             </DataGrid>
                         </DockPanel>
                     </Border>
                 </Grid>
+            </TabItem>
 
-                <!-- Section 3: Manager Controls (Stock Adjustment & Security Audit) -->
-                <Grid Margin="0,0,0,16">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="420"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <!-- Manual Stock Adjustment (A09 Rule: Manager/Owner Only) -->
-                    <Border Grid.Column="0" Background="{StaticResource SurfaceBrush}" Padding="16" CornerRadius="6"
-                            BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Margin="0,0,16,0">
-                        <StackPanel>
-                            <DockPanel Margin="0,0,0,12">
-                                <TextBlock Text="MANUAL STOCK ADJUSTMENT (A09)" FontWeight="Bold" FontSize="14" Foreground="{StaticResource PrimaryBrush}" VerticalAlignment="Center"/>
-                                <TextBlock Text="🔒 Manager Only" Foreground="#C62828" FontWeight="Bold" FontSize="11" HorizontalAlignment="Right" VerticalAlignment="Center"/>
-                            </DockPanel>
-
-                            <TextBlock Text="Select Product:" FontSize="12" Margin="0,0,0,2"/>
-                            <ComboBox x:Name="AdjustProductCombo" Height="34" Margin="0,0,0,8" DisplayMemberPath="Name" SelectedValuePath="ProductId"/>
-
-                            <Grid Margin="0,0,0,8">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Grid.Column="0" Margin="0,0,4,0">
-                                    <TextBlock Text="New Stock Qty:" FontSize="12" Margin="0,0,0,2"/>
-                                    <TextBox x:Name="AdjustQtyInput" Height="34" Padding="6,2" VerticalContentAlignment="Center"/>
-                                </StackPanel>
-                                <StackPanel Grid.Column="1" Margin="4,0,0,0">
-                                    <TextBlock Text="Reason:" FontSize="12" Margin="0,0,0,2"/>
-                                    <ComboBox x:Name="AdjustReasonCombo" Height="34" SelectedIndex="0">
-                                        <ComboBoxItem Content="Stock Audit Count"/>
-                                        <ComboBoxItem Content="Damaged / Broken"/>
-                                        <ComboBoxItem Content="Expired Goods"/>
-                                        <ComboBoxItem Content="Inventory Correction"/>
-                                    </ComboBox>
-                                </StackPanel>
-                            </Grid>
-
-                            <TextBlock Text="Adjustment Notes / Justification:" FontSize="12" Margin="0,0,0,2"/>
-                            <TextBox x:Name="AdjustNotesInput" Height="34" Padding="6,2" Margin="0,0,0,12" VerticalContentAlignment="Center"/>
-
-                            <Button Content="Commit Stock Adjustment" Height="38" Background="{StaticResource AccentBrush}" Foreground="White"
-                                    FontWeight="Bold" Click="CommitStockAdjustment_Click"/>
-
-                            <Button Content="📋 Start Stock Count Session (A12)" Height="38" Margin="0,8,0,0"
-                                    Background="{StaticResource PrimaryBrush}" Foreground="White" FontWeight="Bold"
-                                    Click="StartStockCountSession_Click"/>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- Security & Audit Event Log (A08 Price Overrides & Refunds) -->
-                    <Border Grid.Column="1" Background="{StaticResource SurfaceBrush}" Padding="16" CornerRadius="6"
+            <!-- TAB 4: User & Role Management -->
+            <TabItem Header="👤 User &amp; Role Management" FontSize="13" FontWeight="SemiBold" Padding="12,6">
+                <Grid Margin="12">
+                    <Border Background="{StaticResource SurfaceBrush}" Padding="16" CornerRadius="6"
                             BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
                         <DockPanel>
-                            <TextBlock DockPanel.Dock="Top" Text="SECURITY &amp; AUDIT TRAIL (A08 Price Overrides / Refunds / Adjustments)" 
-                                       FontWeight="Bold" FontSize="14" Foreground="{StaticResource PrimaryBrush}" Margin="0,0,0,8"/>
-                            <DataGrid x:Name="AuditLogGrid" AutoGenerateColumns="False" CanUserAddRows="False"
-                                      Height="210" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}">
+                            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,14">
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="SYSTEM USERS &amp; ROLE PERMISSIONS" FontWeight="Bold" FontSize="14" Foreground="{StaticResource PrimaryBrush}"/>
+                                    <TextBlock Text="Manage staff accounts, assign roles (Cashier, Manager, Owner), and reset passwords"
+                                               Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" Margin="0,2,0,0"/>
+                                </StackPanel>
+
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <Button Content="➕ Add New User" Height="36" Padding="14,2" Margin="0,0,8,0"
+                                            Background="#2E7D32" Foreground="White" FontWeight="Bold" Click="AddUser_Click"/>
+                                    <Button Content="✏️ Edit User / Role" Height="36" Padding="14,2" Margin="0,0,8,0"
+                                            Background="#1565C0" Foreground="White" FontWeight="SemiBold" Click="EditUser_Click"/>
+                                    <Button Content="🔄 Toggle Active / Inactive" Height="36" Padding="14,2"
+                                            Background="#455A64" Foreground="White" FontWeight="SemiBold" Click="ToggleUserActive_Click"/>
+                                </StackPanel>
+                            </DockPanel>
+
+                            <DataGrid x:Name="UsersGrid" AutoGenerateColumns="False" CanUserAddRows="False" SelectionMode="Single"
+                                      Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}">
                                 <DataGrid.Columns>
-                                    <DataGridTextColumn Header="Timestamp" Binding="{Binding OccurredAtUtc, StringFormat={}{0:yyyy-MM-dd HH:mm}}" Width="140" IsReadOnly="True"/>
-                                    <DataGridTextColumn Header="Action" Binding="{Binding Action}" Width="150" IsReadOnly="True"/>
-                                    <DataGridTextColumn Header="Actor" Binding="{Binding ActorId}" Width="90" IsReadOnly="True"/>
-                                    <DataGridTextColumn Header="Details" Binding="{Binding DetailsJson}" Width="*" IsReadOnly="True"/>
+                                    <DataGridTextColumn Header="User ID" Binding="{Binding UserId}" Width="160" IsReadOnly="True"/>
+                                    <DataGridTextColumn Header="Username" Binding="{Binding Username}" Width="140" FontWeight="Bold" IsReadOnly="True"/>
+                                    <DataGridTextColumn Header="Display Name" Binding="{Binding DisplayName}" Width="*" IsReadOnly="True"/>
+                                    <DataGridTextColumn Header="Role" Binding="{Binding Role}" Width="120" FontWeight="Bold" IsReadOnly="True"/>
+                                    <DataGridCheckBoxColumn Header="Active" Binding="{Binding IsActive}" Width="80" IsReadOnly="True"/>
+                                    <DataGridTextColumn Header="Created (UTC)" Binding="{Binding CreatedAtUtc, StringFormat={}{0:yyyy-MM-dd HH:mm}}" Width="150" IsReadOnly="True"/>
                                 </DataGrid.Columns>
                             </DataGrid>
                         </DockPanel>
                     </Border>
                 </Grid>
-            </StackPanel>
-        </ScrollViewer>
+            </TabItem>
+
+            <!-- TAB 5: Security & Audit Trail -->
+            <TabItem Header="🛡️ Security &amp; Audit Trail" FontSize="13" FontWeight="SemiBold" Padding="12,6">
+                <Grid Margin="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="380"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0" Background="{StaticResource SurfaceBrush}" Padding="16" CornerRadius="6"
+                            BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Margin="0,0,16,0">
+                        <DockPanel>
+                            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,12">
+                                <TextBlock Text="IMMUTABLE SECURITY AUDIT TRAIL (A08)" FontWeight="Bold" FontSize="14" Foreground="{StaticResource PrimaryBrush}" VerticalAlignment="Center"/>
+                                <Button Content="🔄 Refresh Audit" Height="30" Padding="10,2" Background="#1565C0" Foreground="White"
+                                        FontWeight="SemiBold" HorizontalAlignment="Right" Click="RefreshAudit_Click"/>
+                            </DockPanel>
+
+                            <DataGrid x:Name="AuditLogGrid" AutoGenerateColumns="False" CanUserAddRows="False"
+                                      SelectionMode="Single" SelectionChanged="AuditLogGrid_SelectionChanged"
+                                      Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Occurred (UTC)" Binding="{Binding OccurredAtUtc, StringFormat={}{0:yyyy-MM-dd HH:mm:ss}}" Width="150" IsReadOnly="True"/>
+                                    <DataGridTextColumn Header="Action" Binding="{Binding Action}" Width="180" FontWeight="Bold" IsReadOnly="True"/>
+                                    <DataGridTextColumn Header="Actor" Binding="{Binding ActorId}" Width="100" IsReadOnly="True"/>
+                                    <DataGridTextColumn Header="Counter" Binding="{Binding CounterId}" Width="80" IsReadOnly="True"/>
+                                    <DataGridTextColumn Header="Details JSON" Binding="{Binding DetailsJson}" Width="*" IsReadOnly="True"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </DockPanel>
+                    </Border>
+
+                    <!-- Details Inspector -->
+                    <Border Grid.Column="1" Background="{StaticResource SurfaceBrush}" Padding="16" CornerRadius="6"
+                            BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Top" Text="AUDIT EVENT INSPECTOR" FontWeight="Bold" FontSize="14" Foreground="{StaticResource PrimaryBrush}" Margin="0,0,0,12"/>
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <TextBox x:Name="AuditDetailsText" IsReadOnly="True" TextWrapping="Wrap" Background="#FAFAFA"
+                                         FontFamily="Consolas" FontSize="12" Padding="8" BorderBrush="{StaticResource BorderBrush}"
+                                         Text="Select an audit event to inspect full metadata and payload."/>
+                            </ScrollViewer>
+                        </DockPanel>
+                    </Border>
+                </Grid>
+            </TabItem>
+        </TabControl>
     </Grid>
 </UserControl>
-

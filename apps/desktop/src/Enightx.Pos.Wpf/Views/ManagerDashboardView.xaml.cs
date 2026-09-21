@@ -15,16 +15,39 @@ public partial class ManagerDashboardView : UserControl
     private readonly PosDatabase _database;
     private readonly ICatalogService _catalogService;
     private readonly IShiftService _shiftService;
+    private readonly ISaleService _saleService;
+    private readonly IAuthService _authService;
+    private readonly IReceiptService _receiptService;
+
+    private List<Sale> _allSales = new();
+    private List<User> _allUsers = new();
+    private CashShift? _activeShift;
 
     public event Action? RequestBackToPos;
+    public event Action? RequestOpenBilling;
+    public event Action? RequestOpenCustomers;
+    public event Action? RequestOpenTransfers;
+    public event Action? RequestOpenReceiving;
+    public event Action? RequestOpenSalesHistory;
+    public event Action? RequestOpenCloseShift;
 
-    public ManagerDashboardView(User currentUser, PosDatabase database, ICatalogService catalogService, IShiftService shiftService)
+    public ManagerDashboardView(
+        User currentUser,
+        PosDatabase database,
+        ICatalogService catalogService,
+        IShiftService shiftService,
+        ISaleService saleService,
+        IAuthService authService,
+        IReceiptService receiptService)
     {
         InitializeComponent();
         _currentUser = currentUser;
         _database = database;
         _catalogService = catalogService;
         _shiftService = shiftService;
+        _saleService = saleService;
+        _authService = authService;
+        _receiptService = receiptService;
 
         RoleBadgeText.Text = $"ROLE: {_currentUser.Role.ToString().ToUpperInvariant()}";
 
@@ -37,6 +60,8 @@ public partial class ManagerDashboardView : UserControl
         await LoadCustomerDebtAsync();
         await LoadActiveShiftAsync();
         await LoadLowStockAlertsAsync();
+        await LoadRecentSalesAsync();
+        await LoadUsersAsync();
         await LoadAuditTrailAsync();
     }
 
@@ -123,21 +148,48 @@ public partial class ManagerDashboardView : UserControl
     {
         try
         {
-            var shift = await _shiftService.GetActiveShiftAsync("B01", "C01");
-            if (shift != null)
+            _activeShift = await _shiftService.GetActiveShiftAsync("B01", "C01");
+            if (_activeShift != null)
             {
-                DrawerCashText.Text = $"LKR {shift.ExpectedCash:F2}";
-                DrawerShiftText.Text = $"Shift ID: {shift.ShiftId:N}[..8]";
+                DrawerCashText.Text = $"LKR {_activeShift.ExpectedCash:F2}";
+                DrawerShiftText.Text = $"Shift ID: {_activeShift.ShiftId:N}[..8]";
+
+                ShiftStatusBadge.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(46, 125, 50));
+                ShiftStatusText.Text = "SHIFT ACTIVE";
+                ActiveCashierInfoText.Text = $"Cashier: {_activeShift.CashierId} | Opened: {_activeShift.OpenedAtUtc:HH:mm:ss} UTC";
+
+                DayOpeningFloatText.Text = $"LKR {_activeShift.OpeningFloat:F2}";
+                DayCashReceivedText.Text = $"LKR {_activeShift.CashReceived:F2}";
+                DayChangeGivenText.Text = $"LKR {_activeShift.ChangeGiven:F2}";
+                DayCashRefundsText.Text = $"LKR {_activeShift.CashRefunds:F2}";
+                DayCashInText.Text = $"LKR {_activeShift.CashIn:F2}";
+                DayCashOutText.Text = $"LKR {_activeShift.CashOut:F2}";
+                DayExpectedCashText.Text = $"LKR {_activeShift.ExpectedCash:F2}";
+                CloseShiftDirectBtn.IsEnabled = true;
             }
             else
             {
                 DrawerCashText.Text = "LKR 0.00";
                 DrawerShiftText.Text = "No Active Shift";
+
+                ShiftStatusBadge.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(198, 40, 40));
+                ShiftStatusText.Text = "NO ACTIVE SHIFT";
+                ActiveCashierInfoText.Text = "No cashier shift is currently active on terminal C01.";
+
+                DayOpeningFloatText.Text = "LKR 0.00";
+                DayCashReceivedText.Text = "LKR 0.00";
+                DayChangeGivenText.Text = "LKR 0.00";
+                DayCashRefundsText.Text = "LKR 0.00";
+                DayCashInText.Text = "LKR 0.00";
+                DayCashOutText.Text = "LKR 0.00";
+                DayExpectedCashText.Text = "LKR 0.00";
+                CloseShiftDirectBtn.IsEnabled = false;
             }
         }
         catch
         {
             DrawerCashText.Text = "LKR 0.00";
+            CloseShiftDirectBtn.IsEnabled = false;
         }
     }
 
@@ -154,6 +206,30 @@ public partial class ManagerDashboardView : UserControl
         var lowStock = allProducts.Where(p => p.StockOnHand <= 10.0m).OrderBy(p => p.StockOnHand).ToList();
         LowStockGrid.ItemsSource = lowStock;
         LowStockCountBadge.Text = $"{lowStock.Count} items below threshold";
+    }
+
+    private async Task LoadRecentSalesAsync()
+    {
+        try
+        {
+            _allSales = await _saleService.GetRecentSalesAsync(50);
+            SalesBillsGrid.ItemsSource = _allSales;
+            if (_allSales.Count > 0)
+            {
+                SalesBillsGrid.SelectedIndex = 0;
+            }
+        }
+        catch { }
+    }
+
+    private async Task LoadUsersAsync()
+    {
+        try
+        {
+            _allUsers = await _authService.GetAllUsersAsync();
+            UsersGrid.ItemsSource = _allUsers;
+        }
+        catch { }
     }
 
     private async Task LoadAuditTrailAsync()
@@ -186,6 +262,151 @@ public partial class ManagerDashboardView : UserControl
         AuditLogGrid.ItemsSource = auditLogs;
     }
 
+    // --- Tab 1: Cashier & Navigation Handlers ---
+    private void CountMoneyCloseShift_Click(object sender, RoutedEventArgs e)
+    {
+        if (_activeShift == null)
+        {
+            MessageBox.Show("No active shift to close.", "Notice", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var dialog = new ShiftCloseDialog(_activeShift, _shiftService, _currentUser.UserId)
+        {
+            Owner = Window.GetWindow(this)
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            MessageBox.Show("Shift closed and reconciled successfully!", "Shift Closed", MessageBoxButton.OK, MessageBoxImage.Information);
+            _ = LoadDashboardDataAsync();
+        }
+    }
+
+    private void OpenCashMovement_Click(object sender, RoutedEventArgs e)
+    {
+        if (_activeShift == null)
+        {
+            MessageBox.Show("An active shift is required to record drawer cash movements.", "Shift Required", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var dialog = new CashMovementDialog(_shiftService, _activeShift, _currentUser)
+        {
+            Owner = Window.GetWindow(this)
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            _ = LoadDashboardDataAsync();
+        }
+    }
+
+    private void PrintZReport_Click(object sender, RoutedEventArgs e)
+    {
+        var zReport = $"========================================\n" +
+                      $"         ENIGHTX POS Z-REPORT          \n" +
+                      $"========================================\n" +
+                      $"Date: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n" +
+                      $"Terminal: C01 | Branch: B01\n" +
+                      $"Generated By: {_currentUser.DisplayName} ({_currentUser.Role})\n" +
+                      $"----------------------------------------\n" +
+                      $"Completed Sales: {OrdersCountText.Text}\n" +
+                      $"Gross Revenue:   {TodayRevenueText.Text}\n" +
+                      $"Average Ticket:  {AvgTicketText.Text}\n" +
+                      $"----------------------------------------\n" +
+                      $"TENDERS COLLECTED:\n" +
+                      $"Cash:     {TenderCashText.Text}\n" +
+                      $"Card:     {TenderCardText.Text}\n" +
+                      $"QR:       {TenderQrText.Text}\n" +
+                      $"Credit:   {TenderCreditText.Text}\n" +
+                      $"----------------------------------------\n" +
+                      $"DRAWER EXPECTED: {DrawerCashText.Text}\n" +
+                      $"========================================\n" +
+                      $"       END OF REPORT (AUDITED)          \n" +
+                      $"========================================";
+
+        MessageBox.Show(zReport, "End-of-Day Z-Report", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private void QuickNavBilling_Click(object sender, RoutedEventArgs e) => RequestOpenBilling?.Invoke();
+    private void QuickNavCustomers_Click(object sender, RoutedEventArgs e) => RequestOpenCustomers?.Invoke();
+    private void QuickNavTransfers_Click(object sender, RoutedEventArgs e) => RequestOpenTransfers?.Invoke();
+    private void QuickNavReceiving_Click(object sender, RoutedEventArgs e) => RequestOpenReceiving?.Invoke();
+    private void QuickNavStockCount_Click(object sender, RoutedEventArgs e) => StartStockCountSession_Click(sender, e);
+
+    // --- Tab 2: Sales Bills Handlers ---
+    private void SalesSearch_GotFocus(object sender, RoutedEventArgs e)
+    {
+        if (SalesSearchInput.Text == "Search receipt / cashier...")
+        {
+            SalesSearchInput.Text = "";
+        }
+    }
+
+    private void SalesSearch_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        var query = SalesSearchInput.Text.Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(query) || query == "search receipt / cashier...")
+        {
+            SalesBillsGrid.ItemsSource = _allSales;
+            return;
+        }
+
+        var filtered = _allSales.Where(s =>
+            s.ReceiptNumber.ToLowerInvariant().Contains(query) ||
+            s.CashierId.ToLowerInvariant().Contains(query)).ToList();
+        SalesBillsGrid.ItemsSource = filtered;
+    }
+
+    private async void RefreshSales_Click(object sender, RoutedEventArgs e)
+    {
+        await LoadRecentSalesAsync();
+    }
+
+    private void SalesBillsGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        var selectedSale = SalesBillsGrid.SelectedItem as Sale;
+        if (selectedSale != null)
+        {
+            PreviewReceiptNum.Text = $"Receipt #{selectedSale.ReceiptNumber}";
+            PreviewBillMeta.Text = $"Cashier: {selectedSale.CashierId} | {selectedSale.OccurredAtUtc:yyyy-MM-dd HH:mm} UTC | Status: {selectedSale.Status}";
+            PreviewItemsList.ItemsSource = selectedSale.Items;
+            PreviewTendersList.ItemsSource = selectedSale.Tenders;
+            ReprintBillBtn.IsEnabled = true;
+        }
+        else
+        {
+            PreviewReceiptNum.Text = "Select a bill from the left to preview";
+            PreviewBillMeta.Text = "";
+            PreviewItemsList.ItemsSource = null;
+            PreviewTendersList.ItemsSource = null;
+            ReprintBillBtn.IsEnabled = false;
+        }
+    }
+
+    private async void ReprintBill_Click(object sender, RoutedEventArgs e)
+    {
+        var selectedSale = SalesBillsGrid.SelectedItem as Sale;
+        if (selectedSale == null) return;
+
+        try
+        {
+            await _receiptService.ReprintReceiptAsync(selectedSale.SaleId, _currentUser.UserId, "TENANT_LK_01", "B01", "C01");
+            MessageBox.Show($"Receipt #{selectedSale.ReceiptNumber} successfully sent to printer!", "Reprint Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Failed to reprint receipt: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void JumpToRefunds_Click(object sender, RoutedEventArgs e)
+    {
+        RequestOpenSalesHistory?.Invoke();
+    }
+
+    // --- Tab 3: Inventory Handlers ---
     private async void CommitStockAdjustment_Click(object sender, RoutedEventArgs e)
     {
         // A09 Security Rule: Cashiers cannot adjust stock manually
@@ -248,20 +469,19 @@ public partial class ManagerDashboardView : UserControl
             var details = JsonSerializer.Serialize(new
             {
                 product_id = product.ProductId,
-                product_name = product.Name,
                 old_stock = oldStock,
                 new_stock = newStock,
                 difference = diff,
-                reason,
-                notes,
-                adjusted_by = _currentUser.UserId
+                reason = reason,
+                notes = notes,
+                actor = _currentUser.UserId
             });
 
             using (var cmd = conn.CreateCommand())
             {
                 cmd.Transaction = tx;
                 cmd.CommandText = @"INSERT INTO audit_events (event_id, tenant_id, branch_id, counter_id, actor_id, action, details_json, occurred_at_utc)
-                                    VALUES (@evId, 'TENANT_LK_01', 'B01', 'C01', @actor, 'MANUAL_STOCK_ADJUSTMENT', @details, @now);";
+                                    VALUES (@evId, 'TENANT_LK_01', 'B01', 'C01', @actor, 'STOCK_ADJUSTMENT', @details, @now);";
                 cmd.Parameters.AddWithValue("@evId", Guid.NewGuid().ToString());
                 cmd.Parameters.AddWithValue("@actor", _currentUser.UserId);
                 cmd.Parameters.AddWithValue("@details", details);
@@ -271,18 +491,17 @@ public partial class ManagerDashboardView : UserControl
 
             tx.Commit();
 
-            product.StockOnHand = newStock;
+            MessageBox.Show($"Stock successfully adjusted for {product.Name}!\nOld: {oldStock:F0} -> New: {newStock:F0} (Change: {diff:+0;-0;0})\nLogged to immutable audit events.", "Stock Adjustment Committed", MessageBoxButton.OK, MessageBoxImage.Information);
+
             AdjustQtyInput.Text = "";
             AdjustNotesInput.Text = "";
 
             await LoadLowStockAlertsAsync();
             await LoadAuditTrailAsync();
-
-            MessageBox.Show($"Stock for '{product.Name}' adjusted from {oldStock:F0} to {newStock:F0} units.\nAudit trail recorded.", "Stock Adjusted", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error adjusting stock: {ex.Message}", "Adjustment Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show($"Failed to commit stock adjustment: {ex.Message}", "Adjustment Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -290,7 +509,7 @@ public partial class ManagerDashboardView : UserControl
     {
         if (_currentUser.Role != Role.Manager && _currentUser.Role != Role.Owner)
         {
-            MessageBox.Show("ACCESS DENIED (A09 Security Rule):\nStock count sessions are strictly restricted to Store Managers and Owners.", "Permission Denied", MessageBoxButton.OK, MessageBoxImage.Stop);
+            MessageBox.Show("ACCESS DENIED (A09 Security Rule):\nPhysical inventory count sessions are restricted to Store Managers and Owners.", "Permission Denied", MessageBoxButton.OK, MessageBoxImage.Stop);
             return;
         }
 
@@ -301,35 +520,118 @@ public partial class ManagerDashboardView : UserControl
 
         if (dialog.ShowDialog() == true)
         {
-            LoadDashboardDataAsync().ConfigureAwait(false);
+            _ = LoadDashboardDataAsync();
         }
     }
 
-    private void PrintZReport_Click(object sender, RoutedEventArgs e)
+    // --- Tab 4: User & Role Management Handlers ---
+    private async void AddUser_Click(object sender, RoutedEventArgs e)
     {
-        var reportMsg = $"========================================\n" +
-                        $"       ENIGHTX POS - Z-REPORT (DAILY)   \n" +
-                        $"========================================\n" +
-                        $"Date: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n" +
-                        $"Branch: B01 | Counter: C01\n" +
-                        $"Manager: {_currentUser.DisplayName} ({_currentUser.UserId})\n" +
-                        $"----------------------------------------\n" +
-                        $"Gross Sales:     {TodayRevenueText.Text}\n" +
-                        $"Transactions:    {OrdersCountText.Text}\n" +
-                        $"Avg Ticket:      {AvgTicketText.Text}\n" +
-                        $"----------------------------------------\n" +
-                        $"Tender Breakdown:\n" +
-                        $"  Cash:          {TenderCashText.Text}\n" +
-                        $"  Card:          {TenderCardText.Text}\n" +
-                        $"  QR:            {TenderQrText.Text}\n" +
-                        $"  Credit:        {TenderCreditText.Text}\n" +
-                        $"----------------------------------------\n" +
-                        $"Customer Debt:   {CustomerDebtText.Text}\n" +
-                        $"Drawer Cash:     {DrawerCashText.Text}\n" +
-                        $"========================================\n" +
-                        $"Z-Report logged for statutory audit.";
+        if (_currentUser.Role != Role.Manager && _currentUser.Role != Role.Owner)
+        {
+            MessageBox.Show("ACCESS DENIED:\nUser management is restricted to Store Managers and Owners.", "Permission Denied", MessageBoxButton.OK, MessageBoxImage.Stop);
+            return;
+        }
 
-        MessageBox.Show(reportMsg, "End-of-Day Z-Report", MessageBoxButton.OK, MessageBoxImage.Information);
+        var dialog = new UserEditDialog(_authService, _currentUser)
+        {
+            Owner = Window.GetWindow(this)
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            await LoadUsersAsync();
+            await LoadAuditTrailAsync();
+        }
+    }
+
+    private async void EditUser_Click(object sender, RoutedEventArgs e)
+    {
+        if (_currentUser.Role != Role.Manager && _currentUser.Role != Role.Owner)
+        {
+            MessageBox.Show("ACCESS DENIED:\nUser management is restricted to Store Managers and Owners.", "Permission Denied", MessageBoxButton.OK, MessageBoxImage.Stop);
+            return;
+        }
+
+        var selectedUser = UsersGrid.SelectedItem as User;
+        if (selectedUser == null)
+        {
+            MessageBox.Show("Please select a user to edit.", "Notice", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var dialog = new UserEditDialog(_authService, _currentUser, userToEdit: selectedUser)
+        {
+            Owner = Window.GetWindow(this)
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            await LoadUsersAsync();
+            await LoadAuditTrailAsync();
+        }
+    }
+
+    private async void ToggleUserActive_Click(object sender, RoutedEventArgs e)
+    {
+        if (_currentUser.Role != Role.Manager && _currentUser.Role != Role.Owner)
+        {
+            MessageBox.Show("ACCESS DENIED:\nUser management is restricted to Store Managers and Owners.", "Permission Denied", MessageBoxButton.OK, MessageBoxImage.Stop);
+            return;
+        }
+
+        var selectedUser = UsersGrid.SelectedItem as User;
+        if (selectedUser == null)
+        {
+            MessageBox.Show("Please select a user to activate or deactivate.", "Notice", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        if (selectedUser.UserId == _currentUser.UserId)
+        {
+            MessageBox.Show("You cannot deactivate your own active account.", "Action Blocked", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var newStatus = !selectedUser.IsActive;
+        var actionVerb = newStatus ? "activate" : "deactivate";
+        var confirm = MessageBox.Show($"Are you sure you want to {actionVerb} user '{selectedUser.Username}'?", "Confirm Action", MessageBoxButton.YesNo, MessageBoxImage.Question);
+        if (confirm != MessageBoxResult.Yes) return;
+
+        try
+        {
+            await _authService.SetUserActiveAsync(selectedUser.UserId, newStatus, _currentUser.UserId, "TENANT_LK_01", "B01", "C01");
+            MessageBox.Show($"User '{selectedUser.Username}' has been {(newStatus ? "activated" : "deactivated")}.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            await LoadUsersAsync();
+            await LoadAuditTrailAsync();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Failed to update user status: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    // --- Tab 5: Security Audit Handlers ---
+    private async void RefreshAudit_Click(object sender, RoutedEventArgs e)
+    {
+        await LoadAuditTrailAsync();
+    }
+
+    private void AuditLogGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        var ev = AuditLogGrid.SelectedItem as AuditEvent;
+        if (ev != null)
+        {
+            try
+            {
+                var parsed = JsonSerializer.Deserialize<JsonElement>(ev.DetailsJson);
+                AuditDetailsText.Text = JsonSerializer.Serialize(parsed, new JsonSerializerOptions { WriteIndented = true });
+            }
+            catch
+            {
+                AuditDetailsText.Text = ev.DetailsJson;
+            }
+        }
     }
 
     private async void Refresh_Click(object sender, RoutedEventArgs e)
@@ -342,4 +644,3 @@ public partial class ManagerDashboardView : UserControl
         RequestBackToPos?.Invoke();
     }
 }
-
