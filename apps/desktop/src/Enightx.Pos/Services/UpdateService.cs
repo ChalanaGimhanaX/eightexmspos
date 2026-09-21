@@ -80,17 +80,38 @@ public class UpdateService : IUpdateService
         _httpClient = httpClient ?? new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
         _manifestUrl = manifestUrl;
         _baseDirectory = baseDirectory;
-        
+
+        // Priority 1 – version stamp file written by the modular update zip.
+        // This file (enightx_version.txt) is included in every update zip so that
+        // xcopy/robocopy places it in the app directory after the update is applied.
+        // Reading from here is the only reliable way to know the current version when
+        // the original WPF exe (Enightx.Pos.Wpf.exe) is never replaced by a modular update.
+        var appDir = baseDirectory ?? AppDomain.CurrentDomain.BaseDirectory;
+        var stampFile = Path.Combine(appDir, "enightx_version.txt");
+        if (File.Exists(stampFile))
+        {
+            var stamped = File.ReadAllText(stampFile).Trim();
+            if (!string.IsNullOrWhiteSpace(stamped))
+            {
+                _currentVersion = stamped;
+                return;
+            }
+        }
+
+        // Priority 2 – explicit override (used by unit tests and in App.xaml.cs for
+        // installs that have never received a modular update, so the stamp file doesn't
+        // exist yet and the passed-in assembly version is the best we have).
         if (!string.IsNullOrEmpty(currentVersion))
         {
             _currentVersion = currentVersion;
+            return;
         }
-        else
-        {
-            var asm = typeof(UpdateService).Assembly;
-            var ver = asm.GetName().Version;
-            _currentVersion = ver != null ? $"{ver.Major}.{ver.Minor}.{ver.Build}" : "1.0.0";
-        }
+
+        // Priority 3 – core assembly version (Enightx.Pos.dll). Correct after any
+        // modular update that side-loads the updated DLL next to the exe.
+        var asm = typeof(UpdateService).Assembly;
+        var ver = asm.GetName().Version;
+        _currentVersion = ver != null ? $"{ver.Major}.{ver.Minor}.{ver.Build}" : "1.0.0";
     }
 
     public virtual bool IsModularInstallation()
