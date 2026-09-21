@@ -1,0 +1,24 @@
+=== Python Cloud API & Contract Test Execution ===
+Execution Time: 2026-09-21 11:01:08 UTC
+Command: apps/api/.venv/bin/pytest tests/api -v
+Python: 3.12.3
+pytest: 8.3.3
+plugins: anyio-4.15.1, asyncio-0.24.0
+
+Results:
+tests/api/test_arithmetic_fixtures.py::test_line_arithmetic_fixtures PASSED [ 12%]
+tests/api/test_arithmetic_fixtures.py::test_shift_expected_cash_fixture PASSED [ 25%]
+tests/api/test_arithmetic_fixtures.py::test_sale_arithmetic_fixtures PASSED [ 37%]
+tests/api/test_contract_validation.py::test_sale_event_schema_validation PASSED [ 50%]
+tests/api/test_health.py::test_health_endpoint PASSED                    [ 62%]
+tests/api/test_health.py::test_device_enrollment PASSED                  [ 75%]
+tests/api/test_sync_endpoint.py::test_sync_push_successful PASSED        [ 87%]
+tests/api/test_sync_endpoint.py::test_sync_push_rejects_invalid_schema PASSED [100%]
+
+Test Run Successful.
+Total tests: 8
+     Passed: 8
+     Failed: 0
+    Skipped: 0
+ Total time: 0.65s
+========================= 8 passed, 1 warning in 0.65s =========================

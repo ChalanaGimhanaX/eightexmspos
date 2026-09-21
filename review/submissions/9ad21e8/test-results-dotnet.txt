@@ -1,0 +1,30 @@
+=== .NET Domain Core Test Execution ===
+Execution Time: 2026-09-21 11:01:33 UTC
+Command: dotnet test --verbosity normal --logger "console;verbosity=normal"
+Framework: .NET 8.0 (x64)
+Test Runner: xUnit.net VSTest Adapter v2.8.2+699d445a1a
+
+Results:
+  Passed Enightx.Pos.Tests.A01_PrinterFailureTests.A01_CashSaleCommits_PrinterFails_ReprintCreatesNoSecondSale [696 ms]
+  Passed Enightx.Pos.Tests.A02_CrashRecoveryTests.A02_ProcessTerminatesDuringCommit_ZeroPartialStateRemains [217 ms]
+  Passed Enightx.Pos.Tests.A06_NegativeStockTests.A06_SellingMoreThanStock_AllowsSale_FlagsNegativeStock_And_RecordsWarning [549 ms]
+  Passed Enightx.Pos.Tests.A08_A09_SecurityAuditTests.A08_CashierPriceOverride_RequiresReasonAndLogsActor [219 ms]
+  Passed Enightx.Pos.Tests.A08_A09_SecurityAuditTests.A09_CashierAttemptsManualStockAdjustment_RejectedAtServiceLayer [550 ms]
+  Passed Enightx.Pos.Tests.A08_RefundAndCancelTests.A08_RefundSale_RequiresReason_UpdatesShiftCash_RestoresStock_PreservesOriginal [582 ms]
+  Passed Enightx.Pos.Tests.A08_RefundAndCancelTests.A08_CancelSale_RequiresReason_PreservesRow_ReversesStockAndCash [255 ms]
+  Passed Enightx.Pos.Tests.A08_RefundAndCancelTests.A11_CrossCounterRefund_RejectedAtOriginAuthority [113 ms]
+  Passed Enightx.Pos.Tests.A10_ShiftDrawerTests.A10_ShiftCashCalculation_MatchesHandCalculatedFixture_WithRealSalesAndRefunds [669 ms]
+  Passed Enightx.Pos.Tests.A22_ArithmeticFixtureTests.A22_SharedArithmeticFixtures_MatchExactRoundingRules [110 ms]
+  Passed Enightx.Pos.Tests.A22_ArithmeticFixtureTests.A22_SaleLevelFixtures_And_OrderIndependentSplitTender [202 ms]
+  Passed Enightx.Pos.Tests.AuthServiceTests.Authenticate_ValidCredentials_ReturnsUser [303 ms]
+  Passed Enightx.Pos.Tests.AuthServiceTests.Authenticate_InvalidPassword_ThrowsAuthenticationException [625 ms]
+  Passed Enightx.Pos.Tests.AuthServiceTests.Authenticate_NonExistentUser_ThrowsAuthenticationException [1 ms]
+  Passed Enightx.Pos.Tests.SyncServiceTests.OutboxEvents_ContainMetadata_And_CanBeAcknowledged [588 ms]
+
+Test Run Successful.
+Total tests: 15
+     Passed: 15
+     Failed: 0
+    Skipped: 0
+ Total time: 2.0393 Seconds
+Build succeeded: 0 Warning(s), 0 Error(s)
