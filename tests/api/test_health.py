@@ -17,6 +17,11 @@ def test_health_endpoint():
     assert data["service"] == "enightx-api"
     assert "timestamp" in data
 
+def test_health_head_endpoint():
+    response = client.head("/health")
+    assert response.status_code == 200
+    assert response.headers.get("content-type") == "application/json"
+
 def test_device_enrollment():
     payload = {
         "tenant_id": "tenant_123",

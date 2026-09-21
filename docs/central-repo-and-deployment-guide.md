@@ -254,7 +254,7 @@ curl -s -X POST https://posapi.eightexms.site/api/v1/sync/push \
 - **Testing:**
   ```bash
   cd /srv/enightx/workspaces/teammate/enightx-pos
-  apps/api/.venv/bin/pytest tests/api -v      # 8 passed
+  apps/api/.venv/bin/pytest tests/api -v      # 9 passed
   dotnet test --no-build -v normal          # 15 passed
   ```
 - **Local Dev Server:**

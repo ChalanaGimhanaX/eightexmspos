@@ -77,7 +77,7 @@ The VPS hosts strictly separated directory trees with OS-level permission enforc
   cd /srv/enightx/workspaces/teammate/enightx-pos
   apps/api/.venv/bin/uvicorn src.enightx_api.main:app --host 127.0.0.1 --port 8011 --reload
   ```
-- **Run API Test Suite (8 Tests):**
+- **Run API Test Suite (9 Tests):**
   ```bash
   cd /srv/enightx/workspaces/teammate/enightx-pos
   apps/api/.venv/bin/pytest tests/api -v

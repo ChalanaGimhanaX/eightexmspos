@@ -80,7 +80,7 @@
 
 - **Authentication:** `enightx-dev` connects directly via SSH ED25519 keypair and secure password without root privileges.
 - **Deep Test Suite (Executed as non-root `enightx-dev` on VPS):**
-  - API Pytest (`apps/api/.venv/bin/pytest tests/api -v`): **8 PASSED**, exit code 0 (100% pass rate).
+  - API Pytest (`apps/api/.venv/bin/pytest tests/api -v`): **9 PASSED**, exit code 0 (100% pass rate).
   - .NET Tests (`dotnet test --no-build -v normal`): **15 PASSED**, 0 failed, exit code 0 (100% pass rate).
 - **PostgreSQL Database Isolation & Hardening:**
   - `enightx_dev` database ownership: `enightx_pos_dev` and `enightx_pos_staging`.
