@@ -55,34 +55,43 @@ To push `main`, `develop`, and `codex/dev/phase0-phase1-sale` to `origin`, valid
 3. Authenticate git push:
    ```bash
    # One-time authenticated push:
-   git push https://<GITHUB_USERNAME>:<PAT>@github.com/ChalanaGimhanaX/eightexmspos.git develop
-   git push https://<GITHUB_USERNAME>:<PAT>@github.com/ChalanaGimhanaX/eightexmspos.git main
-   git push https://<GITHUB_USERNAME>:<PAT>@github.com/ChalanaGimhanaX/eightexmspos.git codex/dev/phase0-phase1-sale
+   git push https://<GITHUB_USERNAME>:<PAT>@github.com/ChalanaGimhanaX/eightexmspos.git main develop codex/dev/phase0-phase1-sale
 
-   # Or configure git credential caching / storage:
+   # Or configure git credential helper:
    git config --global credential.helper cache
    # or
    git config --global credential.helper store
    ```
 
-#### Method B: SSH Deploy Key with Write Access
-1. Generate a new SSH keypair:
+#### Method B: Dedicated SSH Deploy Key (Pre-generated & Ready to Register)
+A dedicated ED25519 deploy key has already been generated and configured on both the **Local Development Host** (`/root/.ssh/id_ed25519_eightexmspos`) and the **Target VPS** (`/home/enightx-dev/.ssh/id_ed25519_eightexmspos`).
+
+1. **Owner Action (One-Time):** In GitHub, navigate to:
+   `https://github.com/ChalanaGimhanaX/eightexmspos/settings/keys`
+   - Click **Add deploy key**
+   - Title: `enightx-pos-deploy-key`
+   - Key:
+     ```text
+     ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC/HwZ0UriGYILaZrHcm3FwPKos33mKLlRqmjJ2KLmSK deploy-key-eightexmspos
+     ```
+   - Check: **Allow write access** (Crucial: write access is needed to push)
+   - Click **Add key**
+
+2. **Immediate Push via SSH Host Alias (Pre-configured):**
+   The SSH host alias `github-eightexmspos` is already configured in `~/.ssh/config` on both machines:
    ```bash
-   ssh-keygen -t ed25519 -C "enightx-pos-deploy" -f ~/.ssh/id_ed25519_eightexmspos
+   # From Local Development Host:
+   git push git@github-eightexmspos:ChalanaGimhanaX/eightexmspos.git main develop codex/dev/phase0-phase1-sale
+
+   # From Target VPS (as enightx-dev):
+   cd /srv/enightx/workspaces/teammate/enightx-pos
+   git push git@github-eightexmspos:ChalanaGimhanaX/eightexmspos.git main develop codex/dev/phase0-phase1-sale
    ```
-2. In the GitHub repository `eightexmspos`, navigate to **Settings** → **Deploy keys** → **Add deploy key**.
-3. Paste the contents of `id_ed25519_eightexmspos.pub` and check **Allow write access**.
-4. Configure SSH host entry in `~/.ssh/config`:
-   ```text
-   Host github-eightexmspos
-       HostName github.com
-       User git
-       IdentityFile ~/.ssh/id_ed25519_eightexmspos
-       IdentitiesOnly yes
-   ```
-5. Update git remote:
+
+3. **Or Switch `origin` to SSH:**
    ```bash
    git remote set-url origin git@github-eightexmspos:ChalanaGimhanaX/eightexmspos.git
+   git push -u origin main develop codex/dev/phase0-phase1-sale
    ```
 
 ---

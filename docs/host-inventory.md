@@ -61,9 +61,9 @@
 ```
 
 ### OS Accounts
-- **Teammate Developer:** `enightx-dev` (UID 1001), shell `/bin/bash`, home `/home/enightx-dev`.
+- **Teammate Developer:** `enightx-dev` (UID 1002, GID 1003), shell `/bin/bash`, home `/home/enightx-dev`.
 - **Production Service User:** `enightx-srv` (system user), shell `/usr/sbin/nologin`, home `/srv/enightx/production`.
-- **Deployment Group:** `enightx-deploy` (system group).
+- **Deployment Group:** `enightx-deploy` (system group, GID 1001).
 
 ### Isolated Toolchains & Runtimes
 1. **Python:** Python 3.12.14 installed (`/usr/bin/python3.12`).
@@ -111,7 +111,7 @@
   - `eightexmspos` is a private GitHub repository.
   - Public unauthenticated requests receive HTTP 404 / terminal prompt disabled (`fatal: could not read Username for 'https://github.com'`).
   - Deploy keys for other repositories (e.g. `ChalanaGimhanaX/Nimal-Morters-system`) are strictly rejected by GitHub with `ERROR: Repository not found`.
-  - **Required for Push:** The repository owner must provide a GitHub Personal Access Token (PAT) with `repo` scope or register a dedicated SSH Deploy Key with write permissions for `eightexmspos`.
+  - **Required for Push:** The repository owner must provide a GitHub Personal Access Token (PAT) with `repo` scope OR register the pre-generated dedicated SSH Deploy Key (`ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC/HwZ0UriGYILaZrHcm3FwPKos33mKLlRqmjJ2KLmSK deploy-key-eightexmspos`) with write permissions under repository settings (see `docs/central-repo-and-deployment-guide.md`).
 
 ### B. Production Service Deployment (`enightx-pos-api.service`)
 - **Release Directory:** `/srv/enightx/production/releases/v1.0.0`

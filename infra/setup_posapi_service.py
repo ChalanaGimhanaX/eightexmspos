@@ -200,8 +200,24 @@ systemctl daemon-reload
 systemctl enable enightx-pos-api
 systemctl restart enightx-pos-api
 
-# Wait for service to come up
-sleep 2
+# Wait for service to come up with retries
+echo "Waiting for enightx-pos-api to bind port 8010..."
+ready=0
+for i in $(seq 1 15); do
+    if curl -s http://127.0.0.1:8010/health > /dev/null; then
+        ready=1
+        echo "Service is up and responding on attempt $i."
+        break
+    fi
+    sleep 1
+done
+
+if [ "$ready" -ne 1 ]; then
+    echo "ERROR: Service failed to respond within 15 seconds."
+    systemctl status enightx-pos-api --no-pager
+    exit 1
+fi
+
 systemctl status enightx-pos-api --no-pager
 curl -s http://127.0.0.1:8010/health
 """

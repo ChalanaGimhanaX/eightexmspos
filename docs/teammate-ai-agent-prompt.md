@@ -30,7 +30,7 @@ You are a senior full-stack engineer and core contributor to the **Enightx POS S
 - **Central GitHub Repository:** `https://github.com/ChalanaGimhanaX/eightexmspos.git`
 - **Git Remote & Pushing:**
   - Remote `origin` is set to `https://github.com/ChalanaGimhanaX/eightexmspos.git`.
-  - The repository is private. To push branches (`develop`, `main`, etc.), the operator or teammate must provide a GitHub PAT or configure an SSH key with write permissions.
+  - The repository is private. To push branches (`develop`, `main`, etc.), the operator or teammate must provide a GitHub PAT or use the pre-configured dedicated Deploy Key (`git push git@github-eightexmspos:ChalanaGimhanaX/eightexmspos.git <branch>`) once registered by the repository owner (see `docs/central-repo-and-deployment-guide.md`).
 - **Live Cloud API Endpoint:**
   - Base URL: `https://posapi.eightexms.site`
   - Health check: `https://posapi.eightexms.site/health`
