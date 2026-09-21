@@ -97,7 +97,7 @@ public class AuthService : IAuthService
             PasswordHash = reader.GetString(4),
             PasswordSalt = reader.GetString(5),
             IsActive = reader.GetInt32(6) == 1,
-            CreatedAtUtc = DateTime.Parse(reader.GetString(7))
+            CreatedAtUtc = DateTime.Parse(reader.GetString(7), null, System.Globalization.DateTimeStyles.AdjustToUniversal)
         };
 
         if (!user.IsActive)

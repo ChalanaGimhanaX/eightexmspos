@@ -1021,7 +1021,7 @@ public class SaleService : ISaleService
             GrandTotal = reader.GetDecimal(12),
             Status = (SaleStatus)reader.GetInt32(13),
             ReprintCount = reader.GetInt32(14),
-            CreatedAtUtc = DateTime.Parse(reader.GetString(15))
+            CreatedAtUtc = DateTime.Parse(reader.GetString(15), null, System.Globalization.DateTimeStyles.AdjustToUniversal)
         };
 
         // Fetch lines

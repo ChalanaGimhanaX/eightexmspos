@@ -50,10 +50,10 @@ public class SyncService : ISyncService
                 SchemaVersion = reader.GetString(6),
                 PayloadJson = reader.GetString(7),
                 ActorId = reader.GetString(8),
-                OccurredAtUtc = DateTime.Parse(reader.GetString(9)),
+                OccurredAtUtc = DateTime.Parse(reader.GetString(9), null, System.Globalization.DateTimeStyles.AdjustToUniversal),
                 CausalReference = reader.IsDBNull(10) ? null : reader.GetString(10),
                 Status = reader.GetString(11),
-                CreatedAtUtc = DateTime.Parse(reader.GetString(12))
+                CreatedAtUtc = DateTime.Parse(reader.GetString(12), null, System.Globalization.DateTimeStyles.AdjustToUniversal)
             });
         }
         return list;
