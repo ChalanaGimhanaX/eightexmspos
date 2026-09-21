@@ -10,9 +10,11 @@ from ..schemas import (
     TopProductReportItem,
     CashierPerformanceItem,
     DashboardSummaryResponse,
+    BranchFreshnessItem,
+    BranchFreshnessReportResponse,
 )
 from ..database import get_db
-from ..models import SyncEvent
+from ..models import SyncEvent, Device
 
 router = APIRouter(prefix="/api/v1/reports", tags=["Reports & Analytics"])
 
@@ -236,5 +238,80 @@ def get_dashboard_summary(
         total_customer_debt=round_lkr(total_customer_debt),
         low_stock_alerts=low_stock_alerts,
         tender_breakdown={k: round_lkr(v) for k, v in tender_breakdown.items()}
+    )
+
+@router.get("/branch-freshness", response_model=BranchFreshnessReportResponse)
+def get_branch_freshness(
+    tenant_id: str = "TENANT_LK_01",
+    branch_id: Optional[str] = None,
+    stale_threshold_seconds: int = 300,
+    db: Session = Depends(get_db)
+):
+    query = db.query(Device).filter(Device.tenant_id == tenant_id)
+    if branch_id:
+        query = query.filter(Device.branch_id == branch_id)
+
+    devices = query.all()
+    now = datetime.now(timezone.utc)
+    freshness_items: List[BranchFreshnessItem] = []
+    has_stale = False
+
+    for dev in devices:
+        last_seen = dev.last_seen_at
+        if last_seen and last_seen.tzinfo is None:
+            last_seen = last_seen.replace(tzinfo=timezone.utc)
+
+        is_stale = False
+        status_str = "ONLINE"
+        reason = None
+
+        if not last_seen:
+            is_stale = True
+            status_str = "OFFLINE"
+            reason = "Device has never connected or reported heartbeat."
+        else:
+            diff_sec = (now - last_seen).total_seconds()
+            if diff_sec > 3600:
+                is_stale = True
+                status_str = "OFFLINE"
+                reason = f"No heartbeat for {int(diff_sec // 60)} minutes."
+            elif diff_sec > stale_threshold_seconds:
+                is_stale = True
+                status_str = "STALE"
+                reason = f"No heartbeat for {int(diff_sec // 60)} minutes (threshold: {stale_threshold_seconds // 60}m)."
+            else:
+                status_str = "ONLINE"
+                is_stale = False
+
+        if is_stale:
+            has_stale = True
+
+        freshness_items.append(
+            BranchFreshnessItem(
+                device_id=dev.device_id,
+                device_code=dev.device_code,
+                device_name=dev.device_name,
+                tenant_id=dev.tenant_id,
+                branch_id=dev.branch_id,
+                last_seen_at=last_seen,
+                last_sync_sequence=dev.last_sync_sequence,
+                app_version=dev.app_version,
+                is_stale=is_stale,
+                status=status_str,
+                stale_reason=reason
+            )
+        )
+
+    warning_msg = None
+    if has_stale:
+        warning_msg = "⚠️ A17 Stale Data Notice: One or more branch counters have stale or offline synchronization data. Cloud totals may not reflect the latest offline sales."
+
+    return BranchFreshnessReportResponse(
+        tenant_id=tenant_id,
+        branch_id=branch_id,
+        checked_at=now,
+        has_stale_counters=has_stale,
+        warning_message=warning_msg,
+        devices=freshness_items
     )
 

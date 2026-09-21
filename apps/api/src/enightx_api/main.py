@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from .routers import health, sync, devices, updates, shifts, customers, inventory, reports, suppliers
+from .dashboard import router as dashboard_router
 from .config import settings
 
 app = FastAPI(
@@ -17,6 +18,7 @@ app.include_router(customers.router)
 app.include_router(inventory.router)
 app.include_router(reports.router)
 app.include_router(suppliers.router)
+app.include_router(dashboard_router)
 
 if __name__ == "__main__":
     import uvicorn

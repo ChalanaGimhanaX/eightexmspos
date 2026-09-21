@@ -42,6 +42,8 @@
                             Background="#1565C0" Foreground="White" FontWeight="SemiBold" Click="NavTransfers_Click"/>
                     <Button Content="📦 Receiving / GRN" Height="30" Padding="12,2" Margin="0,0,6,0"
                             Background="#1565C0" Foreground="White" FontWeight="SemiBold" Click="NavReceiving_Click"/>
+                    <Button Content="📊 Manager Dashboard" Height="30" Padding="12,2" Margin="0,0,6,0"
+                            Background="#00897B" Foreground="White" FontWeight="Bold" Click="NavDashboard_Click"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                     <Button Content="🔒 Close Shift" Height="30" Padding="12,2" Margin="0,0,8,0"

@@ -181,6 +181,15 @@ public partial class MainWindow : Window
         MainContainer.Children.Add(view);
     }
 
+    private void NavDashboard_Click(object sender, RoutedEventArgs e)
+    {
+        if (_currentUser == null) return;
+        var view = new ManagerDashboardView(_currentUser, App.Database, App.CatalogService, App.ShiftService);
+        view.RequestBackToPos += () => NavBilling_Click(this, new RoutedEventArgs());
+        MainContainer.Children.Clear();
+        MainContainer.Children.Add(view);
+    }
+
     private void NavCloseShift_Click(object sender, RoutedEventArgs e)
     {
         if (_currentShift == null || _currentUser == null)

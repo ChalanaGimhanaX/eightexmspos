@@ -297,6 +297,27 @@ class DashboardSummaryResponse(BaseModel):
     low_stock_alerts: int
     tender_breakdown: Dict[str, Decimal]
 
+class BranchFreshnessItem(BaseModel):
+    device_id: str
+    device_code: str
+    device_name: str
+    tenant_id: str
+    branch_id: str
+    last_seen_at: Optional[datetime] = None
+    last_sync_sequence: int = 0
+    app_version: str
+    is_stale: bool
+    status: str
+    stale_reason: Optional[str] = None
+
+class BranchFreshnessReportResponse(BaseModel):
+    tenant_id: str
+    branch_id: Optional[str] = None
+    checked_at: datetime
+    has_stale_counters: bool
+    warning_message: Optional[str] = None
+    devices: List[BranchFreshnessItem]
+
 # --- Supplier Schemas ---
 class SupplierCreateRequest(BaseModel):
     tenant_id: str

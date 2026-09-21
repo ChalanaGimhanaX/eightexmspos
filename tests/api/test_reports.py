@@ -164,3 +164,52 @@ def test_sales_summary_and_top_products_reports():
     assert dash["total_orders"] == 2
     assert Decimal(str(dash["total_revenue"])) == Decimal("3675.00")
 
+def test_branch_freshness_and_web_dashboard():
+    suffix = uuid.uuid4().hex[:6]
+    tenant_id = f"TENANT_FRESH_{suffix}"
+    branch_id = f"BR_{suffix}"
+
+    # 1. Enroll device
+    enroll_payload = {
+        "tenant_id": tenant_id,
+        "branch_id": branch_id,
+        "device_code": f"CTR-{suffix}",
+        "device_name": "Main Register Counter",
+        "hardware_fingerprint": f"HW-{suffix}",
+        "app_version": "1.0.6"
+    }
+    enroll_res = client.post("/api/v1/devices/enroll", json=enroll_payload)
+    assert enroll_res.status_code == 200
+    dev_data = enroll_res.json()
+    device_id = dev_data["device_id"]
+    token = dev_data["token"]
+
+    # 2. Check branch freshness - initially online (enroll sets last_seen_at)
+    fresh_res = client.get(f"/api/v1/reports/branch-freshness?tenant_id={tenant_id}&branch_id={branch_id}&stale_threshold_seconds=600")
+    assert fresh_res.status_code == 200
+    fresh_data = fresh_res.json()
+    assert fresh_data["tenant_id"] == tenant_id
+    assert len(fresh_data["devices"]) == 1
+    device_item = fresh_data["devices"][0]
+    assert device_item["device_id"] == device_id
+    assert device_item["status"] == "ONLINE"
+    assert device_item["is_stale"] is False
+    assert fresh_data["has_stale_counters"] is False
+    assert fresh_data["warning_message"] is None
+
+    # 3. Test stale condition with 0 second threshold
+    stale_res = client.get(f"/api/v1/reports/branch-freshness?tenant_id={tenant_id}&branch_id={branch_id}&stale_threshold_seconds=0")
+    assert stale_res.status_code == 200
+    stale_data = stale_res.json()
+    assert stale_data["has_stale_counters"] is True
+    assert "A17 Stale Data Notice" in (stale_data["warning_message"] or "")
+    assert stale_data["devices"][0]["is_stale"] is True
+    assert stale_data["devices"][0]["status"] == "STALE"
+
+    # 4. Test Web Dashboard HTML response
+    dash_html_res = client.get("/dashboard")
+    assert dash_html_res.status_code == 200
+    assert "Store Manager &amp; Owner Dashboard" in dash_html_res.text
+    assert "Branch &amp; Counter Freshness Monitor (A17)" in dash_html_res.text
+    assert "A17 Freshness Alert" in dash_html_res.text
+
