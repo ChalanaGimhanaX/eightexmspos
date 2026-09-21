@@ -90,3 +90,4 @@ def test_sync_push_rejects_invalid_schema():
     }
     response = client.post("/api/v1/sync/push", json=bad_payload)
     assert response.status_code == 422
+

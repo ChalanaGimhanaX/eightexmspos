@@ -101,3 +101,4 @@ public class A06_NegativeStockTests : IDisposable
         }
     }
 }
+

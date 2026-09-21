@@ -113,3 +113,4 @@ public class SyncServiceTests : IDisposable
         Assert.Equal(2L, finalSeq);
     }
 }
+

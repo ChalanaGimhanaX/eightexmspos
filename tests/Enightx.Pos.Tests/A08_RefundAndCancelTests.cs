@@ -296,3 +296,4 @@ public class A08_RefundAndCancelTests : IDisposable
         Assert.Contains("Cross-counter refund not permitted offline", ex.Message);
     }
 }
+
