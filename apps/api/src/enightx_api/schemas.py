@@ -146,3 +146,75 @@ class ShiftDetailResponse(BaseModel):
     actor_id: Optional[str] = None
     reconciled_at: datetime
 
+class CustomerCreateRequest(BaseModel):
+    name: str
+    phone: str
+    email: Optional[str] = None
+    nic_or_brn: Optional[str] = None
+    credit_limit: Decimal = Decimal("0.00")
+    tenant_id: str = "TENANT_LK_01"
+
+class CustomerResponse(BaseModel):
+    customer_id: str
+    tenant_id: str
+    name: str
+    phone: str
+    email: Optional[str] = None
+    nic_or_brn: Optional[str] = None
+    credit_limit: Decimal
+    current_balance: Decimal
+    available_credit: Decimal
+    is_active: bool
+    created_at: datetime
+
+class CustomerInvoiceRequest(BaseModel):
+    customer_id: str
+    tenant_id: str
+    branch_id: str
+    counter_id: str
+    amount: Decimal
+    reference_id: Optional[str] = None
+    actor_id: str
+    notes: Optional[str] = None
+    occurred_at: Optional[datetime] = None
+
+class CustomerInvoiceResponse(BaseModel):
+    entry_id: uuid.UUID
+    customer_id: str
+    amount: Decimal
+    new_balance: Decimal
+    available_credit: Decimal
+    occurred_at: datetime
+
+class CustomerSettlementRequest(BaseModel):
+    customer_id: str
+    tenant_id: str
+    branch_id: str
+    counter_id: str
+    amount: Decimal
+    payment_method: str = "CASH"
+    reference_id: Optional[str] = None
+    actor_id: str
+    notes: Optional[str] = None
+    occurred_at: Optional[datetime] = None
+
+class CustomerSettlementResponse(BaseModel):
+    entry_id: uuid.UUID
+    customer_id: str
+    amount_settled: Decimal
+    remaining_balance: Decimal
+    settled_at: datetime
+
+class CustomerLedgerEntryResponse(BaseModel):
+    entry_id: uuid.UUID
+    customer_id: str
+    entry_type: str
+    amount: Decimal
+    balance_after: Decimal
+    reference_id: Optional[str] = None
+    payment_method: Optional[str] = None
+    actor_id: str
+    notes: Optional[str] = None
+    occurred_at: datetime
+
+

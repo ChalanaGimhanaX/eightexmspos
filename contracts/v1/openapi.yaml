@@ -163,3 +163,35 @@ paths:
         '404':
           description: Shift not found
 
+  /api/v1/customers:
+    post:
+      summary: Register a new customer with credit terms
+      operationId: createCustomer
+      responses:
+        '201':
+          description: Customer created successfully
+    get:
+      summary: List customers and their credit balances
+      operationId: listCustomers
+      responses:
+        '200':
+          description: Customer list retrieved successfully
+
+  /api/v1/customers/settlement:
+    post:
+      summary: Settle outstanding customer debt via counter or cloud
+      operationId: settleCustomerDebt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './schemas/customer-settlement.json'
+      responses:
+        '200':
+          description: Debt payment recorded and remaining balance calculated
+        '400':
+          description: Invalid settlement amount
+        '404':
+          description: Customer not found
+
