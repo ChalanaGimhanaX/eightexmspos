@@ -9,6 +9,7 @@
 *.pfx
 *.p12
 *.secret
+infra/.secrets/
 
 # .NET / C#
 bin/
