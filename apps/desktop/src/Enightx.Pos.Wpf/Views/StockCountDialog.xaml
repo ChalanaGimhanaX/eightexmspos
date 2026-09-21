@@ -1,0 +1,60 @@
+<Window x:Class="Enightx.Pos.Wpf.Views.StockCountDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Physical Stock Count Session" Height="620" Width="820"
+        WindowStartupLocation="CenterOwner" Background="{StaticResource BackgroundBrush}">
+    <Grid Margin="18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Background="{StaticResource PrimaryDarkBrush}" Padding="16" CornerRadius="6" Margin="0,0,0,14">
+            <DockPanel>
+                <StackPanel>
+                    <TextBlock Text="📋 PHYSICAL INVENTORY COUNT SESSION (A12)" FontWeight="Bold" FontSize="16" Foreground="White"/>
+                    <TextBlock x:Name="CutoffInfoText" Text="Cutoff Time: ... | Concurrent sales will NOT be overwritten" FontSize="12" Foreground="#BBDEFB" Margin="0,4,0,0"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- Grid of Products -->
+        <Border Grid.Row="1" Background="{StaticResource SurfaceBrush}" CornerRadius="6" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+            <DataGrid x:Name="CountGrid" AutoGenerateColumns="False" CanUserAddRows="False"
+                      HeadersVisibility="Column" RowHeight="38" GridLinesVisibility="Horizontal">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Barcode" Binding="{Binding Barcode}" Width="130" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="Product Name" Binding="{Binding Name}" Width="*" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="System Stock (Cutoff)" Binding="{Binding CutoffStock, StringFormat={}{0:F0}}" Width="150" IsReadOnly="True" FontWeight="Bold"/>
+                    
+                    <!-- Editable Counted Quantity -->
+                    <DataGridTemplateColumn Header="Physical Count" Width="140">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBox Text="{Binding PhysicalCount, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:F0}}"
+                                         FontWeight="Bold" FontSize="14" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                                         Padding="4" Margin="2" TextChanged="CountInput_TextChanged"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <DataGridTextColumn Header="Variance" Binding="{Binding Variance, StringFormat={}{0:F0}}" Width="110" IsReadOnly="True" FontWeight="Bold"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+
+        <!-- Actions -->
+        <DockPanel Grid.Row="2" Margin="0,14,0,0">
+            <TextBlock x:Name="SummaryText" Text="0 items with count discrepancies" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{StaticResource TextSecondaryBrush}"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Cancel" Width="100" Height="38" Margin="0,0,10,0" Background="#ECEFF1" Foreground="#37474F"
+                        FontWeight="SemiBold" Click="Cancel_Click"/>
+                <Button Content="Commit Count Reconciliation" Width="220" Height="38" Background="{StaticResource PrimaryBrush}"
+                        Foreground="White" FontWeight="Bold" Click="CommitReconciliation_Click"/>
+            </StackPanel>
+        </DockPanel>
+    </Grid>
+</Window>
+

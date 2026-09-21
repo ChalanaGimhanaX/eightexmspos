@@ -285,3 +285,4 @@ def verify_payment(req: VerifyPaymentRequest, db: Session = Depends(get_db)):
         "licenses_issued": issued_licenses,
         "valid_until": expires_at.isoformat()
     }
+

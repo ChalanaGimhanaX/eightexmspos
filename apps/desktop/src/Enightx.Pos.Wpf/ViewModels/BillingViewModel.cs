@@ -90,6 +90,16 @@ public class CartItemViewModel : INotifyPropertyChanged
     }
 }
 
+public class HeldBill
+{
+    public Guid HeldBillId { get; set; } = Guid.NewGuid();
+    public DateTime HeldAtUtc { get; set; } = DateTime.UtcNow;
+    public string Note { get; set; } = string.Empty;
+    public List<CartItemViewModel> Items { get; set; } = new();
+    public decimal GrandTotal => MoneyCalculator.Round(Items.Sum(i => i.LineTotal));
+    public int TotalItems => (int)Items.Sum(i => i.Quantity);
+}
+
 public class BillingViewModel : INotifyPropertyChanged
 {
     private readonly ICatalogService _catalogService;
@@ -107,6 +117,8 @@ public class BillingViewModel : INotifyPropertyChanged
     public User CurrentUser { get; }
     public CashShift CurrentShift { get; }
     public ObservableCollection<CartItemViewModel> CartItems { get; } = new();
+    public ObservableCollection<HeldBill> HeldBills { get; } = new();
+    public int HeldBillsCount => HeldBills.Count;
     public ObservableCollection<Product> FilteredProducts { get; } = new();
     public ObservableCollection<Category> Categories { get; } = new();
 
@@ -306,6 +318,69 @@ public class BillingViewModel : INotifyPropertyChanged
         CartItems.Clear();
         StatusMessage = "Cart cleared";
         RefreshTotals();
+    }
+
+    public bool HoldCurrentBill(string note = "")
+    {
+        if (CartItems.Count == 0) return false;
+
+        var held = new HeldBill
+        {
+            HeldAtUtc = DateTime.UtcNow,
+            Note = string.IsNullOrWhiteSpace(note) ? $"Bill #{HeldBills.Count + 1}" : note,
+            Items = CartItems.Select(i => new CartItemViewModel
+            {
+                ProductId = i.ProductId,
+                Barcode = i.Barcode,
+                ProductName = i.ProductName,
+                UnitPrice = i.UnitPrice,
+                Quantity = i.Quantity,
+                DiscountRate = i.DiscountRate,
+                TaxRate = i.TaxRate,
+                IsPriceOverridden = i.IsPriceOverridden,
+                OverrideReason = i.OverrideReason
+            }).ToList()
+        };
+        foreach (var item in held.Items) item.Recalculate();
+
+        HeldBills.Add(held);
+        CartItems.Clear();
+        RefreshTotals();
+        OnPropertyChanged(nameof(HeldBillsCount));
+        StatusMessage = $"Bill held ({held.Note}). Cart cleared for next customer.";
+        return true;
+    }
+
+    public bool RecallBill(HeldBill bill)
+    {
+        if (bill == null || !HeldBills.Contains(bill)) return false;
+
+        if (CartItems.Count > 0)
+        {
+            return false;
+        }
+
+        foreach (var item in bill.Items)
+        {
+            item.Recalculate();
+            CartItems.Add(item);
+        }
+
+        HeldBills.Remove(bill);
+        RefreshTotals();
+        OnPropertyChanged(nameof(HeldBillsCount));
+        StatusMessage = $"Recalled held bill: {bill.Note}";
+        return true;
+    }
+
+    public void DiscardHeldBill(HeldBill bill)
+    {
+        if (bill != null && HeldBills.Contains(bill))
+        {
+            HeldBills.Remove(bill);
+            OnPropertyChanged(nameof(HeldBillsCount));
+            StatusMessage = $"Discarded held bill: {bill.Note}";
+        }
     }
 
     public async Task SyncCatalogWithCloudAsync()

@@ -286,6 +286,25 @@ public partial class ManagerDashboardView : UserControl
         }
     }
 
+    private void StartStockCountSession_Click(object sender, RoutedEventArgs e)
+    {
+        if (_currentUser.Role != Role.Manager && _currentUser.Role != Role.Owner)
+        {
+            MessageBox.Show("ACCESS DENIED (A09 Security Rule):\nStock count sessions are strictly restricted to Store Managers and Owners.", "Permission Denied", MessageBoxButton.OK, MessageBoxImage.Stop);
+            return;
+        }
+
+        var dialog = new StockCountDialog(_catalogService, _database, _currentUser)
+        {
+            Owner = Window.GetWindow(this)
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            LoadDashboardDataAsync().ConfigureAwait(false);
+        }
+    }
+
     private void PrintZReport_Click(object sender, RoutedEventArgs e)
     {
         var reportMsg = $"========================================\n" +

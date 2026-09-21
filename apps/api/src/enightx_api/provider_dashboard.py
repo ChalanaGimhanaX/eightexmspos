@@ -606,3 +606,4 @@ PROVIDER_HTML = """<!DOCTYPE html>
 @router.get("/provider", response_class=HTMLResponse)
 def get_provider_dashboard():
     return HTMLResponse(content=PROVIDER_HTML, status_code=200)
+

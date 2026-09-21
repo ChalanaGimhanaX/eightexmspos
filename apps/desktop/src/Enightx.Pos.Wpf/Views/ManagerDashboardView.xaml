@@ -185,6 +185,10 @@
 
                             <Button Content="Commit Stock Adjustment" Height="38" Background="{StaticResource AccentBrush}" Foreground="White"
                                     FontWeight="Bold" Click="CommitStockAdjustment_Click"/>
+
+                            <Button Content="📋 Start Stock Count Session (A12)" Height="38" Margin="0,8,0,0"
+                                    Background="{StaticResource PrimaryBrush}" Foreground="White" FontWeight="Bold"
+                                    Click="StartStockCountSession_Click"/>
                         </StackPanel>
                     </Border>
 

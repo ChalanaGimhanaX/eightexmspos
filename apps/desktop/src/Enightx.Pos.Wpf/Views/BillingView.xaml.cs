@@ -77,4 +77,44 @@ public partial class BillingView : UserControl
             vm.ClearCart();
         }
     }
+
+    private void HoldBill_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is BillingViewModel vm)
+        {
+            if (vm.CartItems.Count == 0)
+            {
+                MessageBox.Show("Cannot hold an empty cart.", "Empty Cart", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var prompt = new ReasonPromptDialog("Enter note / customer name for this held bill (Optional):", $"Customer #{vm.HeldBillsCount + 1}")
+            {
+                Owner = Window.GetWindow(this)
+            };
+
+            if (prompt.ShowDialog() == true)
+            {
+                vm.HoldCurrentBill(prompt.ReasonText);
+            }
+        }
+    }
+
+    private void RecallBill_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is BillingViewModel vm)
+        {
+            if (vm.HeldBills.Count == 0)
+            {
+                MessageBox.Show("No held bills currently parked.", "No Held Bills", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var dialog = new HeldBillsDialog(vm)
+            {
+                Owner = Window.GetWindow(this)
+            };
+            dialog.ShowDialog();
+        }
+    }
 }

@@ -48,6 +48,10 @@
                             Background="#00897B" Foreground="White" FontWeight="Bold" Click="NavDashboard_Click"/>
                     <Button Content="🔑 License" Height="30" Padding="10,2" Margin="0,0,4,0"
                             Background="#455A64" Foreground="White" FontWeight="SemiBold" Click="NavLicense_Click"/>
+                    <Button Content="💵 Cash In/Out" Height="30" Padding="10,2" Margin="0,0,4,0"
+                            Background="#455A64" Foreground="White" FontWeight="SemiBold" Click="NavCashMovement_Click"/>
+                    <Button Content="💾 Backup" Height="30" Padding="10,2" Margin="0,0,4,0"
+                            Background="#455A64" Foreground="White" FontWeight="SemiBold" Click="NavBackup_Click"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                     <!-- Language Switcher -->

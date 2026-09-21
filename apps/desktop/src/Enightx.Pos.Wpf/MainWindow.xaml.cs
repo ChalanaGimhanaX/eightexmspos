@@ -299,6 +299,30 @@ public partial class MainWindow : Window
         dialog.ShowDialog();
     }
 
+    private void NavCashMovement_Click(object sender, RoutedEventArgs e)
+    {
+        if (_currentUser == null || _currentShift == null)
+        {
+            MessageBox.Show("An active shift is required to record drawer cash movements.", "Shift Required", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var dialog = new CashMovementDialog(App.ShiftService, _currentShift, _currentUser)
+        {
+            Owner = this
+        };
+        dialog.ShowDialog();
+    }
+
+    private void NavBackup_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new BackupRestoreDialog
+        {
+            Owner = this
+        };
+        dialog.ShowDialog();
+    }
+
     private void NavCloseShift_Click(object sender, RoutedEventArgs e)
     {
         if (_currentShift == null || _currentUser == null)
