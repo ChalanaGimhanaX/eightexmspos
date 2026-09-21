@@ -36,3 +36,8 @@ public class PrinterException : PosException
     public PrinterException(string message) : base(message) { }
     public PrinterException(string message, Exception inner) : base(message, inner) { }
 }
+
+public class CreditLimitExceededException : PosException
+{
+    public CreditLimitExceededException(string message) : base(message) { }
+}

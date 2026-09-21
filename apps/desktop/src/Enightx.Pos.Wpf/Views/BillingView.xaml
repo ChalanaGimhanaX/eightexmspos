@@ -23,6 +23,9 @@
                     </Border>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Button Content="👥 Customers" Height="32" Padding="10,0" Margin="0,0,8,0"
+                            Background="#2E7D32" Foreground="White" FontWeight="SemiBold" FontSize="12" BorderThickness="0"
+                            Cursor="Hand" Click="Customers_Click"/>
                     <Button Content="↩️ Returns" Height="32" Padding="10,0" Margin="0,0,8,0"
                             Background="#37474F" Foreground="White" FontWeight="SemiBold" FontSize="12" BorderThickness="0"
                             Cursor="Hand" Click="Refund_Click"/>

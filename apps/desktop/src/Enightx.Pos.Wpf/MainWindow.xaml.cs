@@ -123,7 +123,7 @@ public partial class MainWindow : Window
                 return;
             }
 
-            var paymentVm = new PaymentViewModel(billingVm, App.SaleService, App.ReceiptService);
+            var paymentVm = new PaymentViewModel(billingVm, App.SaleService, App.ReceiptService, App.CustomerService);
             var dialog = new PaymentDialog
             {
                 Owner = this,

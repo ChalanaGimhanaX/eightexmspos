@@ -12,7 +12,7 @@ public interface ICatalogService
     Task<Product?> GetProductByBarcodeAsync(string barcode);
     Task<Product?> GetProductByIdAsync(string productId);
     Task<decimal> GetStockOnHandAsync(string productId);
-    Task AdjustStockAsync(string productId, decimal quantityChange, string reason, User actor, string tenantId, string branchId, string counterId);
+    Task AdjustStockAsync(string productId, decimal quantityChange, string reason, User actor, string tenantId, string branchId, string counterId, User? authorizer = null);
     Task ApplyCatalogUpdatesAsync(CatalogSyncResponseDto catalogData, bool updateCursor = true);
     Task<DateTime?> GetLastCatalogSyncTimeAsync();
     Task SetLastCatalogSyncTimeAsync(DateTime timestamp);
@@ -101,14 +101,21 @@ public class CatalogService : ICatalogService
         User actor,
         string tenantId,
         string branchId,
-        string counterId)
+        string counterId,
+        User? authorizer = null)
     {
-        // A09: Manual stock adjustments allowed ONLY for Owner and Manager.
-        if (actor.Role != Role.Owner && actor.Role != Role.Manager)
+        // A09: Manual stock adjustments allowed ONLY for Owner and Manager, or with Manager/Owner authorizer PIN.
+        var effectiveAuthorizer = authorizer ?? (actor.Role == Role.Owner || actor.Role == Role.Manager ? actor : null);
+        if (effectiveAuthorizer == null || (effectiveAuthorizer.Role != Role.Owner && effectiveAuthorizer.Role != Role.Manager))
         {
             throw new UnauthorizedActionException(
                 $"Cashier role '{actor.Username}' is not authorized to adjust manual stock. Owner or Manager authorization required."
             );
+        }
+
+        if (!effectiveAuthorizer.IsActive)
+        {
+            throw new UnauthorizedActionException($"Authorizer '{effectiveAuthorizer.DisplayName}' is inactive.");
         }
 
         if (string.IsNullOrWhiteSpace(reason))
@@ -162,7 +169,9 @@ public class CatalogService : ICatalogService
             ProductId = productId,
             QuantityChange = quantityChange,
             Reason = reason,
-            AdjustmentId = adjId
+            AdjustmentId = adjId,
+            AuthorizerId = effectiveAuthorizer.UserId,
+            AuthorizerName = effectiveAuthorizer.DisplayName
         }));
         auditCmd.Parameters.AddWithValue("$occurred", DateTime.UtcNow.ToString("o"));
         await auditCmd.ExecuteNonQueryAsync();

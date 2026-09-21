@@ -99,6 +99,33 @@ public partial class RefundDialog : Window
             return;
         }
 
+        string? authorizerId = null;
+        if (_currentUser.Role == Role.Cashier)
+        {
+            var pinDialog = new ManagerPinDialog(
+                App.AuthService,
+                actionDescription: $"Return/Refund Approval for Receipt {_loadedSale.ReceiptNumber} (Qty: {qtyToRefund} of {selectedLine.ProductName})",
+                tenantId: _loadedSale.TenantId,
+                branchId: _currentShift.BranchId,
+                counterId: _currentShift.CounterId
+            )
+            {
+                Owner = this
+            };
+
+            if (pinDialog.ShowDialog() != true || pinDialog.AuthorizedUser == null)
+            {
+                MessageBox.Show("Refund cancelled: Manager or Owner authorization required.", "Authorization Denied", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            authorizerId = pinDialog.AuthorizedUser.UserId;
+        }
+        else
+        {
+            authorizerId = _currentUser.UserId;
+        }
+
         try
         {
             var refundCmd = new RefundSaleCommand(
@@ -113,7 +140,8 @@ public partial class RefundDialog : Window
                     new(LineId: selectedLine.LineId, QuantityToRefund: qtyToRefund)
                 },
                 Reason: reason,
-                ReturnStockToInventory: RestockCheckBox.IsChecked == true
+                ReturnStockToInventory: RestockCheckBox.IsChecked == true,
+                AuthorizingUserId: authorizerId
             );
 
             var refundSale = await _saleService.RefundSaleAsync(refundCmd);

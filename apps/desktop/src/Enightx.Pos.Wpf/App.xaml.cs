@@ -19,6 +19,7 @@ public partial class App : Application
     public static IHeldCartService HeldCartService { get; private set; } = null!;
     public static IGoodsReceivingService GoodsReceivingService { get; private set; } = null!;
     public static IReportService ReportService { get; private set; } = null!;
+    public static ICustomerService CustomerService { get; private set; } = null!;
     public static ISyncBackgroundWorker? SyncWorker { get; private set; }
 
     protected override void OnStartup(StartupEventArgs e)
@@ -53,6 +54,7 @@ public partial class App : Application
         AuthService = new AuthService(Database);
         CatalogService = new CatalogService(Database);
         ShiftService = new ShiftService(Database);
+        CustomerService = new CustomerService(Database, ShiftService);
         SaleService = new SaleService(Database, CatalogService);
         HeldCartService = new HeldCartService(Database);
         GoodsReceivingService = new GoodsReceivingService(Database, CatalogService);
@@ -83,14 +85,23 @@ public partial class App : Application
             var adminCount = Convert.ToInt64(await cmd.ExecuteScalarAsync());
             if (adminCount == 0)
             {
-                await AuthService.CreateUserAsync("admin", "Store Manager", "admin123", Role.Manager);
+                await AuthService.CreateUserAsync("admin", "Store Manager", "admin123", Role.Manager, "1234");
             }
 
             cmd.CommandText = "SELECT COUNT(*) FROM users WHERE username = 'cashier1';";
             var cashierCount = Convert.ToInt64(await cmd.ExecuteScalarAsync());
             if (cashierCount == 0)
             {
-                await AuthService.CreateUserAsync("cashier1", "Cashier 01", "cashier123", Role.Cashier);
+                await AuthService.CreateUserAsync("cashier1", "Cashier 01", "cashier123", Role.Cashier, "5678");
+            }
+
+            cmd.CommandText = "SELECT COUNT(*) FROM customers;";
+            var custCount = Convert.ToInt64(await cmd.ExecuteScalarAsync());
+            if (custCount == 0)
+            {
+                await CustomerService.CreateCustomerAsync("Kamal Jayawardena", "0771234567", "No. 45, Galle Road, Colombo", 25000.00m, "admin", 5000.00m);
+                await CustomerService.CreateCustomerAsync("Nihal Motors (Perera)", "0719876543", "12 Temple Rd, Negombo", 50000.00m, "admin", 12500.00m);
+                await CustomerService.CreateCustomerAsync("Samantha Fernando", "0755554444", "Kandy Rd, Kiribathgoda", 15000.00m, "admin", 0.00m);
             }
 
             cmd.CommandText = "SELECT COUNT(*) FROM products;";

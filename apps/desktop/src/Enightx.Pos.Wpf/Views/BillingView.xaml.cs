@@ -148,17 +148,44 @@ public partial class BillingView : UserControl
         }
     }
 
+    private void Customers_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is BillingViewModel vm)
+        {
+            var dialog = new CustomerManagementDialog(App.CustomerService, vm.CurrentUser, vm.CurrentShift)
+            {
+                Owner = Window.GetWindow(this)
+            };
+            dialog.ShowDialog();
+        }
+    }
+
     private void GoodsReceiving_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is BillingViewModel vm)
         {
+            User activeUser = vm.CurrentUser;
             if (vm.CurrentUser.Role != Role.Manager && vm.CurrentUser.Role != Role.Owner)
             {
-                MessageBox.Show("Access Denied: Goods Receiving is restricted to Store Managers and Owners.", "Permission Denied", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
+                var pinDialog = new ManagerPinDialog(
+                    App.AuthService,
+                    actionDescription: "Goods Receiving Access",
+                    branchId: vm.CurrentShift.BranchId,
+                    counterId: vm.CurrentShift.CounterId
+                )
+                {
+                    Owner = Window.GetWindow(this)
+                };
+
+                if (pinDialog.ShowDialog() != true || pinDialog.AuthorizedUser == null)
+                {
+                    return;
+                }
+
+                activeUser = pinDialog.AuthorizedUser;
             }
 
-            var dialog = new GoodsReceivingDialog(App.GoodsReceivingService, App.CatalogService, vm.CurrentUser, vm.CurrentShift.BranchId)
+            var dialog = new GoodsReceivingDialog(App.GoodsReceivingService, App.CatalogService, activeUser, vm.CurrentShift.BranchId)
             {
                 Owner = Window.GetWindow(this)
             };

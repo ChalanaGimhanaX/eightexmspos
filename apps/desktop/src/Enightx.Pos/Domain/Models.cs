@@ -39,6 +39,8 @@ public class User
     public Role Role { get; set; }
     public required string PasswordHash { get; set; }
     public required string PasswordSalt { get; set; }
+    public string? PinHash { get; set; }
+    public string? PinSalt { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 }
@@ -451,6 +453,34 @@ public class InventorySummaryReport
     public decimal TotalValuationAtCost { get; set; }
     public decimal TotalValuationAtRetail { get; set; }
     public List<InventoryValuationItem> Items { get; set; } = new();
+}
+
+public class Customer
+{
+    public required string CustomerId { get; set; }
+    public required string Name { get; set; }
+    public required string Phone { get; set; }
+    public string? Address { get; set; }
+    public decimal CreditLimit { get; set; }
+    public decimal OutstandingBalance { get; set; }
+    public bool IsActive { get; set; } = true;
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
+}
+
+public class CustomerLedgerEntry
+{
+    public Guid EntryId { get; set; } = Guid.NewGuid();
+    public required string CustomerId { get; set; }
+    public required string EntryType { get; set; } // "CREDIT_SALE", "DEBT_PAYMENT", "INITIAL_BALANCE", "SALE_CANCELLED"
+    public decimal Amount { get; set; }
+    public decimal BalanceAfter { get; set; }
+    public string? ReferenceId { get; set; }
+    public Guid? ShiftId { get; set; }
+    public string? PaymentMethod { get; set; } // "CASH", "CARD", "CREDIT"
+    public string? Notes { get; set; }
+    public required string ActorId { get; set; }
+    public DateTime OccurredAtUtc { get; set; } = DateTime.UtcNow;
 }
 
 

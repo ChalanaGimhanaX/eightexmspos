@@ -12,7 +12,8 @@ public record CreateSaleLineRequest(
     decimal? PriceOverride = null,
     string? OverrideReason = null,
     decimal DiscountRate = 0.0m,
-    decimal DiscountFixed = 0.0m
+    decimal DiscountFixed = 0.0m,
+    string? AuthorizingUserId = null
 );
 
 public record CreateTenderRequest(
@@ -29,7 +30,8 @@ public record CreateSaleCommand(
     Guid ShiftId,
     List<CreateSaleLineRequest> Items,
     List<CreateTenderRequest> Tenders,
-    string? CustomerId = null
+    string? CustomerId = null,
+    string? AuthorizingUserId = null
 );
 
 public record RefundLineRequest(
@@ -46,7 +48,8 @@ public record RefundSaleCommand(
     Guid OriginalSaleId,
     List<RefundLineRequest> Items,
     string Reason,
-    bool ReturnStockToInventory = true
+    bool ReturnStockToInventory = true,
+    string? AuthorizingUserId = null
 );
 
 public record CancelSaleCommand(
@@ -56,7 +59,8 @@ public record CancelSaleCommand(
     string CashierId,
     Guid ShiftId,
     Guid SaleId,
-    string Reason
+    string Reason,
+    string? AuthorizingUserId = null
 );
 
 public interface ISaleService
@@ -240,6 +244,70 @@ public class SaleService : ISaleService
                 throw new ShiftClosedException("Cannot commit sale: shift is not open.");
             }
 
+            // Check customer credit limit if credit tender exists
+            var totalCreditTendered = MoneyCalculator.Round(
+                command.Tenders.Where(t => t.TenderType == TenderType.CREDIT).Sum(t => t.AmountTendered)
+            );
+            Customer? customer = null;
+            decimal newCustomerBalance = 0m;
+            if (totalCreditTendered > 0)
+            {
+                var creditRef = !string.IsNullOrWhiteSpace(command.CustomerId)
+                    ? command.CustomerId
+                    : command.Tenders.FirstOrDefault(t => t.TenderType == TenderType.CREDIT && !string.IsNullOrWhiteSpace(t.PaymentReference))?.PaymentReference;
+
+                if (string.IsNullOrWhiteSpace(creditRef))
+                {
+                    throw new PosException("A customer must be specified for credit sales.");
+                }
+
+                if (!string.IsNullOrWhiteSpace(command.CustomerId))
+                {
+                    using var custCmd = conn.CreateCommand();
+                    custCmd.Transaction = tx;
+                    custCmd.CommandText = @"
+                        SELECT customer_id, name, phone, address, credit_limit, outstanding_balance, is_active, created_at_utc, updated_at_utc
+                        FROM customers WHERE customer_id = $cid;
+                    ";
+                custCmd.Parameters.AddWithValue("$cid", command.CustomerId);
+                using (var reader = await custCmd.ExecuteReaderAsync())
+                {
+                    if (await reader.ReadAsync())
+                    {
+                        customer = new Customer
+                        {
+                            CustomerId = reader.GetString(0),
+                            Name = reader.GetString(1),
+                            Phone = reader.GetString(2),
+                            Address = reader.IsDBNull(3) ? null : reader.GetString(3),
+                            CreditLimit = reader.GetDecimal(4),
+                            OutstandingBalance = reader.GetDecimal(5),
+                            IsActive = reader.GetInt32(6) == 1,
+                            CreatedAtUtc = DateTime.Parse(reader.GetString(7), null, System.Globalization.DateTimeStyles.AdjustToUniversal),
+                            UpdatedAtUtc = DateTime.Parse(reader.GetString(8), null, System.Globalization.DateTimeStyles.AdjustToUniversal)
+                        };
+                    }
+                }
+
+                if (customer == null)
+                {
+                    throw new PosException($"Customer '{command.CustomerId}' not found.");
+                }
+                if (!customer.IsActive)
+                {
+                    throw new PosException($"Customer '{customer.Name}' is inactive.");
+                }
+
+                    newCustomerBalance = MoneyCalculator.Round(customer.OutstandingBalance + totalCreditTendered);
+                    if (newCustomerBalance > customer.CreditLimit)
+                    {
+                        throw new CreditLimitExceededException(
+                            $"Credit limit of LKR {customer.CreditLimit:N2} exceeded for customer '{customer.Name}'. Current balance: LKR {customer.OutstandingBalance:N2}, Requested credit: LKR {totalCreditTendered:N2}, Resulting balance: LKR {newCustomerBalance:N2}."
+                        );
+                    }
+                }
+            }
+
             // Allocate sequential receipt number atomically
             using var seqCmd = conn.CreateCommand();
             seqCmd.Transaction = tx;
@@ -395,6 +463,47 @@ public class SaleService : ISaleService
                 await shiftUpdCmd.ExecuteNonQueryAsync();
             }
 
+            // Update customer balance and record customer credit ledger entry if credit tender exists
+            if (totalCreditTendered > 0 && customer != null)
+            {
+                using var updCustCmd = conn.CreateCommand();
+                updCustCmd.Transaction = tx;
+                updCustCmd.CommandText = @"
+                    UPDATE customers SET
+                        outstanding_balance = $bal,
+                        updated_at_utc = $now
+                    WHERE customer_id = $cid;
+                ";
+                updCustCmd.Parameters.AddWithValue("$bal", newCustomerBalance);
+                updCustCmd.Parameters.AddWithValue("$now", nowUtc.ToString("o"));
+                updCustCmd.Parameters.AddWithValue("$cid", customer.CustomerId);
+                await updCustCmd.ExecuteNonQueryAsync();
+
+                using var ledCmd = conn.CreateCommand();
+                ledCmd.Transaction = tx;
+                ledCmd.CommandText = @"
+                    INSERT INTO customer_ledger_entries (
+                        entry_id, customer_id, entry_type, amount, balance_after,
+                        reference_id, shift_id, payment_method, notes, actor_id, occurred_at_utc
+                    ) VALUES (
+                        $eid, $cid, 'CREDIT_SALE', $amt, $bal,
+                        $ref, $sid, 'CREDIT', $notes, $actor, $occurred
+                    );
+                ";
+                ledCmd.Parameters.AddWithValue("$eid", Guid.NewGuid().ToString());
+                ledCmd.Parameters.AddWithValue("$cid", customer.CustomerId);
+                ledCmd.Parameters.AddWithValue("$amt", totalCreditTendered);
+                ledCmd.Parameters.AddWithValue("$bal", newCustomerBalance);
+                ledCmd.Parameters.AddWithValue("$ref", receiptNumber);
+                ledCmd.Parameters.AddWithValue("$sid", command.ShiftId.ToString());
+                ledCmd.Parameters.AddWithValue("$notes", $"Credit sale on bill {receiptNumber}");
+                ledCmd.Parameters.AddWithValue("$actor", command.CashierId);
+                ledCmd.Parameters.AddWithValue("$occurred", nowUtc.ToString("o"));
+                await ledCmd.ExecuteNonQueryAsync();
+            }
+
+            var authorizerId = command.AuthorizingUserId ?? command.Items.FirstOrDefault(i => !string.IsNullOrEmpty(i.AuthorizingUserId))?.AuthorizingUserId;
+
             // Record audit event (including stock shortage warning if present)
             using var auditCmd = conn.CreateCommand();
             auditCmd.Transaction = tx;
@@ -414,7 +523,11 @@ public class SaleService : ISaleService
                 GrandTotal = grandTotal,
                 LinesCount = saleLines.Count,
                 StockShortageWarning = hadStockShortage,
-                Shortages = shortageItems
+                Shortages = shortageItems,
+                AuthorizerId = authorizerId,
+                CustomerId = command.CustomerId,
+                CreditAmount = totalCreditTendered,
+                CustomerBalanceAfter = customer != null ? newCustomerBalance : (decimal?)null
             }));
             auditCmd.Parameters.AddWithValue("$occurred", nowUtc.ToString("o"));
             await auditCmd.ExecuteNonQueryAsync();
@@ -673,15 +786,71 @@ public class SaleService : ISaleService
             var refundSaleId = Guid.NewGuid();
             var nowUtc = DateTime.UtcNow;
 
-            var refundTender = new Tender
+            // Determine refund tender breakdown: if original sale had credit, credit customer first
+            var origCredit = origSale.Tenders.Where(t => t.TenderType == TenderType.CREDIT).Sum(t => t.AmountTendered);
+            var origCash = origSale.Tenders.Where(t => t.TenderType == TenderType.CASH).Sum(t => t.AmountTendered - t.ChangeGiven);
+            decimal refundCredit = 0m;
+            decimal refundCash = 0m;
+
+            if (origCredit > 0 && !string.IsNullOrWhiteSpace(origSale.CustomerId))
             {
-                TenderId = Guid.NewGuid(),
-                SaleId = refundSaleId,
-                TenderType = TenderType.CASH,
-                AmountTendered = refundGrandTotal,
-                ChangeGiven = 0m,
-                PaymentReference = $"REF_ORIG_{origSale.ReceiptNumber}"
-            };
+                if (origCash <= 0)
+                {
+                    refundCredit = refundGrandTotal;
+                    refundCash = 0m;
+                }
+                else
+                {
+                    var propCredit = origSale.GrandTotal > 0 ? (origCredit / origSale.GrandTotal) : 0m;
+                    refundCredit = MoneyCalculator.Round(refundGrandTotal * propCredit);
+                    if (refundCredit > refundGrandTotal) refundCredit = refundGrandTotal;
+                    refundCash = refundGrandTotal - refundCredit;
+                }
+            }
+            else
+            {
+                refundCredit = 0m;
+                refundCash = origSale.Tenders.Any(t => t.TenderType == TenderType.CASH) ? refundGrandTotal : 0m;
+            }
+
+            var refundTenders = new List<Tender>();
+            if (refundCash > 0)
+            {
+                refundTenders.Add(new Tender
+                {
+                    TenderId = Guid.NewGuid(),
+                    SaleId = refundSaleId,
+                    TenderType = TenderType.CASH,
+                    AmountTendered = refundCash,
+                    ChangeGiven = 0m,
+                    PaymentReference = $"REF_ORIG_{origSale.ReceiptNumber}"
+                });
+            }
+            if (refundCredit > 0)
+            {
+                refundTenders.Add(new Tender
+                {
+                    TenderId = Guid.NewGuid(),
+                    SaleId = refundSaleId,
+                    TenderType = TenderType.CREDIT,
+                    AmountTendered = refundCredit,
+                    ChangeGiven = 0m,
+                    PaymentReference = $"REF_ORIG_{origSale.ReceiptNumber}"
+                });
+            }
+            if (refundTenders.Count == 0)
+            {
+                var fallbackType = origSale.Tenders.FirstOrDefault()?.TenderType ?? TenderType.CASH;
+                refundTenders.Add(new Tender
+                {
+                    TenderId = Guid.NewGuid(),
+                    SaleId = refundSaleId,
+                    TenderType = fallbackType,
+                    AmountTendered = refundGrandTotal,
+                    ChangeGiven = 0m,
+                    PaymentReference = $"REF_ORIG_{origSale.ReceiptNumber}"
+                });
+            }
 
             var refundSale = new Sale
             {
@@ -692,6 +861,7 @@ public class SaleService : ISaleService
                 BranchId = command.BranchId,
                 CounterId = command.CounterId,
                 CashierId = command.CashierId,
+                CustomerId = origSale.CustomerId,
                 ParentSaleId = origSale.SaleId,
                 Subtotal = refundSubtotal,
                 DiscountTotal = refundDiscountTotal,
@@ -701,7 +871,7 @@ public class SaleService : ISaleService
                 ReprintCount = 0,
                 CreatedAtUtc = nowUtc,
                 Lines = refundLines,
-                Tenders = new List<Tender> { refundTender }
+                Tenders = refundTenders
             };
 
             // Insert refund sale record
@@ -713,7 +883,7 @@ public class SaleService : ISaleService
                     cashier_id, customer_id, parent_sale_id, subtotal, discount_total, tax_total, grand_total,
                     status, reprint_count, created_at_utc
                 ) VALUES (
-                    $id, $rcpt, $sid, $tid, $bid, $cid, $uid, null, $parent, $sub, $disc, $tax, $grand, 3, 0, $created
+                    $id, $rcpt, $sid, $tid, $bid, $cid, $uid, $cust, $parent, $sub, $disc, $tax, $grand, 3, 0, $created
                 );
             ";
             saleCmd.Parameters.AddWithValue("$id", refundSale.SaleId.ToString());
@@ -723,6 +893,7 @@ public class SaleService : ISaleService
             saleCmd.Parameters.AddWithValue("$bid", refundSale.BranchId);
             saleCmd.Parameters.AddWithValue("$cid", refundSale.CounterId);
             saleCmd.Parameters.AddWithValue("$uid", refundSale.CashierId);
+            saleCmd.Parameters.AddWithValue("$cust", (object?)refundSale.CustomerId ?? DBNull.Value);
             saleCmd.Parameters.AddWithValue("$parent", origSale.SaleId.ToString());
             saleCmd.Parameters.AddWithValue("$sub", refundSale.Subtotal);
             saleCmd.Parameters.AddWithValue("$disc", refundSale.DiscountTotal);
@@ -763,19 +934,22 @@ public class SaleService : ISaleService
                 await lineCmd.ExecuteNonQueryAsync();
             }
 
-            // Insert refund tender
-            using var tCmd = conn.CreateCommand();
-            tCmd.Transaction = tx;
-            tCmd.CommandText = @"
-                INSERT INTO tenders (tender_id, sale_id, tender_type, amount_tendered, change_given, payment_reference)
-                VALUES ($tid, $sid, $ttype, $amt, 0, $pref);
-            ";
-            tCmd.Parameters.AddWithValue("$tid", refundTender.TenderId.ToString());
-            tCmd.Parameters.AddWithValue("$sid", refundSaleId.ToString());
-            tCmd.Parameters.AddWithValue("$ttype", refundTender.TenderType.ToString());
-            tCmd.Parameters.AddWithValue("$amt", refundTender.AmountTendered);
-            tCmd.Parameters.AddWithValue("$pref", (object?)refundTender.PaymentReference ?? DBNull.Value);
-            await tCmd.ExecuteNonQueryAsync();
+            // Insert refund tenders
+            foreach (var rt in refundTenders)
+            {
+                using var tCmd = conn.CreateCommand();
+                tCmd.Transaction = tx;
+                tCmd.CommandText = @"
+                    INSERT INTO tenders (tender_id, sale_id, tender_type, amount_tendered, change_given, payment_reference)
+                    VALUES ($tid, $sid, $ttype, $amt, 0, $pref);
+                ";
+                tCmd.Parameters.AddWithValue("$tid", rt.TenderId.ToString());
+                tCmd.Parameters.AddWithValue("$sid", refundSaleId.ToString());
+                tCmd.Parameters.AddWithValue("$ttype", rt.TenderType.ToString());
+                tCmd.Parameters.AddWithValue("$amt", rt.AmountTendered);
+                tCmd.Parameters.AddWithValue("$pref", (object?)rt.PaymentReference ?? DBNull.Value);
+                await tCmd.ExecuteNonQueryAsync();
+            }
 
             // Record stock movements (restores inventory)
             foreach (var sm in stockMovements)
@@ -797,15 +971,65 @@ public class SaleService : ISaleService
                 await smCmd.ExecuteNonQueryAsync();
             }
 
-            // Update shift cash: increment cash_refunds (A10)
-            using var shiftUpdCmd = conn.CreateCommand();
-            shiftUpdCmd.Transaction = tx;
-            shiftUpdCmd.CommandText = @"
-                UPDATE shifts SET cash_refunds = cash_refunds + $refAmt WHERE shift_id = $sid;
-            ";
-            shiftUpdCmd.Parameters.AddWithValue("$refAmt", refundGrandTotal);
-            shiftUpdCmd.Parameters.AddWithValue("$sid", command.ShiftId.ToString());
-            await shiftUpdCmd.ExecuteNonQueryAsync();
+            // Update customer balance and record customer credit ledger entry if refund includes credit
+            if (refundCredit > 0 && !string.IsNullOrWhiteSpace(origSale.CustomerId))
+            {
+                using var getCustCmd = conn.CreateCommand();
+                getCustCmd.Transaction = tx;
+                getCustCmd.CommandText = "SELECT outstanding_balance FROM customers WHERE customer_id = $cid;";
+                getCustCmd.Parameters.AddWithValue("$cid", origSale.CustomerId);
+                var curBalObj = await getCustCmd.ExecuteScalarAsync();
+                var curBal = curBalObj != null && curBalObj != DBNull.Value ? Convert.ToDecimal(curBalObj) : 0m;
+                var reversedBal = MoneyCalculator.Round(curBal - refundCredit);
+
+                using var revCustCmd = conn.CreateCommand();
+                revCustCmd.Transaction = tx;
+                revCustCmd.CommandText = @"
+                    UPDATE customers SET
+                        outstanding_balance = $bal,
+                        updated_at_utc = $now
+                    WHERE customer_id = $cid;
+                ";
+                revCustCmd.Parameters.AddWithValue("$bal", reversedBal);
+                revCustCmd.Parameters.AddWithValue("$now", nowUtc.ToString("o"));
+                revCustCmd.Parameters.AddWithValue("$cid", origSale.CustomerId);
+                await revCustCmd.ExecuteNonQueryAsync();
+
+                using var ledCmd = conn.CreateCommand();
+                ledCmd.Transaction = tx;
+                ledCmd.CommandText = @"
+                    INSERT INTO customer_ledger_entries (
+                        entry_id, customer_id, entry_type, amount, balance_after,
+                        reference_id, shift_id, payment_method, notes, actor_id, occurred_at_utc
+                    ) VALUES (
+                        $eid, $cid, 'SALE_REFUND', $crdAmt, $balAfter,
+                        $ref, $sid, 'CREDIT', $notes, $actor, $occurred
+                    );
+                ";
+                ledCmd.Parameters.AddWithValue("$eid", Guid.NewGuid().ToString());
+                ledCmd.Parameters.AddWithValue("$cid", origSale.CustomerId);
+                ledCmd.Parameters.AddWithValue("$crdAmt", refundCredit);
+                ledCmd.Parameters.AddWithValue("$balAfter", reversedBal);
+                ledCmd.Parameters.AddWithValue("$ref", receiptNumber);
+                ledCmd.Parameters.AddWithValue("$sid", command.ShiftId.ToString());
+                ledCmd.Parameters.AddWithValue("$notes", $"Credit refund for return on bill {origSale.ReceiptNumber} ({receiptNumber})");
+                ledCmd.Parameters.AddWithValue("$actor", command.CashierId);
+                ledCmd.Parameters.AddWithValue("$occurred", nowUtc.ToString("o"));
+                await ledCmd.ExecuteNonQueryAsync();
+            }
+
+            // Update shift cash: increment cash_refunds ONLY for physical cash refunded (A10)
+            if (refundCash > 0)
+            {
+                using var shiftUpdCmd = conn.CreateCommand();
+                shiftUpdCmd.Transaction = tx;
+                shiftUpdCmd.CommandText = @"
+                    UPDATE shifts SET cash_refunds = cash_refunds + $refAmt WHERE shift_id = $sid;
+                ";
+                shiftUpdCmd.Parameters.AddWithValue("$refAmt", refundCash);
+                shiftUpdCmd.Parameters.AddWithValue("$sid", command.ShiftId.ToString());
+                await shiftUpdCmd.ExecuteNonQueryAsync();
+            }
 
             // Log audit event for refund (A08)
             using var auditCmd = conn.CreateCommand();
@@ -827,7 +1051,8 @@ public class SaleService : ISaleService
                 RefundReceiptNumber = receiptNumber,
                 RefundAmount = refundGrandTotal,
                 Reason = command.Reason,
-                StockRestored = command.ReturnStockToInventory
+                StockRestored = command.ReturnStockToInventory,
+                AuthorizerId = command.AuthorizingUserId
             }));
             auditCmd.Parameters.AddWithValue("$occurred", nowUtc.ToString("o"));
             await auditCmd.ExecuteNonQueryAsync();
@@ -986,6 +1211,57 @@ public class SaleService : ISaleService
                 await shiftUpdCmd.ExecuteNonQueryAsync();
             }
 
+            // 3b. Reverse customer credit balance if sale had credit tender
+            var creditTenderTotal = sale.Tenders
+                .Where(t => t.TenderType == TenderType.CREDIT)
+                .Sum(t => t.AmountTendered);
+
+            if (creditTenderTotal > 0 && !string.IsNullOrWhiteSpace(sale.CustomerId))
+            {
+                using var balCmd = conn.CreateCommand();
+                balCmd.Transaction = tx;
+                balCmd.CommandText = "SELECT outstanding_balance FROM customers WHERE customer_id = $cid;";
+                balCmd.Parameters.AddWithValue("$cid", sale.CustomerId);
+                var balObj = await balCmd.ExecuteScalarAsync();
+                var currentBal = balObj != null && balObj != DBNull.Value ? Convert.ToDecimal(balObj) : 0m;
+                var reversedBal = MoneyCalculator.Round(currentBal - creditTenderTotal);
+
+                using var revCustCmd = conn.CreateCommand();
+                revCustCmd.Transaction = tx;
+                revCustCmd.CommandText = @"
+                    UPDATE customers SET
+                        outstanding_balance = $bal,
+                        updated_at_utc = $now
+                    WHERE customer_id = $cid;
+                ";
+                revCustCmd.Parameters.AddWithValue("$bal", reversedBal);
+                revCustCmd.Parameters.AddWithValue("$now", nowUtc.ToString("o"));
+                revCustCmd.Parameters.AddWithValue("$cid", sale.CustomerId);
+                await revCustCmd.ExecuteNonQueryAsync();
+
+                using var ledCmd = conn.CreateCommand();
+                ledCmd.Transaction = tx;
+                ledCmd.CommandText = @"
+                    INSERT INTO customer_ledger_entries (
+                        entry_id, customer_id, entry_type, amount, balance_after,
+                        reference_id, shift_id, payment_method, notes, actor_id, occurred_at_utc
+                    ) VALUES (
+                        $eid, $cid, 'SALE_CANCELLED', $crdAmt, $balAfter,
+                        $ref, $sid, 'CREDIT', $notes, $actor, $occurred
+                    );
+                ";
+                ledCmd.Parameters.AddWithValue("$eid", Guid.NewGuid().ToString());
+                ledCmd.Parameters.AddWithValue("$cid", sale.CustomerId);
+                ledCmd.Parameters.AddWithValue("$crdAmt", creditTenderTotal);
+                ledCmd.Parameters.AddWithValue("$balAfter", reversedBal);
+                ledCmd.Parameters.AddWithValue("$ref", sale.ReceiptNumber);
+                ledCmd.Parameters.AddWithValue("$sid", command.ShiftId.ToString());
+                ledCmd.Parameters.AddWithValue("$notes", $"Reversal of credit on cancelled sale {sale.ReceiptNumber}");
+                ledCmd.Parameters.AddWithValue("$actor", command.CashierId);
+                ledCmd.Parameters.AddWithValue("$occurred", nowUtc.ToString("o"));
+                await ledCmd.ExecuteNonQueryAsync();
+            }
+
             // 4. Audit event
             using var auditCmd = conn.CreateCommand();
             auditCmd.Transaction = tx;
@@ -1003,7 +1279,9 @@ public class SaleService : ISaleService
                 SaleId = sale.SaleId,
                 ReceiptNumber = sale.ReceiptNumber,
                 Reason = command.Reason,
-                NetCashRefunded = netCashFromSale
+                NetCashRefunded = netCashFromSale,
+                CreditReversed = creditTenderTotal,
+                AuthorizerId = command.AuthorizingUserId
             }));
             auditCmd.Parameters.AddWithValue("$occurred", nowUtc.ToString("o"));
             await auditCmd.ExecuteNonQueryAsync();

@@ -120,6 +120,30 @@ public class PosDatabase : IDisposable
         {
             // Column already exists or table freshly created
         }
+
+        try
+        {
+            using var alterPinCmd = conn.CreateCommand();
+            alterPinCmd.CommandText = "ALTER TABLE users ADD COLUMN pin_hash TEXT;";
+            alterPinCmd.ExecuteNonQuery();
+        }
+        catch { }
+
+        try
+        {
+            using var alterPinSaltCmd = conn.CreateCommand();
+            alterPinSaltCmd.CommandText = "ALTER TABLE users ADD COLUMN pin_salt TEXT;";
+            alterPinSaltCmd.ExecuteNonQuery();
+        }
+        catch { }
+
+        try
+        {
+            using var alterSalesCustCmd = conn.CreateCommand();
+            alterSalesCustCmd.CommandText = "ALTER TABLE sales ADD COLUMN customer_id TEXT;";
+            alterSalesCustCmd.ExecuteNonQuery();
+        }
+        catch { }
     }
 
     private const string SchemaDdl = @"
@@ -130,6 +154,8 @@ public class PosDatabase : IDisposable
             role INTEGER NOT NULL,
             password_hash TEXT NOT NULL,
             password_salt TEXT NOT NULL,
+            pin_hash TEXT,
+            pin_salt TEXT,
             is_active INTEGER NOT NULL DEFAULT 1,
             created_at_utc TEXT NOT NULL
         );
@@ -326,6 +352,35 @@ public class PosDatabase : IDisposable
             FOREIGN KEY (receipt_id) REFERENCES goods_receipts(receipt_id) ON DELETE CASCADE,
             FOREIGN KEY (product_id) REFERENCES products(product_id)
         );
+
+        CREATE TABLE IF NOT EXISTS customers (
+            customer_id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            phone TEXT NOT NULL,
+            address TEXT,
+            credit_limit NUMERIC NOT NULL DEFAULT 0.0,
+            outstanding_balance NUMERIC NOT NULL DEFAULT 0.0,
+            is_active INTEGER NOT NULL DEFAULT 1,
+            created_at_utc TEXT NOT NULL,
+            updated_at_utc TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS customer_ledger_entries (
+            entry_id TEXT PRIMARY KEY,
+            customer_id TEXT NOT NULL,
+            entry_type TEXT NOT NULL,
+            amount NUMERIC NOT NULL,
+            balance_after NUMERIC NOT NULL,
+            reference_id TEXT,
+            shift_id TEXT,
+            payment_method TEXT,
+            notes TEXT,
+            actor_id TEXT NOT NULL,
+            occurred_at_utc TEXT NOT NULL,
+            FOREIGN KEY (customer_id) REFERENCES customers(customer_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_customer_ledger_cust ON customer_ledger_entries(customer_id);
     ";
 
     public void Dispose()

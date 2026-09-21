@@ -64,6 +64,7 @@ public class CartItemViewModel : INotifyPropertyChanged
 
     public string? OverrideReason { get; set; }
     public bool IsPriceOverridden { get; set; } = false;
+    public string? AuthorizingUserId { get; set; }
 
     public decimal Subtotal { get; private set; }
     public decimal DiscountAmount { get; private set; }
