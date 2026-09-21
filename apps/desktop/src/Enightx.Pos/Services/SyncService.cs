@@ -9,6 +9,7 @@ public interface ISyncService
     Task<List<OutboxEvent>> GetPendingEventsAsync(int limit = 50);
     Task MarkEventsAcknowledgedAsync(IEnumerable<Guid> eventIds);
     Task<long> GetLastAcknowledgedSequenceAsync(string branchId, string deviceId);
+    Task SaveOutboxEventAsync(OutboxEvent evt);
 }
 
 public class SyncService : ISyncService
@@ -89,6 +90,37 @@ public class SyncService : ISyncService
         cmd.Parameters.AddWithValue("$did", deviceId);
         var result = await cmd.ExecuteScalarAsync();
         return Convert.ToInt64(result);
+    }
+
+    public async Task SaveOutboxEventAsync(OutboxEvent evt)
+    {
+        using var conn = _db.CreateConnection();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            INSERT INTO outbox_events (
+                event_id, tenant_id, branch_id, device_id, device_generation,
+                source_sequence, schema_version, payload_json, actor_id,
+                occurred_at_utc, causal_reference, status, created_at_utc
+            ) VALUES (
+                $eid, $tid, $bid, $did, $gen,
+                $seq, $ver, $payload, $actor,
+                $occurred, $causal, $status, $created
+            );
+        ";
+        cmd.Parameters.AddWithValue("$eid", evt.EventId.ToString());
+        cmd.Parameters.AddWithValue("$tid", evt.TenantId);
+        cmd.Parameters.AddWithValue("$bid", evt.BranchId);
+        cmd.Parameters.AddWithValue("$did", evt.DeviceId);
+        cmd.Parameters.AddWithValue("$gen", evt.DeviceGeneration);
+        cmd.Parameters.AddWithValue("$seq", evt.SourceSequence);
+        cmd.Parameters.AddWithValue("$ver", evt.SchemaVersion);
+        cmd.Parameters.AddWithValue("$payload", evt.PayloadJson);
+        cmd.Parameters.AddWithValue("$actor", evt.ActorId);
+        cmd.Parameters.AddWithValue("$occurred", evt.OccurredAtUtc.ToString("o"));
+        cmd.Parameters.AddWithValue("$causal", (object?)evt.CausalReference ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("$status", evt.Status);
+        cmd.Parameters.AddWithValue("$created", evt.CreatedAtUtc.ToString("o"));
+        await cmd.ExecuteNonQueryAsync();
     }
 }
 

@@ -297,4 +297,166 @@ class DashboardSummaryResponse(BaseModel):
     low_stock_alerts: int
     tender_breakdown: Dict[str, Decimal]
 
+# --- Supplier Schemas ---
+class SupplierCreateRequest(BaseModel):
+    tenant_id: str
+    supplier_code: str
+    name: str
+    contact_person: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    address: Optional[str] = None
+
+class SupplierUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    contact_person: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    address: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class SupplierResponse(BaseModel):
+    supplier_id: str
+    tenant_id: str
+    supplier_code: str
+    name: str
+    contact_person: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    address: Optional[str] = None
+    balance_lkr: Decimal
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+# --- Purchase Order Schemas ---
+class PurchaseOrderItemCreate(BaseModel):
+    product_id: str
+    product_name: str
+    ordered_quantity: Decimal
+    unit_cost_lkr: Decimal
+
+class PurchaseOrderCreateRequest(BaseModel):
+    tenant_id: str
+    branch_id: str
+    po_number: str
+    supplier_id: str
+    expected_delivery_date: Optional[datetime] = None
+    notes: Optional[str] = None
+    created_by: str
+    items: List[PurchaseOrderItemCreate]
+
+class PurchaseOrderItemResponse(BaseModel):
+    item_id: uuid.UUID
+    product_id: str
+    product_name: str
+    ordered_quantity: Decimal
+    received_quantity: Decimal
+    unit_cost_lkr: Decimal
+    line_total_lkr: Decimal
+
+    class Config:
+        from_attributes = True
+
+class PurchaseOrderResponse(BaseModel):
+    po_id: uuid.UUID
+    tenant_id: str
+    branch_id: str
+    po_number: str
+    supplier_id: str
+    status: str
+    order_date: datetime
+    expected_delivery_date: Optional[datetime] = None
+    total_amount_lkr: Decimal
+    notes: Optional[str] = None
+    created_by: str
+    created_at: datetime
+    updated_at: datetime
+    items: List[PurchaseOrderItemResponse]
+
+    class Config:
+        from_attributes = True
+
+# --- Goods Received Note (GRN) Schemas ---
+class GRNItemCreate(BaseModel):
+    product_id: str
+    product_name: str
+    received_quantity: Decimal
+    unit_cost_lkr: Decimal
+    batch_number: Optional[str] = None
+    expiry_date: Optional[datetime] = None
+
+class GRNCreateRequest(BaseModel):
+    tenant_id: str
+    branch_id: str
+    grn_number: str
+    supplier_id: str
+    po_id: Optional[uuid.UUID] = None
+    supplier_invoice_number: Optional[str] = None
+    received_by: str
+    received_at: Optional[datetime] = None
+    notes: Optional[str] = None
+    items: List[GRNItemCreate]
+
+class GRNItemResponse(BaseModel):
+    item_id: uuid.UUID
+    product_id: str
+    product_name: str
+    received_quantity: Decimal
+    unit_cost_lkr: Decimal
+    line_total_lkr: Decimal
+    batch_number: Optional[str] = None
+    expiry_date: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+class GRNResponse(BaseModel):
+    grn_id: uuid.UUID
+    tenant_id: str
+    branch_id: str
+    grn_number: str
+    po_id: Optional[uuid.UUID] = None
+    supplier_id: str
+    supplier_invoice_number: Optional[str] = None
+    received_at: datetime
+    received_by: str
+    total_cost_lkr: Decimal
+    status: str
+    notes: Optional[str] = None
+    created_at: datetime
+    items: List[GRNItemResponse]
+
+    class Config:
+        from_attributes = True
+
+# --- Supplier Settlement Schemas ---
+class SupplierSettlementRequest(BaseModel):
+    tenant_id: str
+    supplier_id: str
+    amount_lkr: Decimal
+    payment_method: str = "CASH"  # CASH, BANK_TRANSFER, CHEQUE
+    reference_number: Optional[str] = None
+    paid_at: Optional[datetime] = None
+    notes: Optional[str] = None
+    created_by: str
+
+class SupplierSettlementResponse(BaseModel):
+    settlement_id: uuid.UUID
+    tenant_id: str
+    supplier_id: str
+    amount_lkr: Decimal
+    payment_method: str
+    reference_number: Optional[str] = None
+    paid_at: datetime
+    notes: Optional[str] = None
+    created_by: str
+    created_at: datetime
+    remaining_balance_lkr: Decimal
+
+    class Config:
+        from_attributes = True
 
