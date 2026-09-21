@@ -108,7 +108,6 @@ public class SyncService : ISyncService
         return Convert.ToInt64(result);
     }
 
-<<<<<<< HEAD
     public async Task SaveOutboxEventAsync(OutboxEvent evt)
     {
         using var conn = _db.CreateConnection();

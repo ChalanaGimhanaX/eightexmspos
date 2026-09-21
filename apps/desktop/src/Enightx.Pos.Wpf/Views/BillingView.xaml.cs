@@ -15,14 +15,6 @@ public partial class BillingView : UserControl
         InitializeComponent();
     }
 
-    private async void BillingView_Loaded(object sender, RoutedEventArgs e)
-    {
-        if (DataContext is BillingViewModel vm)
-        {
-            await vm.LoadCatalogAsync();
-        }
-    }
-
     private async void AddItem_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is BillingViewModel vm)
@@ -38,30 +30,6 @@ public partial class BillingView : UserControl
         {
             await vm.AddItemByBarcodeAsync(BarcodeInputBox.Text);
             BarcodeInputBox.Focus();
-        }
-    }
-
-    private void ProductCard_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is Button btn && btn.DataContext is Product product && DataContext is BillingViewModel vm)
-        {
-            vm.AddProductToCart(product);
-        }
-    }
-
-    private void CategoryFilter_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is Button btn && btn.DataContext is Category cat && DataContext is BillingViewModel vm)
-        {
-            vm.SelectedCategory = cat;
-        }
-    }
-
-    private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
-    {
-        if (DataContext is BillingViewModel vm)
-        {
-            vm.SearchQuery = SearchBox.Text;
         }
     }
 

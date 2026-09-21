@@ -82,20 +82,22 @@ class DeviceEnrollmentResponse(BaseModel):
     device_generation: int
     token: str
 
-<<<<<<< HEAD
 class DeviceHeartbeatRequest(BaseModel):
     device_id: str
-    device_generation: int = Field(ge=1)
-    hardware_fingerprint: str
+    device_generation: Optional[int] = 1
+    hardware_fingerprint: Optional[str] = None
     app_version: str
     db_size_bytes: Optional[int] = None
     last_sync_sequence: Optional[int] = 0
     status: Optional[str] = "online"
-    sent_at: datetime
+    sent_at: Optional[datetime] = None
+    token: Optional[str] = None
 
 class DeviceHeartbeatResponse(BaseModel):
     status: str = "ok"
-    server_time_utc: datetime
+    acknowledged: bool = True
+    server_time_utc: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    server_time: Optional[datetime] = None
     acknowledged_sequence: int = 0
     command: Optional[str] = None
 

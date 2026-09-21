@@ -224,7 +224,11 @@ public class SyncWorkerTests : IDisposable
         Assert.True(worker.IsRunning);
 
         // Allow at least 1 cycle to execute
-        await Task.Delay(120);
+        var deadline = DateTime.UtcNow.AddSeconds(2);
+        while (!pushCalled && !pullCalled && DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(30);
+        }
 
         Assert.True(pushCalled || pullCalled);
         Assert.True(worker.IsOnline);

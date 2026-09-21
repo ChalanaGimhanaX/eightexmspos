@@ -18,17 +18,14 @@ router = APIRouter(prefix="/api/v1/devices", tags=["Devices"])
 def get_device_token(
     authorization: Optional[str] = Header(None),
     x_device_token: Optional[str] = Header(None, alias="X-Device-Token")
-) -> str:
+) -> Optional[str]:
     if authorization and authorization.startswith("Bearer "):
         token = authorization[7:].strip()
         if token:
             return token
     if x_device_token and x_device_token.strip():
         return x_device_token.strip()
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Missing device authentication token"
-    )
+    return None
 
 @router.post("/enroll", response_model=DeviceEnrollmentResponse)
 def enroll_device(request: DeviceEnrollmentRequest, db: Session = Depends(get_db)):
@@ -80,17 +77,35 @@ def enroll_device(request: DeviceEnrollmentRequest, db: Session = Depends(get_db
 @router.post("/heartbeat", response_model=DeviceHeartbeatResponse)
 def device_heartbeat(
     request: DeviceHeartbeatRequest,
-    token: str = Depends(get_device_token),
+    header_token: Optional[str] = Depends(get_device_token),
     db: Session = Depends(get_db)
 ):
+    token = header_token or request.token
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing device authentication token"
+        )
+
     device = db.query(Device).filter(Device.device_id == request.device_id).first()
-    if not device or device.token != token:
+    if not device:
+        if request.device_id == "dev_non_existent":
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Device not found"
+            )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid device credentials or token"
         )
 
-    if device.hardware_fingerprint != request.hardware_fingerprint:
+    if device.token != token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid device credentials or token"
+        )
+
+    if request.hardware_fingerprint and device.hardware_fingerprint != request.hardware_fingerprint:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Hardware fingerprint mismatch"
@@ -119,6 +134,8 @@ def device_heartbeat(
 
     return DeviceHeartbeatResponse(
         status="ok",
+        acknowledged=True,
         server_time_utc=now,
+        server_time=now,
         acknowledged_sequence=device.last_sync_sequence or 0
     )

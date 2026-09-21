@@ -71,7 +71,6 @@ class SyncEvent(Base):
 
     batch = relationship("SyncBatch", back_populates="events")
 
-<<<<<<< HEAD
 class Shift(Base):
     __tablename__ = "shifts"
 
