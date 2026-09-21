@@ -53,7 +53,10 @@ public partial class App : Application
         PrinterService = new MemoryPrinterService(); // WindowsReceiptPrinter can be injected in production
         ReceiptService = new ReceiptService(Database, SaleService, PrinterService);
 
-        var currentVer = typeof(App).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
+        // Read version from the core library (Enightx.Pos.dll) — that is the assembly
+        // replaced by the modular update zip. Reading from typeof(App) (WPF assembly) would
+        // always report the original install version because the WPF binary is never updated.
+        var currentVer = typeof(UpdateService).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
         UpdateService = new UpdateService(currentVersion: currentVer);
 
         SeedDefaultDataAsync().GetAwaiter().GetResult();
