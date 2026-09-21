@@ -123,6 +123,54 @@ public class UpdateServiceTests
         Assert.Null(received);
     }
 
+    [Fact]
+    public void IsModularInstallation_DetectsBasedOnCoreClr()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), "test_modular_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDir);
+        try
+        {
+            var nonModularService = new UpdateService(baseDirectory: tempDir);
+            Assert.False(nonModularService.IsModularInstallation());
+
+            File.WriteAllText(Path.Combine(tempDir, "coreclr.dll"), "dummy");
+            var modularService = new UpdateService(baseDirectory: tempDir);
+            Assert.True(modularService.IsModularInstallation());
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void GetBestDownloadUrl_ChoosesZipForModular_AndExeForStandalone()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), "test_best_url_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDir);
+        try
+        {
+            var manifest = new UpdateManifest
+            {
+                Version = "1.0.3",
+                DownloadUrl = "https://mock/Enightx.Pos.Wpf.exe",
+                UpdateZipUrl = "https://mock/EnightxPos-Update.zip",
+                ZipSizeBytes = 1200000
+            };
+
+            var nonModular = new UpdateService(baseDirectory: tempDir);
+            Assert.Equal("https://mock/Enightx.Pos.Wpf.exe", nonModular.GetBestDownloadUrl(manifest));
+
+            File.WriteAllText(Path.Combine(tempDir, "coreclr.dll"), "dummy");
+            var modular = new UpdateService(baseDirectory: tempDir);
+            Assert.Equal("https://mock/EnightxPos-Update.zip", modular.GetBestDownloadUrl(manifest));
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+        }
+    }
+
     private class MockHttpMessageHandler : HttpMessageHandler
     {
         private readonly HttpStatusCode _code;

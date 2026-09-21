@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.IO.Compression;
 using System.Net.Http.Json;
 using System.Net.WebSockets;
 using System.Runtime.InteropServices;
@@ -20,8 +21,20 @@ public class UpdateManifest
     [JsonPropertyName("downloadUrl")]
     public string DownloadUrl { get; set; } = "";
 
+    [JsonPropertyName("updateZipUrl")]
+    public string? UpdateZipUrl { get; set; }
+
+    [JsonPropertyName("setupZipUrl")]
+    public string? SetupZipUrl { get; set; }
+
     [JsonPropertyName("sha256")]
     public string? Sha256 { get; set; }
+
+    [JsonPropertyName("zipSha256")]
+    public string? ZipSha256 { get; set; }
+
+    [JsonPropertyName("zipSizeBytes")]
+    public long? ZipSizeBytes { get; set; }
 
     [JsonPropertyName("publishedAtUtc")]
     public DateTime? PublishedAtUtc { get; set; }
@@ -41,9 +54,11 @@ public interface IUpdateService
 {
     string CurrentVersion { get; }
     event Action<UpdateManifest>? LiveUpdateReceived;
+    bool IsModularInstallation();
+    string GetBestDownloadUrl(UpdateManifest manifest);
     Task<UpdateCheckResult> CheckForUpdatesAsync(CancellationToken ct = default);
     Task<string> DownloadUpdateAsync(string downloadUrl, IProgress<double>? progress = null, CancellationToken ct = default);
-    void ApplyUpdateAndRestart(string downloadedFilePath);
+    void ApplyUpdateAndRestart(string downloadedPath);
     void StartListeningForLiveUpdates(string? wsUrl = null, CancellationToken ct = default);
 }
 
@@ -52,16 +67,19 @@ public class UpdateService : IUpdateService
     private readonly HttpClient _httpClient;
     private readonly string _manifestUrl;
     private readonly string _currentVersion;
+    private readonly string? _baseDirectory;
 
     public string CurrentVersion => _currentVersion;
 
     public UpdateService(
         HttpClient? httpClient = null,
         string manifestUrl = "https://posapi.eightexms.site/downloads/version.json",
-        string? currentVersion = null)
+        string? currentVersion = null,
+        string? baseDirectory = null)
     {
         _httpClient = httpClient ?? new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
         _manifestUrl = manifestUrl;
+        _baseDirectory = baseDirectory;
         
         if (!string.IsNullOrEmpty(currentVersion))
         {
@@ -73,6 +91,21 @@ public class UpdateService : IUpdateService
             var ver = asm.GetName().Version;
             _currentVersion = ver != null ? $"{ver.Major}.{ver.Minor}.{ver.Build}" : "1.0.0";
         }
+    }
+
+    public virtual bool IsModularInstallation()
+    {
+        var appDir = _baseDirectory ?? AppDomain.CurrentDomain.BaseDirectory;
+        return File.Exists(Path.Combine(appDir, "coreclr.dll")) || File.Exists(Path.Combine(appDir, "hostfxr.dll"));
+    }
+
+    public string GetBestDownloadUrl(UpdateManifest manifest)
+    {
+        if (IsModularInstallation() && !string.IsNullOrWhiteSpace(manifest.UpdateZipUrl))
+        {
+            return manifest.UpdateZipUrl;
+        }
+        return manifest.DownloadUrl;
     }
 
     public async Task<UpdateCheckResult> CheckForUpdatesAsync(CancellationToken ct = default)
@@ -130,7 +163,9 @@ public class UpdateService : IUpdateService
     {
         var tempDir = Path.Combine(Path.GetTempPath(), "EnightxPosUpdate");
         Directory.CreateDirectory(tempDir);
-        var targetFile = Path.Combine(tempDir, "Enightx.Pos.Wpf.new.exe");
+        
+        bool isZip = downloadUrl.EndsWith(".zip", StringComparison.OrdinalIgnoreCase);
+        var targetFile = Path.Combine(tempDir, isZip ? "update.zip" : "Enightx.Pos.Wpf.new.exe");
 
         if (File.Exists(targetFile))
         {
@@ -142,29 +177,43 @@ public class UpdateService : IUpdateService
 
         var totalBytes = response.Content.Headers.ContentLength ?? -1L;
         using var stream = await response.Content.ReadAsStreamAsync(ct);
-        using var fileStream = new FileStream(targetFile, FileMode.Create, FileAccess.Write, FileShare.None, 81920, true);
-
-        var buffer = new byte[81920];
-        long totalRead = 0;
-        int bytesRead;
-
-        while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, ct)) > 0)
+        using (var fileStream = new FileStream(targetFile, FileMode.Create, FileAccess.Write, FileShare.None, 81920, true))
         {
-            await fileStream.WriteAsync(buffer, 0, bytesRead, ct);
-            totalRead += bytesRead;
+            var buffer = new byte[81920];
+            long totalRead = 0;
+            int bytesRead;
 
-            if (totalBytes > 0 && progress != null)
+            while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, ct)) > 0)
             {
-                var pct = (double)totalRead / totalBytes;
-                progress.Report(pct);
+                await fileStream.WriteAsync(buffer, 0, bytesRead, ct);
+                totalRead += bytesRead;
+
+                if (totalBytes > 0 && progress != null)
+                {
+                    var pct = (double)totalRead / totalBytes;
+                    progress.Report(pct);
+                }
             }
         }
 
         progress?.Report(1.0);
+
+        if (isZip)
+        {
+            var extractedDir = Path.Combine(tempDir, "extracted");
+            if (Directory.Exists(extractedDir))
+            {
+                try { Directory.Delete(extractedDir, true); } catch { }
+            }
+            Directory.CreateDirectory(extractedDir);
+            ZipFile.ExtractToDirectory(targetFile, extractedDir, overwriteFiles: true);
+            return extractedDir;
+        }
+
         return targetFile;
     }
 
-    public void ApplyUpdateAndRestart(string downloadedFilePath)
+    public void ApplyUpdateAndRestart(string downloadedPath)
     {
         var currentExe = Environment.ProcessPath;
         if (string.IsNullOrEmpty(currentExe))
@@ -173,22 +222,61 @@ public class UpdateService : IUpdateService
             currentExe = proc.MainModule?.FileName;
         }
 
-        if (string.IsNullOrEmpty(currentExe) || !File.Exists(downloadedFilePath))
+        bool isDirectory = Directory.Exists(downloadedPath);
+        bool isFile = File.Exists(downloadedPath);
+
+        if (string.IsNullOrEmpty(currentExe) || (!isDirectory && !isFile))
         {
-            throw new InvalidOperationException("Could not resolve current executable path or downloaded update file.");
+            throw new InvalidOperationException("Could not resolve current executable path or downloaded update package.");
         }
+
+        var currentDir = Path.GetDirectoryName(currentExe) ?? AppDomain.CurrentDomain.BaseDirectory;
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             var pid = Process.GetCurrentProcess().Id;
-            var tempDir = Path.GetDirectoryName(downloadedFilePath) ?? Path.GetTempPath();
+            var tempDir = Path.Combine(Path.GetTempPath(), "EnightxPosUpdate");
             var batPath = Path.Combine(tempDir, "apply_update.bat");
 
-            var script = $@"@echo off
+            string script;
+            if (isDirectory)
+            {
+                script = $@"@echo off
+setlocal
+set PID={pid}
+set TARGET_DIR=""{currentDir}""
+set TARGET_EXE=""{currentExe}""
+set EXTRACTED=""{downloadedPath}""
+
+:wait_loop
+tasklist /fi ""PID eq %PID%"" 2>nul | find ""%PID%"" >nul
+if %ERRORLEVEL% == 0 (
+    timeout /t 1 /nobreak >nul
+    goto wait_loop
+)
+
+timeout /t 1 /nobreak >nul
+
+echo Applying modular update files...
+xcopy /y /e /q %EXTRACTED%\* %TARGET_DIR%\ >nul
+if %ERRORLEVEL% neq 0 (
+    robocopy %EXTRACTED% %TARGET_DIR% /E /IS /IT /NP >nul
+)
+
+rd /s /q %EXTRACTED% 2>nul
+
+start """" %TARGET_EXE%
+
+(goto) 2>nul & del ""%~f0""
+";
+            }
+            else
+            {
+                script = $@"@echo off
 setlocal
 set PID={pid}
 set TARGET=""{currentExe}""
-set SOURCE=""{downloadedFilePath}""
+set SOURCE=""{downloadedPath}""
 
 :wait_loop
 tasklist /fi ""PID eq %PID%"" 2>nul | find ""%PID%"" >nul
@@ -210,6 +298,7 @@ start """" %TARGET%
 
 (goto) 2>nul & del ""%~f0""
 ";
+            }
 
             File.WriteAllText(batPath, script);
 
@@ -230,7 +319,21 @@ start """" %TARGET%
             // Non-Windows fallback (Linux/macOS development)
             try
             {
-                File.Copy(downloadedFilePath, currentExe, true);
+                if (isDirectory)
+                {
+                    foreach (var file in Directory.GetFiles(downloadedPath, "*", SearchOption.AllDirectories))
+                    {
+                        var rel = Path.GetRelativePath(downloadedPath, file);
+                        var dest = Path.Combine(currentDir, rel);
+                        var destDir = Path.GetDirectoryName(dest);
+                        if (!string.IsNullOrEmpty(destDir)) Directory.CreateDirectory(destDir);
+                        File.Copy(file, dest, true);
+                    }
+                }
+                else
+                {
+                    File.Copy(downloadedPath, currentExe, true);
+                }
                 Process.Start(currentExe);
                 Environment.Exit(0);
             }

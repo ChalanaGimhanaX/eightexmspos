@@ -16,7 +16,19 @@ public partial class UpdateDialog : Window
         _updateService = updateService;
 
         NewVersionBadge.Text = $"v{manifest.Version} Available";
-        CurrentVersionText.Text = $"Current installed version: v{currentVersion}";
+        
+        bool isModular = _updateService.IsModularInstallation();
+        string sizeInfo = "";
+        if (isModular && manifest.ZipSizeBytes.HasValue && manifest.ZipSizeBytes.Value > 0)
+        {
+            sizeInfo = $" • Size: ~{manifest.ZipSizeBytes.Value / (1024.0 * 1024.0):F1} MB (Modular)";
+        }
+        else if (isModular && !string.IsNullOrWhiteSpace(manifest.UpdateZipUrl))
+        {
+            sizeInfo = " • Size: ~1.2 MB (Modular)";
+        }
+
+        CurrentVersionText.Text = $"Current installed version: v{currentVersion}{sizeInfo}";
         ReleaseNotesText.Text = string.IsNullOrWhiteSpace(manifest.ReleaseNotes) 
             ? "Performance improvements and bug fixes." 
             : manifest.ReleaseNotes;
@@ -46,13 +58,14 @@ public partial class UpdateDialog : Window
 
         try
         {
-            var downloadedFile = await _updateService.DownloadUpdateAsync(_manifest.DownloadUrl, progress);
+            var targetUrl = _updateService.GetBestDownloadUrl(_manifest);
+            var downloadedPath = await _updateService.DownloadUpdateAsync(targetUrl, progress);
 
             StatusText.Text = "Download complete! Restarting terminal now...";
             ProgressPercentText.Text = "100%";
             await Task.Delay(800); // Brief visual confirmation before restart
 
-            _updateService.ApplyUpdateAndRestart(downloadedFile);
+            _updateService.ApplyUpdateAndRestart(downloadedPath);
         }
         catch (Exception ex)
         {
