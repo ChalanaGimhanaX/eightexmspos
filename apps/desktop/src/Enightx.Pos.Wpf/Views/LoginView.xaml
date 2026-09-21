@@ -29,6 +29,14 @@
                 <Button Content="Sign In" Height="42" Margin="0,24,0,0"
                         Background="{StaticResource PrimaryBrush}" Foreground="White"
                         FontWeight="Bold" FontSize="15" Click="SignIn_Click"/>
+
+                <Border Background="#F0F4F8" CornerRadius="6" Padding="12" Margin="0,20,0,0" BorderBrush="#CFD8DC" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="Default Logins:" FontWeight="Bold" FontSize="12" Foreground="{StaticResource PrimaryBrush}"/>
+                        <TextBlock Text="• Manager:  admin / admin123" FontSize="12" Foreground="#37474F" Margin="0,4,0,0"/>
+                        <TextBlock Text="• Cashier:  cashier1 / cashier123" FontSize="12" Foreground="#37474F" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </Border>
             </StackPanel>
         </Border>
     </Grid>

@@ -16,7 +16,7 @@ public partial class App : Application
     public static IReceiptService ReceiptService { get; private set; } = null!;
     public static ISyncService SyncService { get; private set; } = null!;
 
-    protected override async void OnStartup(StartupEventArgs e)
+    protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
 
@@ -33,19 +33,35 @@ public partial class App : Application
         PrinterService = new MemoryPrinterService(); // WindowsReceiptPrinter can be injected in production
         ReceiptService = new ReceiptService(Database, SaleService, PrinterService);
 
-        await SeedDefaultDataAsync();
+        SeedDefaultDataAsync().GetAwaiter().GetResult();
+
+        var mainWindow = new MainWindow();
+        mainWindow.Show();
     }
 
     private static async Task SeedDefaultDataAsync()
     {
-        using var conn = Database.CreateConnection();
-        using var cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT COUNT(*) FROM users;";
-        var count = Convert.ToInt64(await cmd.ExecuteScalarAsync());
-        if (count == 0)
+        try
         {
-            await AuthService.CreateUserAsync("admin", "Store Manager", "admin123", Role.Manager);
-            await AuthService.CreateUserAsync("cashier1", "Cashier 01", "cashier123", Role.Cashier);
+            using var conn = Database.CreateConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT COUNT(*) FROM users WHERE username = 'admin';";
+            var adminCount = Convert.ToInt64(await cmd.ExecuteScalarAsync());
+            if (adminCount == 0)
+            {
+                await AuthService.CreateUserAsync("admin", "Store Manager", "admin123", Role.Manager);
+            }
+
+            cmd.CommandText = "SELECT COUNT(*) FROM users WHERE username = 'cashier1';";
+            var cashierCount = Convert.ToInt64(await cmd.ExecuteScalarAsync());
+            if (cashierCount == 0)
+            {
+                await AuthService.CreateUserAsync("cashier1", "Cashier 01", "cashier123", Role.Cashier);
+            }
+
+            cmd.CommandText = "SELECT COUNT(*) FROM products;";
+            var prodCount = Convert.ToInt64(await cmd.ExecuteScalarAsync());
+            if (prodCount == 0)
 
             await CatalogService.AddProductAsync(new Product
             {
@@ -102,6 +118,10 @@ public partial class App : Application
                 StockOnHand = 15.0m,
                 IsActive = true
             });
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error during seeding: {ex.Message}");
         }
     }
 
