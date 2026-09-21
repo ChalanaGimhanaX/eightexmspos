@@ -1,6 +1,6 @@
 from decimal import Decimal
 from enum import Enum
-from typing import List, Optional
+from typing import List, Optional, Dict
 from pydantic import BaseModel, Field
 from datetime import datetime
 import uuid
@@ -81,3 +81,34 @@ class DeviceEnrollmentResponse(BaseModel):
     device_id: str
     device_generation: int
     token: str
+
+class SalesSummaryReportResponse(BaseModel):
+    tenant_id: str
+    branch_id: Optional[str] = None
+    total_sales_count: int
+    total_revenue: Decimal
+    total_tax: Decimal
+    total_discount: Decimal
+    tender_breakdown: Dict[str, Decimal]
+    average_ticket_size: Decimal
+
+class TopProductReportItem(BaseModel):
+    product_id: str
+    product_name: str
+    quantity_sold: Decimal
+    revenue: Decimal
+
+class CashierPerformanceItem(BaseModel):
+    cashier_id: str
+    shifts_worked: int
+    total_sales_amount: Decimal
+    total_variance: Decimal
+
+class DashboardSummaryResponse(BaseModel):
+    tenant_id: str
+    total_revenue: Decimal
+    total_orders: int
+    total_customer_debt: Decimal
+    low_stock_alerts: int
+    tender_breakdown: Dict[str, Decimal]
+
