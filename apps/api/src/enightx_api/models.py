@@ -1,13 +1,5 @@
 from datetime import datetime
-<<<<<<< HEAD
-<<<<<<< HEAD
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Numeric, Boolean, func
-=======
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Numeric, func
->>>>>>> codex/teammate/branch-inventory-transfers
-=======
 from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Boolean, Numeric, func
->>>>>>> codex/teammate/supplier-grn
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from .database import Base
@@ -79,8 +71,6 @@ class SyncEvent(Base):
 
     batch = relationship("SyncBatch", back_populates="events")
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 class Shift(Base):
     __tablename__ = "shifts"
 
@@ -116,7 +106,12 @@ class Customer(Base):
     nic_or_brn = Column(String(32), nullable=True)
     credit_limit = Column(Numeric(12, 2), nullable=False, default=0.00)
     current_balance = Column(Numeric(12, 2), nullable=False, default=0.00)
-=======
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
+
+    ledger_entries = relationship("CustomerLedger", back_populates="customer", cascade="all, delete-orphan")
+
 class Product(Base):
     __tablename__ = "products"
 
@@ -130,13 +125,10 @@ class Product(Base):
     cost_basis = Column(Numeric(12, 2), nullable=False)
     tax_rate = Column(Numeric(5, 4), nullable=False)
     stock_on_hand = Column(Numeric(12, 2), nullable=False)
->>>>>>> codex/teammate/supplier-grn
     is_active = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
 
-<<<<<<< HEAD
-    ledger_entries = relationship("CustomerLedger", back_populates="customer", cascade="all, delete-orphan")
 
 class CustomerLedger(Base):
     __tablename__ = "customer_ledger"
