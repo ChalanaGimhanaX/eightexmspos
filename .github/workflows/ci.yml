@@ -55,3 +55,13 @@ jobs:
         run: |
           dotnet restore apps/desktop/src/Enightx.Pos.Wpf/Enightx.Pos.Wpf.csproj
           dotnet build apps/desktop/src/Enightx.Pos.Wpf/Enightx.Pos.Wpf.csproj -c Release
+
+      - name: Publish Standalone Windows POS Executable
+        run: |
+          dotnet publish apps/desktop/src/Enightx.Pos.Wpf/Enightx.Pos.Wpf.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o publish/
+
+      - name: Upload Windows POS Executable Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: EnightxPos-Windows-x64
+          path: publish/
