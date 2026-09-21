@@ -195,3 +195,54 @@ paths:
         '404':
           description: Customer not found
 
+  /api/v1/inventory/transfers/request:
+    post:
+      summary: Request an inter-branch stock transfer
+      operationId: requestStockTransfer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './schemas/stock-transfer.json'
+      responses:
+        '201':
+          description: Transfer request created successfully
+        '400':
+          description: Invalid transfer request
+
+  /api/v1/inventory/transfers/{transfer_id}/dispatch:
+    post:
+      summary: Dispatch items for an inter-branch transfer
+      operationId: dispatchStockTransfer
+      parameters:
+        - name: transfer_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Transfer dispatched and source stock decremented
+        '400':
+          description: Insufficient stock or invalid status
+
+  /api/v1/inventory/transfers/{transfer_id}/receive:
+    post:
+      summary: Receive items for an inter-branch transfer at destination branch
+      operationId: receiveStockTransfer
+      parameters:
+        - name: transfer_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Transfer received and destination stock incremented
+        '400':
+          description: Invalid transfer status
+
+

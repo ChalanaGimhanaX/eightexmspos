@@ -1,5 +1,9 @@
 from datetime import datetime
+<<<<<<< HEAD
 from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Numeric, Boolean, func
+=======
+from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Numeric, func
+>>>>>>> codex/teammate/branch-inventory-transfers
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from .database import Base
@@ -71,6 +75,7 @@ class SyncEvent(Base):
 
     batch = relationship("SyncBatch", back_populates="events")
 
+<<<<<<< HEAD
 class Shift(Base):
     __tablename__ = "shifts"
 
@@ -131,6 +136,49 @@ class CustomerLedger(Base):
     created_at = Column(DateTime(timezone=True), nullable=False, default=func.now())
 
     customer = relationship("Customer", back_populates="ledger_entries")
+
+class BranchInventory(Base):
+    __tablename__ = "branch_inventory"
+
+    id = Column(UUID(as_uuid=True), primary_key=True)
+    tenant_id = Column(String(64), nullable=False)
+    branch_id = Column(String(64), nullable=False, index=True)
+    product_id = Column(String(64), nullable=False)
+    stock_on_hand = Column(Numeric(12, 2), nullable=False, default=0.00)
+    stock_in_transit = Column(Numeric(12, 2), nullable=False, default=0.00)
+    reorder_point = Column(Numeric(12, 2), nullable=False, default=0.00)
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
+
+class StockTransfer(Base):
+    __tablename__ = "stock_transfers"
+
+    transfer_id = Column(UUID(as_uuid=True), primary_key=True)
+    tenant_id = Column(String(64), nullable=False)
+    source_branch_id = Column(String(64), nullable=False, index=True)
+    dest_branch_id = Column(String(64), nullable=False, index=True)
+    status = Column(String(32), nullable=False, default="REQUESTED", index=True)
+    requested_by = Column(String(64), nullable=False)
+    dispatched_by = Column(String(64), nullable=True)
+    received_by = Column(String(64), nullable=True)
+    requested_at = Column(DateTime(timezone=True), nullable=False, default=func.now())
+    dispatched_at = Column(DateTime(timezone=True), nullable=True)
+    received_at = Column(DateTime(timezone=True), nullable=True)
+    notes = Column(String(256), nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=func.now())
+
+    items = relationship("StockTransferItem", back_populates="transfer", cascade="all, delete-orphan")
+
+class StockTransferItem(Base):
+    __tablename__ = "stock_transfer_items"
+
+    item_id = Column(UUID(as_uuid=True), primary_key=True)
+    transfer_id = Column(UUID(as_uuid=True), ForeignKey("stock_transfers.transfer_id", ondelete="CASCADE"), nullable=False, index=True)
+    product_id = Column(String(64), nullable=False)
+    requested_quantity = Column(Numeric(12, 2), nullable=False)
+    dispatched_quantity = Column(Numeric(12, 2), nullable=False, default=0.00)
+    received_quantity = Column(Numeric(12, 2), nullable=False, default=0.00)
+
+    transfer = relationship("StockTransfer", back_populates="items")
 
 
 
