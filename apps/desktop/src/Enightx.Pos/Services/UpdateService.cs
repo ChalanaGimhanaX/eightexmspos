@@ -59,6 +59,20 @@ public partial class UpdateService : IUpdateService
     public string CurrentVersion { get; }
     public event Action<UpdateManifest>? LiveUpdateReceived;
 
+    public const string EmbeddedReleasePublicKey = """
+-----BEGIN PUBLIC KEY-----
+MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEA1z1WbDxF/89XZVqojy8W
+/RyUXSfSfeHSqpq47Zo6bt0nI7JTRDXI8uquJ3xi+S/hx+k741FjJQ3PTYoTOgOv
+aYOh1r/JZIPQ8UIJDYC/qb6Ev5kXl0IvsPlvFYgNmDuEWsSxdJf7x74L0PjMh03y
+s27xuUp8JnxuccOQi1yu1XIMtC2f2qMHPyKLzfsKD3KxmYlnLOiusxsBkFaqzvMG
+4K3eG2eETEjrHlbzjj1EF6M1v0YSOxefChNp656HWfZ9Yl5ojTYdW2p88Wnqde+O
+63HqUzbddCrzZEBmAs+U5a8LyBLxJ5Fq+D9YJ9eQMplzujpO7m5//Yr9XGQruF7z
+0ZskiWauV3xTckgUCxQaZPXaekaGni7X4p+wGfuJR+EwIXGWTUOjAaXEEAVtIBq3
+8dXDZTaDjkejk5nWlgIZUfVhk8TRT4rOJVMZY6u0Rt8pwvyqN2uDFZ/VYSNlg8HR
+NmYaZpk7c8tLh7fAh3BxeCQj+2Ypn2hVfON0KWLK1BiRAgMBAAE=
+-----END PUBLIC KEY-----
+""";
+
     public UpdateService(HttpClient? httpClient = null,
         string manifestUrl = "https://posapi.eightexms.site/downloads/version-v2.json",
         string? currentVersion = null, string? baseDirectory = null, string? cacheDirectory = null, string? trustedPublicKey = null)
@@ -67,7 +81,7 @@ public partial class UpdateService : IUpdateService
         _manifestUri = new Uri(manifestUrl);
         _baseDirectory = Path.GetFullPath(baseDirectory ?? AppContext.BaseDirectory);
         var keyPath = Path.Combine(_baseDirectory, "release-public-key.pem");
-        _trustedPublicKey = trustedPublicKey ?? (File.Exists(keyPath) ? File.ReadAllText(keyPath) : null);
+        _trustedPublicKey = trustedPublicKey ?? (File.Exists(keyPath) ? File.ReadAllText(keyPath) : EmbeddedReleasePublicKey);
         _cache = Path.GetFullPath(cacheDirectory ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "EnightxPOS", "updates-v2"));
         CurrentVersion = currentVersion ?? typeof(UpdateService).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
     }

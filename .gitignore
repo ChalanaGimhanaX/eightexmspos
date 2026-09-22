@@ -5,6 +5,7 @@
 *.env
 !.env.example
 *.pem
+!release-public-key.pem
 *.key
 *.pfx
 *.p12

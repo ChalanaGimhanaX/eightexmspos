@@ -38,17 +38,17 @@ CSPROJ_WPF = os.path.join(WORKSPACE, "apps/desktop/src/Enightx.Pos.Wpf/Enightx.P
 CSPROJ_CORE = os.path.join(WORKSPACE, "apps/desktop/src/Enightx.Pos/Enightx.Pos.csproj")
 SIGNING_KEY_PATH = os.path.join(WORKSPACE, "infra/.secrets/release_private_key.pem")
 
-OUTPUT_DIR = "/tmp/enightx-release-1.0.17"
+OUTPUT_DIR = "/tmp/enightx-release-1.0.18"
 FOLDER_DIR = os.path.join(OUTPUT_DIR, "folder")
 SINGLE_DIR = os.path.join(OUTPUT_DIR, "single")
 
-VER = "1.0.17"
-NOTES = "Enightx POS v1.0.17: Cashier Shift Float Prompt, Product Master Management CRUD, Multi-Branch Transfers, Physical Stock Count Sessions, and Licensing Lockout Protection."
+VER = "1.0.18"
+NOTES = "Enightx POS v1.0.18: Auto-Popup Update Dialog, Embedded Release Verification Key, Product Management, Shift Control, Inventory Transfers & Stock Counts."
 
 SUPPORTED_FROM = [
     "1.0.0", "1.0.1", "1.0.2", "1.0.3", "1.0.4", "1.0.5",
     "1.0.6", "1.0.7", "1.0.8", "1.0.9", "1.0.10", "1.0.11",
-    "1.0.12", "1.0.13", "1.0.14", "1.0.15", "1.0.16"
+    "1.0.12", "1.0.13", "1.0.14", "1.0.15", "1.0.16", "1.0.17"
 ]
 
 def update_version(ver: str):
@@ -148,10 +148,13 @@ def main():
     shutil.copy2(folder_exe, folder_app_exe)
     shutil.copy2(folder_exe, os.path.join(FOLDER_DIR, "EnightxPos.exe"))
 
-    # Copy ApplyUpdate.ps1
+    # Copy ApplyUpdate.ps1 and release-public-key.pem
     ps1_src = os.path.join(WORKSPACE, "apps/desktop/src/Enightx.Pos.Wpf/ApplyUpdate.ps1")
     if os.path.isfile(ps1_src):
         shutil.copy2(ps1_src, os.path.join(FOLDER_DIR, "ApplyUpdate.ps1"))
+    key_src = os.path.join(WORKSPACE, "apps/desktop/src/Enightx.Pos.Wpf/release-public-key.pem")
+    if os.path.isfile(key_src):
+        shutil.copy2(key_src, os.path.join(FOLDER_DIR, "release-public-key.pem"))
 
     # 3. Package Setup Zip
     setup_zip = os.path.join(OUTPUT_DIR, "EnightxPos-Setup.zip")

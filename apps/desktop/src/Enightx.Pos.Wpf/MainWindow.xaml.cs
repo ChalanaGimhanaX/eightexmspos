@@ -79,6 +79,17 @@ public partial class MainWindow : Window
         _latestManifest = manifest;
         UpdateBannerText.Text = $"Version {manifest.Version} is available. Install when billing is finished.";
         UpdateBanner.Visibility = Visibility.Visible;
+
+        if (!_updateDialogOpen && (_billingVm == null || _billingVm.CartItems.Count == 0))
+        {
+            var dialog = new UpdateDialog(manifest, App.UpdateService.CurrentVersion, App.UpdateService)
+            {
+                Owner = this
+            };
+            _updateDialogOpen = true;
+            try { dialog.ShowDialog(); }
+            finally { _updateDialogOpen = false; }
+        }
     }
 
     private void DismissUpdateBanner_Click(object sender, RoutedEventArgs e)
