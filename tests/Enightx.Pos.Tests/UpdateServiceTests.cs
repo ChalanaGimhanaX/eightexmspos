@@ -191,6 +191,44 @@ public class UpdateServiceTests
         }
     }
 
+    [Fact]
+    public void Deserialize_VpsVersionV2Json_DoesNotThrow()
+    {
+        var json = """
+        {
+          "version": "1.0.14",
+          "Version": "1.0.14",
+          "releaseNotes": "Enightx POS v1.0.14",
+          "ReleaseNotes": "Enightx POS v1.0.14",
+          "release_notes": "Enightx POS v1.0.14",
+          "downloadUrl": "https://posapi.eightexms.site/downloads/Enightx.Pos.Wpf.exe",
+          "DownloadUrl": "https://posapi.eightexms.site/downloads/Enightx.Pos.Wpf.exe",
+          "download_url": "https://posapi.eightexms.site/downloads/Enightx.Pos.Wpf.exe",
+          "updateZipUrl": "https://posapi.eightexms.site/downloads/EnightxPos-Update.zip",
+          "UpdateZipUrl": "https://posapi.eightexms.site/downloads/EnightxPos-Update.zip",
+          "update_zip_url": "https://posapi.eightexms.site/downloads/EnightxPos-Update.zip",
+          "setupZipUrl": "https://posapi.eightexms.site/downloads/EnightxPos-Setup.zip",
+          "SetupZipUrl": "https://posapi.eightexms.site/downloads/EnightxPos-Setup.zip",
+          "setup_zip_url": "https://posapi.eightexms.site/downloads/EnightxPos-Setup.zip",
+          "sha256": "4b88979e861b28f2e3997fc3f9ab5845fd8b3422271627e86dc6132eded0ca1d",
+          "Sha256": "4b88979e861b28f2e3997fc3f9ab5845fd8b3422271627e86dc6132eded0ca1d",
+          "zipSha256": "4b88979e861b28f2e3997fc3f9ab5845fd8b3422271627e86dc6132eded0ca1d",
+          "ZipSha256": "4b88979e861b28f2e3997fc3f9ab5845fd8b3422271627e86dc6132eded0ca1d",
+          "zipSizeBytes": 117121,
+          "ZipSizeBytes": 117121,
+          "publishedAtUtc": "2026-09-22T02:04:24Z",
+          "PublishedAtUtc": "2026-09-22T02:04:24Z",
+          "mandatory": true,
+          "Mandatory": true
+        }
+        """;
+
+        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        var manifest = JsonSerializer.Deserialize<UpdateManifest>(json, options);
+        Assert.NotNull(manifest);
+        Assert.Equal("1.0.14", manifest.Version);
+    }
+
     private class MockHttpMessageHandler : HttpMessageHandler
     {
         private readonly HttpStatusCode _code;
