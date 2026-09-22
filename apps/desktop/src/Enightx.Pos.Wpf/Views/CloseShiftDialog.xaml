@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Close Shift &amp; Cash Reconciliation" Height="580" Width="600"
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
-        Background="#F5F7FA" Loaded="Window_Loaded">
+        Background="{DynamicResource BackgroundBrush}" Loaded="Window_Loaded">
     <Grid Margin="22">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -14,53 +14,53 @@
         <!-- Header -->
         <Border Grid.Row="0" Margin="0,0,0,16">
             <StackPanel>
-                <TextBlock Text="🔒 Shift Closing &amp; Cash Reconciliation" FontSize="20" FontWeight="Bold" Foreground="#1A365D"/>
-                <TextBlock Text="Count all physical cash in the drawer and reconcile against expected ledger cash." FontSize="13" Foreground="#718096" Margin="0,4,0,0"/>
+                <TextBlock Text="🔒 Shift Closing &amp; Cash Reconciliation" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource ForegroundBrush}"/>
+                <TextBlock Text="Count all physical cash in the drawer and reconcile against expected ledger cash." FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
             </StackPanel>
         </Border>
 
         <!-- Content -->
-        <Border Grid.Row="1" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="18">
+        <Border Grid.Row="1" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="18">
             <StackPanel>
                 <!-- Drawer Expected Breakdown -->
-                <TextBlock Text="CASH DRAWER LEDGER (EXPECTED)" FontSize="12" FontWeight="Bold" Foreground="#4A5568" Margin="0,0,0,10"/>
+                <TextBlock Text="CASH DRAWER LEDGER (EXPECTED)" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,10"/>
 
                 <DockPanel Margin="0,0,0,6">
-                    <TextBlock Text="Opening Float:" Foreground="#718096"/>
-                    <TextBlock x:Name="OpeningFloatText" Text="LKR 0.00" HorizontalAlignment="Right" FontWeight="SemiBold"/>
+                    <TextBlock Text="Opening Float:" Foreground="{DynamicResource TextMutedBrush}"/>
+                    <TextBlock x:Name="OpeningFloatText" Text="Rs. 0.00" HorizontalAlignment="Right" FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}"/>
                 </DockPanel>
 
                 <DockPanel Margin="0,0,0,6">
-                    <TextBlock Text="(+) Net Cash Sales:" Foreground="#718096"/>
-                    <TextBlock x:Name="NetCashSalesText" Text="LKR 0.00" HorizontalAlignment="Right" FontWeight="SemiBold"/>
+                    <TextBlock Text="(+) Net Cash Sales:" Foreground="{DynamicResource TextMutedBrush}"/>
+                    <TextBlock x:Name="NetCashSalesText" Text="Rs. 0.00" HorizontalAlignment="Right" FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}"/>
                 </DockPanel>
 
                 <DockPanel Margin="0,0,0,6">
-                    <TextBlock Text="(-) Cash Refunds:" Foreground="#718096"/>
-                    <TextBlock x:Name="CashRefundsText" Text="LKR 0.00" HorizontalAlignment="Right" FontWeight="SemiBold" Foreground="#C53030"/>
+                    <TextBlock Text="(-) Cash Refunds:" Foreground="{DynamicResource TextMutedBrush}"/>
+                    <TextBlock x:Name="CashRefundsText" Text="Rs. 0.00" HorizontalAlignment="Right" FontWeight="SemiBold" Foreground="{DynamicResource DangerBrush}"/>
                 </DockPanel>
 
                 <DockPanel Margin="0,0,0,6">
-                    <TextBlock Text="(+) Cash In (Deposits):" Foreground="#718096"/>
-                    <TextBlock x:Name="CashInText" Text="LKR 0.00" HorizontalAlignment="Right" FontWeight="SemiBold" Foreground="#2B6CB0"/>
+                    <TextBlock Text="(+) Cash In (Deposits):" Foreground="{DynamicResource TextMutedBrush}"/>
+                    <TextBlock x:Name="CashInText" Text="Rs. 0.00" HorizontalAlignment="Right" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryBrush}"/>
                 </DockPanel>
 
                 <DockPanel Margin="0,0,0,10">
-                    <TextBlock Text="(-) Cash Out (Payouts):" Foreground="#718096"/>
-                    <TextBlock x:Name="CashOutText" Text="LKR 0.00" HorizontalAlignment="Right" FontWeight="SemiBold" Foreground="#DD6B20"/>
+                    <TextBlock Text="(-) Cash Out (Payouts):" Foreground="{DynamicResource TextMutedBrush}"/>
+                    <TextBlock x:Name="CashOutText" Text="Rs. 0.00" HorizontalAlignment="Right" FontWeight="SemiBold" Foreground="{DynamicResource WarningBrush}"/>
                 </DockPanel>
 
                 <Separator Margin="0,0,0,10"/>
 
                 <DockPanel Margin="0,0,0,16">
-                    <TextBlock Text="EXPECTED DRAWER CASH:" FontWeight="Bold" FontSize="14" Foreground="#1A365D"/>
-                    <TextBlock x:Name="ExpectedCashText" Text="LKR 0.00" HorizontalAlignment="Right" FontWeight="Bold" FontSize="16" Foreground="#2B6CB0"/>
+                    <TextBlock Text="EXPECTED DRAWER CASH:" FontWeight="Bold" FontSize="14" Foreground="{DynamicResource ForegroundBrush}"/>
+                    <TextBlock x:Name="ExpectedCashText" Text="Rs. 0.00" HorizontalAlignment="Right" FontWeight="Bold" FontSize="16" Foreground="{DynamicResource PrimaryBrush}"/>
                 </DockPanel>
 
                 <!-- Counted Cash Input -->
-                <Border Background="#EDF2F7" CornerRadius="6" Padding="14" Margin="0,0,0,12">
+                <Border Background="{DynamicResource SurfaceCardBrush}" CornerRadius="6" Padding="14" Margin="0,0,0,12">
                     <StackPanel>
-                        <TextBlock Text="Actual Counted Cash in Drawer (LKR):" FontWeight="Bold" FontSize="13" Margin="0,0,0,6"/>
+                        <TextBlock Text="Actual Counted Cash in Drawer (Rs.):" FontWeight="Bold" FontSize="13" Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,6"/>
                         <TextBox x:Name="CountedCashBox" Height="40" FontSize="18" FontWeight="Bold" Padding="8,4"
                                  TextChanged="CountedCashBox_TextChanged"/>
                     </StackPanel>
@@ -68,20 +68,20 @@
 
                 <!-- Variance Display -->
                 <DockPanel Margin="0,4,0,0">
-                    <TextBlock Text="Cash Variance (Counted - Expected):" FontWeight="Bold" FontSize="14"/>
-                    <TextBlock x:Name="VarianceText" Text="LKR 0.00" HorizontalAlignment="Right" FontWeight="Bold" FontSize="16" Foreground="#38A169"/>
+                    <TextBlock Text="Cash Variance (Counted - Expected):" FontWeight="Bold" FontSize="14" Foreground="{DynamicResource ForegroundBrush}"/>
+                    <TextBlock x:Name="VarianceText" Text="Rs. 0.00" HorizontalAlignment="Right" FontWeight="Bold" FontSize="16" Foreground="{DynamicResource SuccessBrush}"/>
                 </DockPanel>
-                <TextBlock x:Name="VarianceNote" Text="Balanced (No discrepancy)" FontSize="12" Foreground="Gray" HorizontalAlignment="Right" Margin="0,2,0,0"/>
+                <TextBlock x:Name="VarianceNote" Text="Balanced (No discrepancy)" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Right" Margin="0,2,0,0"/>
             </StackPanel>
         </Border>
 
         <!-- Footer Buttons -->
         <Border Grid.Row="2" Margin="0,16,0,0">
             <DockPanel>
-                <Button Content="Cancel" Width="90" Height="38" Background="#EDF2F7" Foreground="#4A5568"
+                <Button Content="Cancel" Width="90" Height="38" Background="{DynamicResource SurfaceCardBrush}" Foreground="{DynamicResource ForegroundBrush}"
                         FontWeight="SemiBold" BorderThickness="0" Cursor="Hand" Click="Cancel_Click"/>
                 <Button Content="🔒 Reconcile &amp; Close Shift" Width="200" Height="38" HorizontalAlignment="Right"
-                        Background="#C53030" Foreground="White" FontWeight="Bold" BorderThickness="0"
+                        Background="{DynamicResource DangerBrush}" Foreground="{DynamicResource TextOnPrimaryBrush}" FontWeight="Bold" BorderThickness="0"
                         Cursor="Hand" Click="ConfirmClose_Click"/>
             </DockPanel>
         </Border>

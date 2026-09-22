@@ -1,0 +1,90 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ========================================================================= -->
+    <!-- COLOR TOKENS (LIGHT THEME - HIGH CONTRAST)                                -->
+    <!-- ========================================================================= -->
+    
+    <!-- Brand & Accent Colors -->
+    <Color x:Key="PrimaryColor">#0F62FE</Color>
+    <Color x:Key="PrimaryDarkColor">#0043CE</Color>
+    <Color x:Key="PrimaryLightColor">#EDF5FF</Color>
+    <Color x:Key="SecondaryColor">#475569</Color>
+    <Color x:Key="AccentColor">#059669</Color>
+
+    <!-- Canvas & Surface Colors -->
+    <Color x:Key="BackgroundColor">#F8FAFC</Color>
+    <Color x:Key="SurfaceColor">#FFFFFF</Color>
+    <Color x:Key="CardColor">#FFFFFF</Color>
+    <Color x:Key="CardHoverColor">#F1F5F9</Color>
+    <Color x:Key="HeaderBackgroundColor">#0F62FE</Color>
+    <Color x:Key="RowAlternateColor">#F8FAFC</Color>
+
+    <!-- Border Colors -->
+    <Color x:Key="BorderColor">#E2E8F0</Color>
+    <Color x:Key="BorderFocusColor">#0F62FE</Color>
+
+    <!-- Feedback & Semantics Colors -->
+    <Color x:Key="SuccessColor">#16A34A</Color>
+    <Color x:Key="SuccessSurfaceColor">#DCFCE7</Color>
+    <Color x:Key="WarningColor">#D97706</Color>
+    <Color x:Key="WarningSurfaceColor">#FEF3C7</Color>
+    <Color x:Key="DangerColor">#DC2626</Color>
+    <Color x:Key="DangerSurfaceColor">#FEE2E2</Color>
+    <Color x:Key="InfoColor">#0284C7</Color>
+    <Color x:Key="InfoSurfaceColor">#E0F2FE</Color>
+
+    <!-- Typography Colors -->
+    <Color x:Key="TextPrimaryColor">#0F172A</Color>
+    <Color x:Key="TextSecondaryColor">#475569</Color>
+    <Color x:Key="TextMutedColor">#94A3B8</Color>
+    <Color x:Key="TextOnPrimaryColor">#FFFFFF</Color>
+
+    <!-- Input Control Colors -->
+    <Color x:Key="InputBackgroundColor">#FFFFFF</Color>
+    <Color x:Key="InputBorderColor">#CBD5E1</Color>
+
+    <!-- ========================================================================= -->
+    <!-- SOLID COLOR BRUSH TOKENS (LIGHT THEME)                                    -->
+    <!-- ========================================================================= -->
+
+    <!-- Brand & Accent Brushes -->
+    <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource PrimaryColor}"/>
+    <SolidColorBrush x:Key="PrimaryDarkBrush" Color="{StaticResource PrimaryDarkColor}"/>
+    <SolidColorBrush x:Key="PrimaryLightBrush" Color="{StaticResource PrimaryLightColor}"/>
+    <SolidColorBrush x:Key="SecondaryBrush" Color="{StaticResource SecondaryColor}"/>
+    <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}"/>
+
+    <!-- Canvas & Surface Brushes -->
+    <SolidColorBrush x:Key="BackgroundBrush" Color="{StaticResource BackgroundColor}"/>
+    <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource SurfaceColor}"/>
+    <SolidColorBrush x:Key="CardBrush" Color="{StaticResource CardColor}"/>
+    <SolidColorBrush x:Key="CardHoverBrush" Color="{StaticResource CardHoverColor}"/>
+    <SolidColorBrush x:Key="HeaderBackgroundBrush" Color="{StaticResource HeaderBackgroundColor}"/>
+    <SolidColorBrush x:Key="RowAlternateBrush" Color="{StaticResource RowAlternateColor}"/>
+
+    <!-- Border Brushes -->
+    <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource BorderColor}"/>
+    <SolidColorBrush x:Key="BorderFocusBrush" Color="{StaticResource BorderFocusColor}"/>
+
+    <!-- Feedback & Semantics Brushes -->
+    <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}"/>
+    <SolidColorBrush x:Key="SuccessSurfaceBrush" Color="{StaticResource SuccessSurfaceColor}"/>
+    <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}"/>
+    <SolidColorBrush x:Key="WarningSurfaceBrush" Color="{StaticResource WarningSurfaceColor}"/>
+    <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource DangerColor}"/>
+    <SolidColorBrush x:Key="DangerSurfaceBrush" Color="{StaticResource DangerSurfaceColor}"/>
+    <SolidColorBrush x:Key="InfoBrush" Color="{StaticResource InfoColor}"/>
+    <SolidColorBrush x:Key="InfoSurfaceBrush" Color="{StaticResource InfoSurfaceColor}"/>
+
+    <!-- Typography Brushes -->
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimaryColor}"/>
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondaryColor}"/>
+    <SolidColorBrush x:Key="TextMutedBrush" Color="{StaticResource TextMutedColor}"/>
+    <SolidColorBrush x:Key="TextOnPrimaryBrush" Color="{StaticResource TextOnPrimaryColor}"/>
+
+    <!-- Input Control Brushes -->
+    <SolidColorBrush x:Key="InputBackgroundBrush" Color="{StaticResource InputBackgroundColor}"/>
+    <SolidColorBrush x:Key="InputBorderBrush" Color="{StaticResource InputBorderColor}"/>
+
+</ResourceDictionary>

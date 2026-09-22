@@ -166,18 +166,23 @@ public class BillingViewModel : INotifyPropertyChanged
         set { _isCatalogLoading = value; OnPropertyChanged(); }
     }
 
+    public const decimal MaxCashierDiscountRate = 0.10m; // 10% maximum cashier discount limit
+    private readonly IAuthorizationGateService? _authorizationGateService;
+
     public BillingViewModel(
         User user,
         CashShift shift,
         ICatalogService catalogService,
         ISaleService saleService,
-        IHeldCartService? heldCartService = null)
+        IHeldCartService? heldCartService = null,
+        IAuthorizationGateService? authorizationGateService = null)
     {
         CurrentUser = user;
         CurrentShift = shift;
         _catalogService = catalogService;
         _saleService = saleService;
         _heldCartService = heldCartService;
+        _authorizationGateService = authorizationGateService ?? App.AuthorizationGateService;
     }
 
     public async Task LoadCatalogAsync()
@@ -268,7 +273,7 @@ public class BillingViewModel : INotifyPropertyChanged
             CartItems.Add(item);
         }
 
-        StatusMessage = $"Added: {product.Name} (LKR {product.UnitPrice:N2})";
+        StatusMessage = $"Added: {product.Name} (Rs. {product.UnitPrice:N2})";
         RefreshTotals();
     }
 
@@ -465,6 +470,331 @@ public class BillingViewModel : INotifyPropertyChanged
         catch (Exception ex)
         {
             StatusMessage = $"Sync failed: {ex.Message}";
+        }
+    }
+
+    // =========================================================================
+    // GUARDRAIL 1: PRICE OVERRIDE
+    // =========================================================================
+    public async Task<bool> OverrideItemPriceAsync(CartItemViewModel item, decimal newUnitPrice, string reason)
+    {
+        if (item == null) throw new ArgumentNullException(nameof(item));
+        if (newUnitPrice < 0m)
+        {
+            StatusMessage = "Price override rejected: Price cannot be negative.";
+            return false;
+        }
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            StatusMessage = "Price override rejected: An override reason is strictly mandatory.";
+            return false;
+        }
+        if (item.UnitPrice == newUnitPrice)
+        {
+            return true;
+        }
+
+        // Authorization Gate Interception
+        if (CurrentUser.Role < Role.Manager)
+        {
+            var gate = _authorizationGateService ?? App.AuthorizationGateService;
+            if (gate == null)
+            {
+                StatusMessage = "Price override rejected: Authorization gate service unavailable.";
+                return false;
+            }
+
+            var opName = $"Price Override: {item.ProductName} (Rs. {item.UnitPrice:#,##0.00} -> Rs. {newUnitPrice:#,##0.00})";
+            bool authorized = await gate.AuthorizeOperationAsync(
+                CurrentUser,
+                Role.Manager,
+                opName,
+                CurrentShift?.TenantId,
+                CurrentShift?.BranchId,
+                CurrentShift?.CounterId);
+
+            if (!authorized)
+            {
+                StatusMessage = $"Price override rejected: Manager authorization required for {item.ProductName}.";
+                return false;
+            }
+
+            item.AuthorizingUserId = gate.LastAuthorizingUser?.UserId ?? "MANAGER_AUTHORIZED";
+        }
+        else
+        {
+            item.AuthorizingUserId = CurrentUser.UserId;
+        }
+
+        item.UnitPrice = newUnitPrice;
+        item.IsPriceOverridden = true;
+        item.OverrideReason = reason.Trim();
+        item.Recalculate();
+        RefreshTotals();
+
+        StatusMessage = $"Price override applied: {item.ProductName} set to Rs. {newUnitPrice:#,##0.00}";
+        return true;
+    }
+
+    public Task<bool> ApplyPriceOverrideAsync(CartItemViewModel item, decimal newUnitPrice, string reason)
+        => OverrideItemPriceAsync(item, newUnitPrice, reason);
+
+    // =========================================================================
+    // GUARDRAIL 2: DISCOUNT LIMIT (> 10%)
+    // =========================================================================
+    public async Task<bool> ApplyItemDiscountAsync(CartItemViewModel item, decimal discountRate, string? reason = null)
+    {
+        if (item == null) throw new ArgumentNullException(nameof(item));
+        if (discountRate < 0m || discountRate > 1.0m)
+        {
+            StatusMessage = "Discount rejected: Rate must be between 0% and 100%.";
+            return false;
+        }
+
+        if (discountRate > MaxCashierDiscountRate && CurrentUser.Role < Role.Manager)
+        {
+            var gate = _authorizationGateService ?? App.AuthorizationGateService;
+            if (gate == null)
+            {
+                StatusMessage = "Discount rejected: Authorization gate service unavailable.";
+                return false;
+            }
+
+            var opName = $"Excessive Discount ({discountRate:P0} > 10%) on {item.ProductName}";
+            bool authorized = await gate.AuthorizeOperationAsync(
+                CurrentUser,
+                Role.Manager,
+                opName,
+                CurrentShift?.TenantId,
+                CurrentShift?.BranchId,
+                CurrentShift?.CounterId);
+
+            if (!authorized)
+            {
+                StatusMessage = "Discount rejected: Discounts exceeding 10% require Manager authorization.";
+                return false;
+            }
+
+            item.AuthorizingUserId = gate.LastAuthorizingUser?.UserId ?? "MANAGER_AUTHORIZED";
+        }
+        else if (CurrentUser.Role >= Role.Manager)
+        {
+            item.AuthorizingUserId = CurrentUser.UserId;
+        }
+
+        item.DiscountRate = discountRate;
+        item.Recalculate();
+        RefreshTotals();
+
+        StatusMessage = $"Discount of {discountRate:P0} applied to {item.ProductName}.";
+        return true;
+    }
+
+    public Task<bool> ApplyDiscountAsync(CartItemViewModel item, decimal discountRate, string? reason = null)
+        => ApplyItemDiscountAsync(item, discountRate, reason);
+
+    public async Task<bool> ApplyCartDiscountAsync(decimal discountRate, string? reason = null)
+    {
+        if (CartItems.Count == 0)
+        {
+            StatusMessage = "Cannot apply discount to an empty cart.";
+            return false;
+        }
+        if (discountRate < 0m || discountRate > 1.0m)
+        {
+            StatusMessage = "Discount rejected: Rate must be between 0% and 100%.";
+            return false;
+        }
+
+        string? authorizerId = null;
+        if (discountRate > MaxCashierDiscountRate && CurrentUser.Role < Role.Manager)
+        {
+            var gate = _authorizationGateService ?? App.AuthorizationGateService;
+            if (gate == null)
+            {
+                StatusMessage = "Cart discount rejected: Authorization gate service unavailable.";
+                return false;
+            }
+
+            var opName = $"Cart Discount ({discountRate:P0} > 10%) on {CartItems.Count} items";
+            bool authorized = await gate.AuthorizeOperationAsync(
+                CurrentUser,
+                Role.Manager,
+                opName,
+                CurrentShift?.TenantId,
+                CurrentShift?.BranchId,
+                CurrentShift?.CounterId);
+
+            if (!authorized)
+            {
+                StatusMessage = "Cart discount rejected: Discounts exceeding 10% require Manager authorization.";
+                return false;
+            }
+
+            authorizerId = gate.LastAuthorizingUser?.UserId ?? "MANAGER_AUTHORIZED";
+        }
+        else if (CurrentUser.Role >= Role.Manager)
+        {
+            authorizerId = CurrentUser.UserId;
+        }
+
+        foreach (var item in CartItems)
+        {
+            item.DiscountRate = discountRate;
+            if (authorizerId != null) item.AuthorizingUserId = authorizerId;
+            item.Recalculate();
+        }
+
+        RefreshTotals();
+        StatusMessage = $"Cart discount of {discountRate:P0} applied successfully.";
+        return true;
+    }
+
+    // =========================================================================
+    // GUARDRAIL 3: REFUND / RETURN ISSUANCE
+    // =========================================================================
+    public async Task<bool> ProcessRefundAsync(RefundSaleCommand command)
+    {
+        if (command == null) throw new ArgumentNullException(nameof(command));
+        if (string.IsNullOrWhiteSpace(command.Reason))
+        {
+            StatusMessage = "Refund rejected: A refund reason is strictly mandatory.";
+            return false;
+        }
+
+        string? authorizerId = null;
+        if (CurrentUser.Role < Role.Manager)
+        {
+            var gate = _authorizationGateService ?? App.AuthorizationGateService;
+            if (gate == null)
+            {
+                StatusMessage = "Refund rejected: Authorization gate service unavailable.";
+                return false;
+            }
+
+            var opName = $"Issue Refund for Sale {command.OriginalSaleId} ({command.Items?.Count ?? 0} items)";
+            bool authorized = await gate.AuthorizeOperationAsync(
+                CurrentUser,
+                Role.Manager,
+                opName,
+                command.TenantId ?? CurrentShift?.TenantId,
+                command.BranchId ?? CurrentShift?.BranchId,
+                command.CounterId ?? CurrentShift?.CounterId);
+
+            if (!authorized)
+            {
+                StatusMessage = "Refund cancelled: Manager authorization required.";
+                return false;
+            }
+
+            authorizerId = gate.LastAuthorizingUser?.UserId ?? "MANAGER_AUTHORIZED";
+        }
+        else
+        {
+            authorizerId = CurrentUser.UserId;
+        }
+
+        try
+        {
+            var cmdWithAuth = command with { AuthorizingUserId = authorizerId };
+            var refundSale = await _saleService.RefundSaleAsync(cmdWithAuth);
+
+            StatusMessage = $"Refund processed: Receipt {refundSale.ReceiptNumber} (Rs. {refundSale.GrandTotal:#,##0.00}).";
+            return true;
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Refund failed: {ex.Message}";
+            return false;
+        }
+    }
+
+    public async Task<bool> IssueRefundAsync(Guid originalSaleId, List<RefundLineRequest> items, string reason, bool returnStockToInventory = true)
+    {
+        var command = new RefundSaleCommand(
+            TenantId: CurrentShift?.TenantId ?? "TENANT_LK_01",
+            BranchId: CurrentShift?.BranchId ?? "B01",
+            CounterId: CurrentShift?.CounterId ?? "C01",
+            CashierId: CurrentUser.UserId,
+            ShiftId: CurrentShift?.ShiftId ?? Guid.Empty,
+            OriginalSaleId: originalSaleId,
+            Items: items,
+            Reason: reason,
+            ReturnStockToInventory: returnStockToInventory
+        );
+
+        return await ProcessRefundAsync(command);
+    }
+
+    // =========================================================================
+    // GUARDRAIL 4: STOCK ADJUSTMENT
+    // =========================================================================
+    public async Task<bool> AdjustStockAsync(string productId, decimal quantityChange, string reason)
+    {
+        if (string.IsNullOrWhiteSpace(productId)) throw new ArgumentException("Product ID cannot be empty.", nameof(productId));
+        if (quantityChange == 0m)
+        {
+            StatusMessage = "Stock adjustment rejected: Quantity change cannot be zero.";
+            return false;
+        }
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            StatusMessage = "Stock adjustment rejected: An adjustment reason is strictly mandatory.";
+            return false;
+        }
+
+        User? authorizer = null;
+        if (CurrentUser.Role < Role.Manager)
+        {
+            var gate = _authorizationGateService ?? App.AuthorizationGateService;
+            if (gate == null)
+            {
+                StatusMessage = "Stock adjustment rejected: Authorization gate service unavailable.";
+                return false;
+            }
+
+            var opName = $"Stock Adjustment ({quantityChange:+0.##;-0.##}) for Product {productId}";
+            bool authorized = await gate.AuthorizeOperationAsync(
+                CurrentUser,
+                Role.Manager,
+                opName,
+                CurrentShift?.TenantId,
+                CurrentShift?.BranchId,
+                CurrentShift?.CounterId);
+
+            if (!authorized)
+            {
+                StatusMessage = "Stock adjustment cancelled: Manager authorization required.";
+                return false;
+            }
+
+            authorizer = gate.LastAuthorizingUser;
+        }
+        else
+        {
+            authorizer = CurrentUser;
+        }
+
+        try
+        {
+            await _catalogService.AdjustStockAsync(
+                productId: productId,
+                quantityChange: quantityChange,
+                reason: reason.Trim(),
+                actor: CurrentUser,
+                tenantId: CurrentShift?.TenantId ?? "TENANT_LK_01",
+                branchId: CurrentShift?.BranchId ?? "B01",
+                counterId: CurrentShift?.CounterId ?? "C01",
+                authorizer: authorizer
+            );
+
+            StatusMessage = $"Stock adjusted for product {productId} by {quantityChange:+0.##;-0.##}.";
+            return true;
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Stock adjustment failed: {ex.Message}";
+            return false;
         }
     }
 

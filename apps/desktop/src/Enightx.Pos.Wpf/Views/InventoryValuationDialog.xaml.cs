@@ -26,8 +26,8 @@ public class ValuationDisplayItem
     public bool IsLowStock => StockOnHand >= 0 && StockOnHand <= 5;
     public string AlertStatus => IsNegativeStock ? "🚨 OVERSOLD" : (IsLowStock ? "⚠️ LOW STOCK" : "OK");
     public Brush AlertColor => IsNegativeStock
-        ? new SolidColorBrush(Color.FromRgb(220, 38, 38))
-        : (IsLowStock ? new SolidColorBrush(Color.FromRgb(217, 119, 6)) : new SolidColorBrush(Color.FromRgb(22, 163, 74)));
+        ? ((Brush)Application.Current?.FindResource("DangerBrush")!)
+        : (IsLowStock ? ((Brush)Application.Current?.FindResource("WarningBrush")!) : ((Brush)Application.Current?.FindResource("SuccessBrush")!));
 }
 
 public partial class InventoryValuationDialog : Window
@@ -63,11 +63,11 @@ public partial class InventoryValuationDialog : Window
 
             SubtitleText.Text = $"Snapshot generated at: {_report.GeneratedAtUtc:yyyy-MM-dd HH:mm:ss} UTC | Total SKUs: {_report.TotalProducts}";
 
-            ValuationCostText.Text = $"LKR {_report.TotalValuationAtCost:N2}";
-            ValuationRetailText.Text = $"LKR {_report.TotalValuationAtRetail:N2}";
+            ValuationCostText.Text = $"Rs. {_report.TotalValuationAtCost:#,##0.00}";
+            ValuationRetailText.Text = $"Rs. {_report.TotalValuationAtRetail:#,##0.00}";
 
             var profit = MoneyCalculator.Round(_report.TotalValuationAtRetail - _report.TotalValuationAtCost);
-            PotentialProfitText.Text = $"LKR {profit:N2}";
+            PotentialProfitText.Text = $"Rs. {profit:#,##0.00}";
             var marginPct = _report.TotalValuationAtRetail > 0
                 ? MoneyCalculator.Round((profit / _report.TotalValuationAtRetail) * 100m)
                 : 0m;
@@ -163,4 +163,3 @@ public partial class InventoryValuationDialog : Window
         Close();
     }
 }
-

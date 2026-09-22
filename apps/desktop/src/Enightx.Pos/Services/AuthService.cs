@@ -12,7 +12,7 @@ public interface IAuthService
     Task<User> CreateUserAsync(string username, string displayName, string password, Role role, string? pin = null);
     Task<User> AuthenticateAsync(string username, string password, string tenantId, string branchId, string counterId);
     Task SetUserPinAsync(string userId, string pin);
-    Task<User> VerifyPinAsync(string pin, Role minimumRole = Role.Manager, string? tenantId = null, string? branchId = null, string? counterId = null, string? actionDescription = null);
+    Task<User> VerifyPinAsync(string pin, Role minimumRole = Role.Manager, string? tenantId = null, string? branchId = null, string? counterId = null, string? actionDescription = null, string? cashierId = null);
 }
 
 public class AuthService : IAuthService
@@ -193,7 +193,8 @@ public class AuthService : IAuthService
         string? tenantId = null,
         string? branchId = null,
         string? counterId = null,
-        string? actionDescription = null)
+        string? actionDescription = null,
+        string? cashierId = null)
     {
         if (string.IsNullOrWhiteSpace(pin))
         {
@@ -299,6 +300,7 @@ public class AuthService : IAuthService
                     AuthorizerId = user.UserId,
                     AuthorizerName = user.DisplayName,
                     Role = user.Role.ToString(),
+                    CashierId = cashierId,
                     SensitiveAction = actionDescription ?? "UNKNOWN"
                 }));
                 auditCmd.Parameters.AddWithValue("$occurred", DateTime.UtcNow.ToString("o"));
@@ -322,6 +324,7 @@ public class AuthService : IAuthService
         {
             SensitiveAction = actionDescription ?? "UNKNOWN",
             MinimumRole = minimumRole.ToString(),
+            CashierId = cashierId,
             Reason = "Invalid PIN or user lacks required role."
         }));
         failCmd.Parameters.AddWithValue("$occurred", DateTime.UtcNow.ToString("o"));

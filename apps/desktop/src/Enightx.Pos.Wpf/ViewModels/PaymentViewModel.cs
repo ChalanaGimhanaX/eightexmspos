@@ -231,7 +231,7 @@ public class PaymentViewModel : INotifyPropertyChanged
 
         if (IsCashSelected && AmountTendered < GrandTotal)
         {
-            ErrorMessage = $"Tendered amount (LKR {AmountTendered:F2}) is insufficient. Total is LKR {GrandTotal:F2}.";
+            ErrorMessage = $"Tendered amount (Rs. {AmountTendered:N2}) is insufficient. Total is Rs. {GrandTotal:N2}.";
             return;
         }
 
@@ -244,7 +244,7 @@ public class PaymentViewModel : INotifyPropertyChanged
             }
             if (GrandTotal > CustomerAvailableCredit)
             {
-                ErrorMessage = $"Sale total (LKR {GrandTotal:F2}) exceeds customer's available credit (LKR {CustomerAvailableCredit:F2}).";
+                ErrorMessage = $"Sale total (Rs. {GrandTotal:N2}) exceeds customer's available credit (Rs. {CustomerAvailableCredit:N2}).";
                 return;
             }
         }
@@ -263,17 +263,17 @@ public class PaymentViewModel : INotifyPropertyChanged
             }
             if (CreditAmount > CustomerAvailableCredit)
             {
-                ErrorMessage = $"Credit portion (LKR {CreditAmount:F2}) exceeds customer's available credit (LKR {CustomerAvailableCredit:F2}).";
+                ErrorMessage = $"Credit portion (Rs. {CreditAmount:N2}) exceeds customer's available credit (Rs. {CustomerAvailableCredit:N2}).";
                 return;
             }
             if (CreditAmount > GrandTotal)
             {
-                ErrorMessage = $"Credit portion (LKR {CreditAmount:F2}) cannot exceed grand total (LKR {GrandTotal:F2}).";
+                ErrorMessage = $"Credit portion (Rs. {CreditAmount:N2}) cannot exceed grand total (Rs. {GrandTotal:N2}).";
                 return;
             }
             if ((CashAmount + CreditAmount) < GrandTotal)
             {
-                ErrorMessage = $"Total tendered (LKR {CashAmount + CreditAmount:F2}) is less than grand total (LKR {GrandTotal:F2}).";
+                ErrorMessage = $"Total tendered (Rs. {CashAmount + CreditAmount:N2}) is less than grand total (Rs. {GrandTotal:N2}).";
                 return;
             }
         }

@@ -53,16 +53,16 @@ public partial class DailyReportDialog : Window
             SubtitleText.Text = $"Date: {date:dddd, dd MMMM yyyy} | Branch: {CurrentReport.BranchId} | Shifts: {CurrentReport.ShiftsCount}";
 
             // Top KPIs
-            KpiNetSalesText.Text = $"LKR {CurrentReport.NetSales:N2}";
-            KpiGrossProfitText.Text = $"LKR {CurrentReport.ProfitSummary.GrossProfit:N2} ({CurrentReport.ProfitSummary.GrossMarginPercent:F1}%)";
+            KpiNetSalesText.Text = $"Rs. {CurrentReport.NetSales:#,##0.00}";
+            KpiGrossProfitText.Text = $"Rs. {CurrentReport.ProfitSummary.GrossProfit:#,##0.00} ({CurrentReport.ProfitSummary.GrossMarginPercent:F1}%)";
             KpiTxnCountText.Text = $"{CurrentReport.CompletedSalesCount} txns / {CurrentReport.ShiftsCount} shifts";
-            KpiDrawerCashText.Text = $"{(CurrentReport.NetDrawerCashChange >= 0 ? "+" : "")}LKR {CurrentReport.NetDrawerCashChange:N2}";
+            KpiDrawerCashText.Text = $"{(CurrentReport.NetDrawerCashChange >= 0 ? "+" : "")}Rs. {CurrentReport.NetDrawerCashChange:#,##0.00}";
 
             // Section 1: Sales & Refunds
-            GrossSalesText.Text = $"LKR {CurrentReport.GrossSales:N2}";
-            DiscountsText.Text = $"LKR -{CurrentReport.DiscountTotal:N2}";
-            TaxText.Text = $"LKR {CurrentReport.TaxTotal:N2}";
-            RefundsText.Text = $"LKR -{CurrentReport.TotalRefundAmount:N2} ({CurrentReport.RefundCount} refunds)";
+            GrossSalesText.Text = $"Rs. {CurrentReport.GrossSales:#,##0.00}";
+            DiscountsText.Text = $"Rs. -{CurrentReport.DiscountTotal:#,##0.00}";
+            TaxText.Text = $"Rs. {CurrentReport.TaxTotal:#,##0.00}";
+            RefundsText.Text = $"Rs. -{CurrentReport.TotalRefundAmount:#,##0.00} ({CurrentReport.RefundCount} refunds)";
 
             // Section 2: Tender Breakdown
             TenderGrid.ItemsSource = CurrentReport.TenderSummaries;
@@ -70,17 +70,17 @@ public partial class DailyReportDialog : Window
             // Section 3: Drawer Cash Movements
             var cashTender = CurrentReport.TenderSummaries
                 .FirstOrDefault(t => t.TenderType == TenderType.CASH)?.NetAmount ?? 0m;
-            NetCashSalesText.Text = $"LKR {cashTender:N2}";
-            CashRefundsText.Text = $"LKR -{CurrentReport.TotalRefundAmount:N2}";
-            CashInText.Text = $"LKR +{CurrentReport.TotalCashIn:N2}";
-            CashOutText.Text = $"LKR -{CurrentReport.TotalCashOut:N2}";
-            NetDrawerImpactText.Text = $"{(CurrentReport.NetDrawerCashChange >= 0 ? "+" : "")}LKR {CurrentReport.NetDrawerCashChange:N2}";
+            NetCashSalesText.Text = $"Rs. {cashTender:#,##0.00}";
+            CashRefundsText.Text = $"Rs. -{CurrentReport.TotalRefundAmount:#,##0.00}";
+            CashInText.Text = $"Rs. +{CurrentReport.TotalCashIn:#,##0.00}";
+            CashOutText.Text = $"Rs. -{CurrentReport.TotalCashOut:#,##0.00}";
+            NetDrawerImpactText.Text = $"{(CurrentReport.NetDrawerCashChange >= 0 ? "+" : "")}Rs. {CurrentReport.NetDrawerCashChange:#,##0.00}";
 
             // Section 4: Profit Summary
             var prof = CurrentReport.ProfitSummary;
-            ProfitRevText.Text = $"LKR {prof.Revenue:N2}";
-            ProfitCogsText.Text = $"LKR {prof.CostOfGoodsSold:N2}";
-            GrossProfitText.Text = $"LKR {prof.GrossProfit:N2}";
+            ProfitRevText.Text = $"Rs. {prof.Revenue:#,##0.00}";
+            ProfitCogsText.Text = $"Rs. {prof.CostOfGoodsSold:#,##0.00}";
+            GrossProfitText.Text = $"Rs. {prof.GrossProfit:#,##0.00}";
             GrossMarginText.Text = $"{prof.GrossMarginPercent:F2}%";
         }
         catch (Exception ex)
@@ -116,4 +116,3 @@ public partial class DailyReportDialog : Window
         Close();
     }
 }
-

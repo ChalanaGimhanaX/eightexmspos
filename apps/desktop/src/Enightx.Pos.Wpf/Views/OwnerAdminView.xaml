@@ -1,0 +1,101 @@
+<UserControl x:Class="Enightx.Pos.Wpf.Views.OwnerAdminView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" 
+             d:DesignHeight="768" d:DesignWidth="1024"
+             Background="{DynamicResource BackgroundBrush}"
+             Padding="24">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel MaxWidth="1200" HorizontalAlignment="Stretch">
+            <!-- Section Header -->
+            <TextBlock Text="Owner Command Center &amp; Master Administration" 
+                       FontFamily="{StaticResource PosFontFamily}"
+                       FontSize="24" FontWeight="Bold" 
+                       Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,6"/>
+            <TextBlock Text="Manage enterprise catalog, staff credentials, multi-branch stock dispatches, physical audits, and valuation analytics."
+                       FontFamily="{StaticResource PosFontFamily}"
+                       FontSize="14" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,20"/>
+
+            <!-- Grid of Action Cards -->
+            <UniformGrid Columns="2" Margin="0,0,0,16">
+                <!-- 1. Product Master Catalog CRUD Card -->
+                <Border Style="{DynamicResource TouchCardBorderStyle}" Margin="8">
+                    <StackPanel>
+                        <TextBlock Text="🏷️ Product Master Catalog" FontSize="18" FontWeight="Bold" 
+                                   Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                        <TextBlock Text="Add, edit, and deactivate catalog products, Sinhala and Tamil multilingual names, barcodes, and pricing." 
+                                   FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,16"/>
+                        <Button Content="Manage Catalog Master" Style="{DynamicResource TouchPrimaryButtonStyle}" 
+                                Click="ProductMaster_Click"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 2. Staff PIN & Security Card -->
+                <Border Style="{DynamicResource TouchCardBorderStyle}" Margin="8">
+                    <StackPanel>
+                        <TextBlock Text="🔑 Staff PIN &amp; Access Control" FontSize="18" FontWeight="Bold" 
+                                   Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                        <TextBlock Text="Configure secure cashier and supervisor 4-digit PIN credentials, role permissions, and active operators." 
+                                   FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,16"/>
+                        <Button Content="Manage Staff &amp; PINs" Style="{DynamicResource TouchPrimaryButtonStyle}" 
+                                Click="StaffPin_Click"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 3. Multi-Branch Stock Transfers Card -->
+                <Border Style="{DynamicResource TouchCardBorderStyle}" Margin="8">
+                    <StackPanel>
+                        <TextBlock Text="🚚 Multi-Branch Stock Transfers" FontSize="18" FontWeight="Bold" 
+                                   Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                        <TextBlock Text="Dispatch stock to destination branches, generate transfer manifests, and receive in-transit inventory." 
+                                   FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,16"/>
+                        <Button Content="Stock Transfers &amp; Dispatches" Style="{DynamicResource TouchPrimaryButtonStyle}" 
+                                Click="Transfers_Click"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 4. Physical Stock Count Audits Card -->
+                <Border Style="{DynamicResource TouchCardBorderStyle}" Margin="8">
+                    <StackPanel>
+                        <TextBlock Text="📋 Physical Stock Count Audits" FontSize="18" FontWeight="Bold" 
+                                   Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                        <TextBlock Text="Initiate store count audit sessions, freeze inventory movement cutoffs, and post variance adjustments." 
+                                   FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,16"/>
+                        <Button Content="Stock Audit Sessions" Style="{DynamicResource TouchPrimaryButtonStyle}" 
+                                Click="StockCount_Click"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 5. Inventory Valuation Analytics Card -->
+                <Border Style="{DynamicResource TouchCardBorderStyle}" Margin="8">
+                    <StackPanel>
+                        <TextBlock Text="📈 Inventory Valuation &amp; Health" FontSize="18" FontWeight="Bold" 
+                                   Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                        <TextBlock Text="Analyze total store asset valuation at cost vs retail, potential gross profit margin, and dead stock." 
+                                   FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,16"/>
+                        <Button Content="Valuation Analytics Dashboard" Style="{DynamicResource TouchPrimaryButtonStyle}" 
+                                Click="Valuation_Click"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 6. Cloud Sync & Replication Card -->
+                <Border Style="{DynamicResource TouchCardBorderStyle}" Margin="8">
+                    <StackPanel>
+                        <TextBlock Text="☁️ Real-Time Cloud Replication" FontSize="18" FontWeight="Bold" 
+                                   Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                        <TextBlock Text="Force cloud catalog pull, flush offline transaction sync queue, and check replication health." 
+                                   FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,16"/>
+                        <StackPanel Orientation="Horizontal">
+                            <Button x:Name="SyncButton" Content="🔄 Sync Now" Style="{DynamicResource TouchPrimaryButtonStyle}" 
+                                    Margin="0,0,10,0" Click="Sync_Click"/>
+                            <TextBlock x:Name="SyncStatusText" Text="Sync: Idle" FontSize="12" 
+                                       Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </UniformGrid>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

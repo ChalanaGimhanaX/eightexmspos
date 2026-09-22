@@ -60,7 +60,7 @@ public partial class CashMovementDialog : Window
             );
 
             MessageBox.Show(
-                $"Cash {(isCashIn ? "In" : "Out")} of LKR {amount:N2} recorded successfully.",
+                $"Cash {(isCashIn ? "In" : "Out")} of Rs. {amount:N2} recorded successfully.",
                 "Cash Movement Recorded",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information

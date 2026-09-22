@@ -9,6 +9,7 @@ Provides:
 
 import os
 import sys
+import fcntl
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Generator, Callable
@@ -29,6 +30,21 @@ DEFAULT_TEST_DEVICE_ID = "C01"
 DEFAULT_TEST_DEVICE_TOKEN = "tok_test_default_token_lk01"
 DEFAULT_TEST_TENANT_ID = "TENANT_LK_01"
 DEFAULT_TEST_BRANCH_ID = "B01"
+
+
+@pytest.fixture(scope="session", autouse=True)
+def serialize_concurrent_test_runs():
+    """Serialize concurrent pytest processes on the shared database to eliminate data wipeout races."""
+    lock_fd = os.open("/tmp/enightx_pytest_session.lock", os.O_CREAT | os.O_RDWR)
+    fcntl.flock(lock_fd, fcntl.LOCK_EX)
+    try:
+        yield
+    finally:
+        try:
+            fcntl.flock(lock_fd, fcntl.LOCK_UN)
+            os.close(lock_fd)
+        except Exception:
+            pass
 
 
 @pytest.fixture(scope="session", autouse=True)

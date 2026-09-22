@@ -147,7 +147,7 @@ public partial class RefundDialog : Window
             var refundSale = await _saleService.RefundSaleAsync(refundCmd);
 
             MessageBox.Show(
-                $"Refund processed successfully!\n\nRefund Receipt: {refundSale.ReceiptNumber}\nAmount Refunded (Cash): LKR {refundSale.GrandTotal:N2}\nRestocked to Inventory: {(RestockCheckBox.IsChecked == true ? "Yes" : "No")}",
+                $"Refund processed successfully!\n\nRefund Receipt: {refundSale.ReceiptNumber}\nAmount Refunded (Cash): Rs. {refundSale.GrandTotal:N2}\nRestocked to Inventory: {(RestockCheckBox.IsChecked == true ? "Yes" : "No")}",
                 "Refund Completed",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information

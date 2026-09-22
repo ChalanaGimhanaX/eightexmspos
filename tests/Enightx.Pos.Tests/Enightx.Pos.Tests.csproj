@@ -25,4 +25,8 @@
     <ProjectReference Include="..\..\apps\desktop\src\Enightx.Pos\Enightx.Pos.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Include="..\..\apps\desktop\src\Enightx.Pos.Wpf\ViewModels\BillingViewModel.cs" Link="ViewModels\BillingViewModel.cs" />
+  </ItemGroup>
+
 </Project>

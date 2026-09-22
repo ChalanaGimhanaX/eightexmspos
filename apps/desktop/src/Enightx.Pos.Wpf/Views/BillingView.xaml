@@ -5,101 +5,131 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" 
              d:DesignHeight="768" d:DesignWidth="1280"
-             Loaded="BillingView_Loaded">
-    <Grid Background="{StaticResource BackgroundBrush}">
+             Loaded="BillingView_Loaded"
+             FontFamily="{StaticResource PosFontFamily}">
+    <Grid Background="{DynamicResource BackgroundBrush}">
         <Grid.RowDefinitions>
-            <RowDefinition Height="60"/>
+            <!-- Row 0: Sleek Kiosk Context Bar (52px) -->
+            <RowDefinition Height="52"/>
+            <!-- Row 1: 3-Column Billing Sales Terminal Workspace -->
             <RowDefinition Height="*"/>
-            <RowDefinition Height="40"/>
+            <!-- Row 2: Status Bar Ribbon (38px) -->
+            <RowDefinition Height="38"/>
         </Grid.RowDefinitions>
 
-        <!-- Header -->
-        <Border Grid.Row="0" Background="{StaticResource PrimaryBrush}" Padding="16,8">
+        <!-- ========================================================================= -->
+        <!-- ROW 0: CLEAN DISTRACTION-FREE KIOSK HEADER                                -->
+        <!-- ========================================================================= -->
+        <Border Grid.Row="0" Background="{DynamicResource HeaderBackgroundBrush}" Padding="16,6" SnapsToDevicePixels="True">
             <DockPanel>
+                <!-- Left: Terminal Context -->
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="⚡ ENIGHTX POS" FontWeight="Bold" FontSize="18" Foreground="White" VerticalAlignment="Center"/>
-                    <Border Background="#1E88E5" CornerRadius="4" Padding="6,2" Margin="10,0,0,0" VerticalAlignment="Center">
-                        <TextBlock Text="COUNTER 01" FontWeight="Bold" FontSize="11" Foreground="White"/>
+                    <TextBlock Text="⚡ COUNTER BILLING" FontWeight="Bold" FontSize="16" 
+                               Foreground="{DynamicResource TextOnPrimaryBrush}" VerticalAlignment="Center"/>
+                    <Border Background="{DynamicResource PrimaryDarkBrush}" CornerRadius="4" 
+                            Padding="8,3" Margin="12,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding CurrentShift.CounterId, StringFormat='COUNTER {0}'}" 
+                                   FontWeight="Bold" FontSize="11" Foreground="{DynamicResource TextOnPrimaryBrush}"/>
+                    </Border>
+                    <Border Background="{DynamicResource PrimaryDarkBrush}" CornerRadius="4" 
+                            Padding="8,3" Margin="6,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding CurrentShift.BranchId, StringFormat='BRANCH {0}'}" 
+                                   FontWeight="Bold" FontSize="11" Foreground="{DynamicResource TextOnPrimaryBrush}"/>
                     </Border>
                 </StackPanel>
+                
+                <!-- Right: Active Shift Float & Cashier Context -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                    <Button Content="🏷️ Products" Height="32" Padding="8,0" Margin="0,0,6,0"
-                            Background="#37474F" Foreground="White" FontWeight="SemiBold" FontSize="11" BorderThickness="0"
-                            Cursor="Hand" Click="ProductManagement_Click"/>
-                    <Button Content="📅 Daily Report" Height="32" Padding="8,0" Margin="0,0,6,0"
-                            Background="#37474F" Foreground="White" FontWeight="SemiBold" FontSize="11" BorderThickness="0"
-                            Cursor="Hand" Click="DailyReport_Click"/>
-                    <Button Content="📋 Valuation" Height="32" Padding="8,0" Margin="0,0,6,0"
-                            Background="#37474F" Foreground="White" FontWeight="SemiBold" FontSize="11" BorderThickness="0"
-                            Cursor="Hand" Click="InventoryValuation_Click"/>
-                    <Button Content="👥 Customers" Height="32" Padding="10,0" Margin="0,0,8,0"
-                            Background="#2E7D32" Foreground="White" FontWeight="SemiBold" FontSize="12" BorderThickness="0"
-                            Cursor="Hand" Click="Customers_Click"/>
-                    <Button Content="↩️ Returns" Height="32" Padding="10,0" Margin="0,0,8,0"
-                            Background="#37474F" Foreground="White" FontWeight="SemiBold" FontSize="12" BorderThickness="0"
-                            Cursor="Hand" Click="Refund_Click"/>
-                    <Button Content="💵 Cash In/Out" Height="32" Padding="10,0" Margin="0,0,8,0"
-                            Background="#37474F" Foreground="White" FontWeight="SemiBold" FontSize="12" BorderThickness="0"
-                            Cursor="Hand" Click="CashMovement_Click"/>
-                    <Button Content="📊 Shift Report" Height="32" Padding="10,0" Margin="0,0,8,0"
-                            Background="#37474F" Foreground="White" FontWeight="SemiBold" FontSize="12" BorderThickness="0"
-                            Cursor="Hand" Click="ShiftReport_Click"/>
-                    <Button Content="📦 Receiving" Height="32" Padding="10,0" Margin="0,0,8,0"
-                            Background="#37474F" Foreground="White" FontWeight="SemiBold" FontSize="12" BorderThickness="0"
-                            Cursor="Hand" Click="GoodsReceiving_Click"/>
-                    <Button Content="🔒 Close Shift" Height="32" Padding="10,0" Margin="0,0,12,0"
-                            Background="#C53030" Foreground="White" FontWeight="Bold" FontSize="12" BorderThickness="0"
-                            Cursor="Hand" Click="CloseShift_Click"/>
-                    <Button Content="🔄 Sync" Height="32" Padding="10,0" Margin="0,0,12,0"
-                            Background="#1E88E5" Foreground="White" FontWeight="SemiBold" FontSize="12" BorderThickness="0"
-                            Cursor="Hand" Click="SyncCatalog_Click"/>
-                    <TextBlock Text="Cashier: " Foreground="#BBDEFB" VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding CurrentUser.DisplayName}" FontWeight="Bold" Foreground="White" Margin="0,0,12,0" VerticalAlignment="Center"/>
-                    <TextBlock Text="Shift: " Foreground="#BBDEFB" VerticalAlignment="Center"/>
-                    <Border Background="#004D40" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
-                        <TextBlock Text="Open" Foreground="#A7FFEB" FontWeight="Bold" FontSize="12"/>
+                    <!-- Shift Float Pill -->
+                    <Border Background="{DynamicResource PrimaryDarkBrush}" CornerRadius="6" 
+                            Padding="10,4" Margin="0,0,10,0" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="● OPEN" Foreground="{DynamicResource AccentBrush}" 
+                                       FontWeight="Bold" FontSize="12" VerticalAlignment="Center"/>
+                            <TextBlock Text=" | Float: " Foreground="{DynamicResource TextOnPrimaryBrush}" 
+                                       FontSize="12" Opacity="0.85" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding CurrentShift.OpeningFloat, StringFormat='Rs. {0:#,##0.00}'}" 
+                                       Foreground="{DynamicResource TextOnPrimaryBrush}" FontWeight="Bold" 
+                                       FontSize="12" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Cashier Identity Pill -->
+                    <Border Background="{DynamicResource PrimaryDarkBrush}" CornerRadius="6" 
+                            Padding="10,4" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="👤 " FontSize="12" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding CurrentUser.DisplayName}" FontWeight="Bold" 
+                                       Foreground="{DynamicResource TextOnPrimaryBrush}" VerticalAlignment="Center"/>
+                        </StackPanel>
                     </Border>
                 </StackPanel>
             </DockPanel>
         </Border>
 
-        <!-- Main Content -->
+        <!-- ========================================================================= -->
+        <!-- ROW 1: MAIN BILLING WORKSPACE                                             -->
+        <!-- ========================================================================= -->
         <Grid Grid.Row="1" Margin="12">
             <Grid.ColumnDefinitions>
-                <!-- Column 0: Product Catalog & Quick-Pick Tiles -->
+                <!-- Column 0: Product Catalog & Quick-Pick Tiles (Width 480px) -->
                 <ColumnDefinition Width="480"/>
-                <!-- Column 1: Cart Items -->
+                <!-- Column 1: Current Sale Cart Table (*) -->
                 <ColumnDefinition Width="*"/>
-                <!-- Column 2: Bill Summary -->
-                <ColumnDefinition Width="320"/>
+                <!-- Column 2: Bill Summary & Tender Panel (Width 330px) -->
+                <ColumnDefinition Width="330"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Column 0: Product Quick-Pick Catalog -->
-            <Border Grid.Column="0" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}"
-                    BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,12,0">
+            <!-- ===================================================================== -->
+            <!-- COLUMN 0: PRODUCT QUICK-PICK CATALOG                                  -->
+            <!-- ===================================================================== -->
+            <Border Grid.Column="0" Background="{DynamicResource SurfaceBrush}" 
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" 
+                    CornerRadius="10" Padding="12" Margin="0,0,12,0" SnapsToDevicePixels="True">
                 <Grid>
                     <Grid.RowDefinitions>
+                        <!-- Row 0: Quick Search Input (48px) -->
                         <RowDefinition Height="Auto"/>
+                        <!-- Row 1: Quick-Pick Category Chips (48px) -->
                         <RowDefinition Height="Auto"/>
+                        <!-- Row 2: Product Tiles Grid (*) -->
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <!-- Search Input -->
-                    <Border Grid.Row="0" Background="#F0F4F8" CornerRadius="6" Padding="8,4" Margin="0,0,0,10">
+                    <!-- 1. Quick-Search Box (Minimum 48px Height) -->
+                    <Border Grid.Row="0" Background="{DynamicResource InputBackgroundBrush}" 
+                            BorderBrush="{DynamicResource InputBorderBrush}" BorderThickness="1.5" 
+                            CornerRadius="8" Height="48" Margin="0,0,0,10" SnapsToDevicePixels="True">
                         <Grid>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="48"/>
                                 <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="48"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="🔍" FontSize="14" VerticalAlignment="Center" Margin="4,0,8,0" Foreground="Gray"/>
-                            <TextBox x:Name="SearchBox" Grid.Column="1" Height="32" FontSize="14" Background="Transparent"
-                                     BorderThickness="0" VerticalContentAlignment="Center"
+                            
+                            <!-- Search Icon -->
+                            <TextBlock Grid.Column="0" Text="🔍" FontSize="16" HorizontalAlignment="Center" 
+                                       VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                            
+                            <!-- Search Text Input -->
+                            <TextBox x:Name="SearchBox" Grid.Column="1" Height="48" FontSize="15" 
+                                     FontFamily="{StaticResource PosFontFamily}"
+                                     Background="Transparent" BorderThickness="0" 
+                                     Foreground="{DynamicResource TextPrimaryBrush}"
+                                     CaretBrush="{DynamicResource TextPrimaryBrush}"
+                                     VerticalContentAlignment="Center"
                                      Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"
                                      TextChanged="SearchBox_TextChanged"/>
+                            
+                            <!-- Quick Clear Button (48x48px hit area) -->
+                            <Button Grid.Column="2" Content="✕" Width="48" Height="48" 
+                                    Background="Transparent" BorderThickness="0" Cursor="Hand"
+                                    Foreground="{DynamicResource TextSecondaryBrush}" FontSize="15" FontWeight="Bold"
+                                    Click="ClearSearch_Click"/>
                         </Grid>
                     </Border>
 
-                    <!-- Category Chips -->
+                    <!-- 2. Quick-Pick Category Chips (48px Height, CornerRadius 24) -->
                     <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Margin="0,0,0,10">
                         <ItemsControl ItemsSource="{Binding Categories}">
                             <ItemsControl.ItemsPanel>
@@ -109,15 +139,16 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Button Content="{Binding Name}" Height="30" Padding="12,0" Margin="0,0,6,0"
-                                            Background="#ECEFF1" Foreground="#37474F" FontWeight="SemiBold" FontSize="12"
-                                            BorderThickness="0" Cursor="Hand" Click="CategoryFilter_Click"/>
+                                    <Button Content="{Binding Name}" 
+                                            Style="{DynamicResource CategoryChipButtonStyle}"
+                                            Height="48" MinHeight="48"
+                                            Click="CategoryFilter_Click"/>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </ScrollViewer>
 
-                    <!-- Products Grid -->
+                    <!-- 3. Product Quick-Pick Tiles (220x115px Tap Area, Trilingual, Rs. #,##0.00) -->
                     <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
                         <ItemsControl ItemsSource="{Binding FilteredProducts}">
                             <ItemsControl.ItemsPanel>
@@ -127,29 +158,70 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Width="218" Margin="0,0,8,8" Background="White" BorderBrush="#E0E0E0"
-                                            BorderThickness="1" CornerRadius="8" Padding="10">
-                                        <Grid>
-                                            <Grid.RowDefinitions>
-                                                <RowDefinition Height="Auto"/>
-                                                <RowDefinition Height="Auto"/>
-                                                <RowDefinition Height="Auto"/>
-                                                <RowDefinition Height="Auto"/>
-                                            </Grid.RowDefinitions>
-                                            <TextBlock Grid.Row="0" Text="{Binding Name}" FontWeight="Bold" FontSize="13" 
-                                                       TextTrimming="CharacterEllipsis" Foreground="{StaticResource TextPrimaryBrush}"/>
-                                            <TextBlock Grid.Row="1" Text="{Binding NameSi}" FontSize="11" Foreground="Gray" 
-                                                       TextTrimming="CharacterEllipsis" Margin="0,2,0,4"/>
-                                            <DockPanel Grid.Row="2" Margin="0,2,0,6">
-                                                <TextBlock Text="{Binding Barcode}" FontSize="10" Foreground="#90A4AE" VerticalAlignment="Center"/>
-                                                <TextBlock Text="{Binding UnitPrice, StringFormat='LKR {0:N2}'}" FontWeight="Bold" 
-                                                           FontSize="13" Foreground="{StaticResource PrimaryBrush}" HorizontalAlignment="Right"/>
-                                            </DockPanel>
-                                            <Button Grid.Row="3" Content="+ Add to Bill" Height="28" Background="{StaticResource PrimaryBrush}"
-                                                    Foreground="White" FontWeight="SemiBold" FontSize="11" BorderThickness="0"
-                                                    Cursor="Hand" Click="ProductCard_Click"/>
-                                        </Grid>
-                                    </Border>
+                                    <!-- Full card tap area (Width 220, MinHeight 115) -->
+                                    <Button Margin="0,0,8,8" Width="220" MinHeight="115" Cursor="Hand"
+                                            Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                                            BorderThickness="1" Click="ProductCard_Click">
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border x:Name="tileBorder" Background="{TemplateBinding Background}" 
+                                                        BorderBrush="{TemplateBinding BorderBrush}" 
+                                                        BorderThickness="{TemplateBinding BorderThickness}" 
+                                                        CornerRadius="8" Padding="10" SnapsToDevicePixels="True">
+                                                    <Grid>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="Auto"/>
+                                                            <RowDefinition Height="Auto"/>
+                                                            <RowDefinition Height="Auto"/>
+                                                            <RowDefinition Height="*"/>
+                                                        </Grid.RowDefinitions>
+
+                                                        <!-- English / Primary Name -->
+                                                        <TextBlock Grid.Row="0" Text="{Binding Name}" FontWeight="Bold" FontSize="13" 
+                                                                   FontFamily="{StaticResource PosFontFamily}"
+                                                                   Foreground="{DynamicResource TextPrimaryBrush}" 
+                                                                   TextTrimming="CharacterEllipsis"/>
+
+                                                        <!-- Sinhala Name (Unclipped Line Height) -->
+                                                        <TextBlock Grid.Row="1" Text="{Binding NameSi}" FontSize="12" 
+                                                                   FontFamily="{StaticResource PosFontFamily}"
+                                                                   Foreground="{DynamicResource TextSecondaryBrush}" 
+                                                                   TextTrimming="CharacterEllipsis" Margin="0,2,0,0"
+                                                                   LineStackingStrategy="BlockLineHeight" LineHeight="18"/>
+
+                                                        <!-- Tamil Name (Unclipped Line Height) -->
+                                                        <TextBlock Grid.Row="2" Text="{Binding NameTa}" FontSize="12" 
+                                                                   FontFamily="{StaticResource PosFontFamily}"
+                                                                   Foreground="{DynamicResource TextSecondaryBrush}" 
+                                                                   TextTrimming="CharacterEllipsis" Margin="0,2,0,4"
+                                                                   LineStackingStrategy="BlockLineHeight" LineHeight="18"/>
+
+                                                        <!-- Barcode & Price Rs. #,##0.00 -->
+                                                        <DockPanel Grid.Row="3" VerticalAlignment="Bottom" Margin="0,4,0,0">
+                                                            <TextBlock Text="{Binding Barcode}" FontSize="11" 
+                                                                       FontFamily="{StaticResource PosFontFamily}"
+                                                                       Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
+                                                            <TextBlock Text="{Binding UnitPrice, StringFormat='Rs. {0:#,##0.00}'}" 
+                                                                       FontWeight="Bold" FontSize="14" 
+                                                                       FontFamily="{StaticResource PosFontFamily}"
+                                                                       Foreground="{DynamicResource PrimaryBrush}" 
+                                                                       HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                                        </DockPanel>
+                                                    </Grid>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="tileBorder" Property="BorderBrush" Value="{DynamicResource PrimaryBrush}"/>
+                                                        <Setter TargetName="tileBorder" Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                                    </Trigger>
+                                                    <Trigger Property="IsPressed" Value="True">
+                                                        <Setter TargetName="tileBorder" Property="Background" Value="{DynamicResource PrimaryLightBrush}"/>
+                                                        <Setter TargetName="tileBorder" Property="BorderBrush" Value="{DynamicResource PrimaryBrush}"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                    </Button>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
@@ -157,56 +229,118 @@
                 </Grid>
             </Border>
 
-            <!-- Column 1: Current Sale Cart Table -->
+            <!-- ===================================================================== -->
+            <!-- COLUMN 1: CURRENT SALE CART TABLE                                     -->
+            <!-- ===================================================================== -->
             <DockPanel Grid.Column="1" Margin="0,0,12,0">
-                <!-- Barcode Scanner Input -->
-                <Border DockPanel.Dock="Top" Background="{StaticResource SurfaceBrush}" Padding="10" CornerRadius="6" Margin="0,0,0,10"
-                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                <!-- Barcode Scanner Input (Height >= 48px) -->
+                <Border DockPanel.Dock="Top" Background="{DynamicResource SurfaceBrush}" 
+                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" 
+                        Padding="8" CornerRadius="8" Margin="0,0,0,10" SnapsToDevicePixels="True">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="90"/>
+                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <TextBox x:Name="BarcodeInputBox" Grid.Column="0" Height="36" FontSize="15" Padding="8,4"
+                        
+                        <TextBox x:Name="BarcodeInputBox" Grid.Column="0" Height="48" MinHeight="48" FontSize="16" 
+                                 FontFamily="{StaticResource PosFontFamily}"
+                                 Background="{DynamicResource InputBackgroundBrush}" 
+                                 Foreground="{DynamicResource TextPrimaryBrush}"
+                                 CaretBrush="{DynamicResource TextPrimaryBrush}"
+                                 BorderBrush="{DynamicResource InputBorderBrush}" BorderThickness="1.5"
+                                 Padding="12,0" VerticalContentAlignment="Center"
                                  Text="{Binding BarcodeInput, UpdateSourceTrigger=PropertyChanged}"
                                  KeyDown="BarcodeInput_KeyDown"/>
-                        <Button Grid.Column="1" Content="Add Item" Height="36" Margin="8,0,0,0"
-                                Background="{StaticResource PrimaryBrush}" Foreground="White" FontWeight="Bold"
-                                Click="AddItem_Click"/>
+                        
+                        <Button Grid.Column="1" Content="+ Add Item" Height="48" MinWidth="110" Margin="8,0,0,0"
+                                Style="{DynamicResource TouchPrimaryButtonStyle}" Click="AddItem_Click"/>
                     </Grid>
                 </Border>
 
-                <!-- DataGrid -->
+                <!-- Cart Items Table (56px Row Height, 48x48px Touch Steppers & Delete, Rs. #,##0.00) -->
                 <DataGrid ItemsSource="{Binding CartItems}" AutoGenerateColumns="False" CanUserAddRows="False"
-                          Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}"
-                          RowHeight="40" GridLinesVisibility="Horizontal" HeadersVisibility="Column">
+                          Style="{DynamicResource TouchDataGridStyle}" RowHeight="56" ColumnHeaderHeight="46"
+                          GridLinesVisibility="Horizontal" HeadersVisibility="Column" SnapsToDevicePixels="True">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Product Name" Binding="{Binding ProductName}" Width="*" IsReadOnly="True"/>
+                        <!-- Product Name & Barcode Column -->
+                        <DataGridTemplateColumn Header="Product Name" Width="*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel VerticalAlignment="Center" Margin="10,0">
+                                        <TextBlock Text="{Binding ProductName}" FontWeight="SemiBold" FontSize="14" 
+                                                   FontFamily="{StaticResource PosFontFamily}"
+                                                   Foreground="{DynamicResource TextPrimaryBrush}" 
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding Barcode}" FontSize="11" 
+                                                   FontFamily="{StaticResource PosFontFamily}"
+                                                   Foreground="{DynamicResource TextMutedBrush}" 
+                                                   TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
                         
-                        <!-- Quantity with quick + / - buttons -->
-                        <DataGridTemplateColumn Header="Qty" Width="100">
+                        <!-- Quantity Stepper Column (Width 160, 48x48px Hit Areas) -->
+                        <DataGridTemplateColumn Header="Qty" Width="160">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                        <Button Content="-" Width="22" Height="22" Padding="0" Background="#ECEFF1" BorderThickness="0"
-                                                Click="DecrementQty_Click"/>
-                                        <TextBlock Text="{Binding Quantity, StringFormat={}{0:F0}}" Margin="6,0" FontWeight="Bold" VerticalAlignment="Center"/>
-                                        <Button Content="+" Width="22" Height="22" Padding="0" Background="#ECEFF1" BorderThickness="0"
-                                                Click="IncrementQty_Click"/>
+                                        <!-- Decrement Button (48x48px) -->
+                                        <Button Content="-" Style="{DynamicResource TouchStepperButtonStyle}" Click="DecrementQty_Click"/>
+                                        
+                                        <!-- Quantity Display Text (Width 44) -->
+                                        <TextBlock Text="{Binding Quantity, StringFormat={}{0:F0}}" Width="44" 
+                                                   TextAlignment="Center" FontWeight="Bold" FontSize="16" 
+                                                   FontFamily="{StaticResource PosFontFamily}"
+                                                   Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                        
+                                        <!-- Increment Button (48x48px) -->
+                                        <Button Content="+" Style="{DynamicResource TouchStepperButtonStyle}" Click="IncrementQty_Click"/>
                                     </StackPanel>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
 
-                        <DataGridTextColumn Header="Unit Price" Binding="{Binding UnitPrice, StringFormat=LKR {0:N2}}" Width="105" IsReadOnly="True"/>
-                        <DataGridTextColumn Header="Total" Binding="{Binding LineTotal, StringFormat=LKR {0:N2}}" Width="110" IsReadOnly="True"/>
-
-                        <!-- Action column -->
-                        <DataGridTemplateColumn Width="45">
+                        <!-- Unit Price Column (Width 130, Rs. #,##0.00) -->
+                        <DataGridTemplateColumn Header="Unit Price" Width="130">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <Button Content="✕" Width="24" Height="24" Background="#FFEBEE" Foreground="#D32F2F"
-                                            FontWeight="Bold" BorderThickness="0" Cursor="Hand" Click="RemoveItem_Click"/>
+                                    <Button ToolTip="Click to override price (Manager PIN required for Cashier)"
+                                            Click="OverridePrice_Click"
+                                            Background="Transparent" BorderThickness="0" Cursor="Hand"
+                                            MinHeight="48" MinWidth="48" HorizontalAlignment="Stretch" Padding="0">
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                            <TextBlock Text="{Binding UnitPrice, StringFormat='Rs. {0:#,##0.00}'}" 
+                                                       TextAlignment="Right" VerticalAlignment="Center" Margin="0,0,4,0"
+                                                       FontSize="14" FontFamily="{StaticResource PosFontFamily}"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                            <TextBlock Text="✎" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- Line Total Column (Width 130, Rs. #,##0.00) -->
+                        <DataGridTemplateColumn Header="Line Total" Width="130">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding LineTotal, StringFormat='Rs. {0:#,##0.00}'}" 
+                                               TextAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0"
+                                               FontSize="15" FontWeight="Bold" FontFamily="{StaticResource PosFontFamily}"
+                                               Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- Line Remove Action Column (Width 64, 48x48px Hit Area) -->
+                        <DataGridTemplateColumn Width="64">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button Content="✕" Style="{DynamicResource TouchDeleteButtonStyle}" 
+                                            HorizontalAlignment="Center" VerticalAlignment="Center" 
+                                            Click="RemoveItem_Click"/>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
@@ -214,69 +348,146 @@
                 </DataGrid>
             </DockPanel>
 
-            <!-- Column 2: Bill Summary Card -->
-            <Border Grid.Column="2" Background="{StaticResource SurfaceBrush}" Padding="18" CornerRadius="8"
-                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+            <!-- ===================================================================== -->
+            <!-- COLUMN 2: BILL SUMMARY & TENDER PANEL                                 -->
+            <!-- ===================================================================== -->
+            <Border Grid.Column="2" Background="{DynamicResource CardBrush}" 
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" 
+                    Padding="18" CornerRadius="10" SnapsToDevicePixels="True">
                 <StackPanel>
-                    <TextBlock Text="BILL SUMMARY" FontWeight="Bold" FontSize="16" Foreground="{StaticResource PrimaryDarkBrush}" Margin="0,0,0,16"/>
+                    <TextBlock Text="BILL SUMMARY" FontSize="16" FontWeight="Bold" 
+                               Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,16"/>
                     
+                    <!-- Subtotal -->
                     <DockPanel Margin="0,0,0,8">
-                        <TextBlock Text="Subtotal:" FontSize="14" Foreground="{StaticResource TextSecondaryBrush}"/>
-                        <TextBlock Text="{Binding Subtotal, StringFormat=LKR {0:N2}}" HorizontalAlignment="Right" FontSize="14" FontWeight="SemiBold"/>
+                        <TextBlock Text="Subtotal:" FontSize="14" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding Subtotal, StringFormat='Rs. {0:#,##0.00}'}" HorizontalAlignment="Right" 
+                                   FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                     </DockPanel>
                     
+                    <!-- Discounts -->
                     <DockPanel Margin="0,0,0,8">
-                        <TextBlock Text="Discounts:" FontSize="14" Foreground="{StaticResource TextSecondaryBrush}"/>
-                        <TextBlock Text="{Binding DiscountTotal, StringFormat=LKR -{0:N2}}" HorizontalAlignment="Right" FontSize="14" Foreground="Green"/>
+                        <TextBlock Text="Discounts:" FontSize="14" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding DiscountTotal, StringFormat='-Rs. {0:#,##0.00}'}" HorizontalAlignment="Right" 
+                                   FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource SuccessBrush}"/>
                     </DockPanel>
 
+                    <!-- Tax -->
                     <DockPanel Margin="0,0,0,16">
-                        <TextBlock Text="Tax (VAT 18%):" FontSize="14" Foreground="{StaticResource TextSecondaryBrush}"/>
-                        <TextBlock Text="{Binding TaxTotal, StringFormat=LKR {0:N2}}" HorizontalAlignment="Right" FontSize="14"/>
+                        <TextBlock Text="Tax (VAT 18%):" FontSize="14" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding TaxTotal, StringFormat='Rs. {0:#,##0.00}'}" HorizontalAlignment="Right" 
+                                   FontSize="14" Foreground="{DynamicResource TextSecondaryBrush}"/>
                     </DockPanel>
 
-                    <Separator Margin="0,0,0,16"/>
+                    <Separator Background="{DynamicResource BorderBrush}" Margin="0,0,0,16"/>
 
-                    <DockPanel Margin="0,0,0,24">
-                        <TextBlock Text="GRAND TOTAL" FontSize="16" FontWeight="Bold"/>
-                        <TextBlock Text="{Binding GrandTotal, StringFormat=LKR {0:N2}}" HorizontalAlignment="Right" 
-                                   FontSize="22" FontWeight="Bold" Foreground="{StaticResource PrimaryBrush}"/>
+                    <!-- Grand Total -->
+                    <DockPanel Margin="0,0,0,16">
+                        <TextBlock Text="GRAND TOTAL" FontSize="16" FontWeight="Bold" 
+                                   Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding GrandTotal, StringFormat='Rs. {0:#,##0.00}'}" HorizontalAlignment="Right" 
+                                   FontSize="22" FontWeight="Bold" Foreground="{DynamicResource PrimaryBrush}"/>
                     </DockPanel>
 
-                    <Button Content="PAY CASH (F12)" Height="52" Background="{StaticResource AccentBrush}" Foreground="White"
-                            FontWeight="Bold" FontSize="18" Cursor="Hand" Click="PayCash_Click"/>
+                    <!-- Apply Discount Action Button -->
+                    <Button Content="🏷️ Apply Discount" Height="48" MinHeight="48" MinWidth="100" Margin="0,0,0,12" 
+                            Style="{DynamicResource TouchSecondaryButtonStyle}" Click="ApplyDiscount_Click"/>
 
-                    <Grid Margin="0,10,0,0">
+                    <!-- Large Cash Pay Tender Button (Height 56px) -->
+                    <Button Content="💵 PAY CASH (F12)" Style="{DynamicResource BigTenderButtonStyle}" 
+                            Height="56" MinHeight="56" Click="PayCash_Click"/>
+
+                    <!-- Quick Tender Shortcuts (48px Height) -->
+                    <Grid Margin="0,8,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <Button Grid.Column="0" Content="⏸️ Hold Bill" Height="38" Margin="0,0,4,0"
-                                Background="#ECEFF1" Foreground="#37474F" FontWeight="SemiBold" FontSize="13"
-                                Cursor="Hand" Click="HoldCart_Click"/>
-                        <Button Grid.Column="1" Height="38" Margin="4,0,0,0"
-                                Background="#E3F2FD" Foreground="#1565C0" FontWeight="Bold" FontSize="13"
-                                Cursor="Hand" Click="RecallHeldCarts_Click">
+                        
+                        <Button Grid.Column="0" Height="48" Margin="0,0,4,0" 
+                                Style="{DynamicResource TouchSecondaryButtonStyle}" Click="PayCard_Click">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                <TextBlock Text="📋 Held Bills" VerticalAlignment="Center"/>
-                                <Border Background="#1976D2" CornerRadius="8" Padding="6,1" Margin="6,0,0,0" VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding HeldCartsCount}" Foreground="White" FontSize="11" FontWeight="Bold"/>
+                                <TextBlock Text="💳 Card (F10)" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        
+                        <Button Grid.Column="1" Height="48" Margin="4,0,0,0" 
+                                Style="{DynamicResource TouchSecondaryButtonStyle}" Click="PaySplit_Click">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <TextBlock Text="📝 Split / More" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+
+                    <!-- Held Cart Tray & Cart Actions -->
+                    <Grid Margin="0,12,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <!-- Hold Bill Button (48px Height) -->
+                        <Button Grid.Column="0" Height="48" Margin="0,0,4,0" 
+                                Style="{DynamicResource TouchSecondaryButtonStyle}" Click="HoldCart_Click">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <TextBlock Text="⏸️ Hold Bill" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        
+                        <!-- Recall Held Bills Button (48px Height with Count Badge) -->
+                        <Button Grid.Column="1" Height="48" Margin="4,0,0,0" 
+                                Style="{DynamicResource TouchSecondaryButtonStyle}" Click="RecallHeldCarts_Click">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <TextBlock Text="📋 Held Bills" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                <Border Background="{DynamicResource PrimaryBrush}" CornerRadius="12" 
+                                        MinWidth="24" Height="24" Padding="6,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding HeldCartsCount}" Foreground="{DynamicResource TextOnPrimaryBrush}" 
+                                               FontSize="12" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
                             </StackPanel>
                         </Button>
                     </Grid>
 
-                    <Button Content="Clear Cart" Height="36" Margin="0,10,0,0" Background="#ECEFF1" Foreground="#37474F"
-                            FontWeight="SemiBold" Cursor="Hand" Click="ClearCart_Click"/>
+                    <!-- Clear Cart Action (48px Height) -->
+                    <Button Content="🗑️ Clear Cart" Height="48" MinHeight="48" MinWidth="48" Margin="0,8,0,0" 
+                            Background="{DynamicResource DangerSurfaceBrush}" Foreground="{DynamicResource DangerBrush}"
+                            BorderBrush="{DynamicResource DangerBrush}" BorderThickness="1"
+                            FontFamily="{StaticResource PosFontFamily}" FontWeight="SemiBold" FontSize="13" 
+                            Cursor="Hand" Click="ClearCart_Click">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="clearBorder" Background="{TemplateBinding Background}" 
+                                         BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                                         CornerRadius="6" SnapsToDevicePixels="True">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="clearBorder" Property="Background" Value="{DynamicResource DangerBrush}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource TextOnPrimaryBrush}"/>
+                                    </Trigger>
+                                    <Trigger Property="IsPressed" Value="True">
+                                        <Setter TargetName="clearBorder" Property="Opacity" Value="0.8"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
                 </StackPanel>
             </Border>
         </Grid>
 
-        <!-- Status Footer -->
-        <Border Grid.Row="2" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" Padding="16,4">
+        <!-- ========================================================================= -->
+        <!-- ROW 2: STATUS BAR RIBBON                                                  -->
+        <!-- ========================================================================= -->
+        <Border Grid.Row="2" Background="{DynamicResource SurfaceBrush}" 
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" 
+                Padding="16,4" SnapsToDevicePixels="True">
             <DockPanel>
-                <TextBlock Text="{Binding StatusMessage}" FontSize="13" VerticalAlignment="Center" Foreground="{StaticResource PrimaryDarkBrush}"/>
-                <TextBlock Text="Offline Local Database: Connected | Mode: WAL" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray" FontSize="12"/>
+                <TextBlock Text="{Binding StatusMessage}" FontSize="13" VerticalAlignment="Center" 
+                           Foreground="{DynamicResource PrimaryBrush}"/>
+                <TextBlock Text="Offline Local Database: Connected | Mode: WAL" HorizontalAlignment="Right" 
+                           VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12"/>
             </DockPanel>
         </Border>
     </Grid>

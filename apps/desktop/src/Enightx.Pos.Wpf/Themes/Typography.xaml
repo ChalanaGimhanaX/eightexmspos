@@ -1,0 +1,119 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <!-- ========================================================================= -->
+    <!-- TRILINGUAL FONT FALLBACK STACK                                            -->
+    <!-- Segoe UI: Tabular Latin numerals and English UI labels                   -->
+    <!-- Nirmala UI: Microsoft unified Indic font (Sinhala + Tamil full coverage)  -->
+    <!-- Iskoola Pota: Traditional Windows Sinhala OpenType font                   -->
+    <!-- Latha: Traditional Windows Tamil OpenType font                            -->
+    <!-- Arial: Universal sans-serif fallback                                      -->
+    <!-- ========================================================================= -->
+    <FontFamily x:Key="PosFontFamily">Segoe UI, Nirmala UI, Iskoola Pota, Latha, Arial</FontFamily>
+
+    <!-- Font Size Scale Tokens -->
+    <sys:Double x:Key="DisplayFontSize">30</sys:Double>
+    <sys:Double x:Key="TitleFontSize">22</sys:Double>
+    <sys:Double x:Key="SubtitleFontSize">16</sys:Double>
+    <sys:Double x:Key="BodyFontSize">14</sys:Double>
+    <sys:Double x:Key="CaptionFontSize">12</sys:Double>
+    <sys:Double x:Key="SmallFontSize">11</sys:Double>
+
+    <!-- Line Height Tokens (Ensuring >= 1.35x ratio to prevent glyph clipping) -->
+    <sys:Double x:Key="DisplayLineHeight">42</sys:Double>
+    <sys:Double x:Key="TitleLineHeight">30</sys:Double>
+    <sys:Double x:Key="SubtitleLineHeight">24</sys:Double>
+    <sys:Double x:Key="BodyLineHeight">20</sys:Double>
+    <sys:Double x:Key="CaptionLineHeight">18</sys:Double>
+    <sys:Double x:Key="SmallLineHeight">16</sys:Double>
+
+    <!-- Breathing Room Padding Tokens (Ensuring >= 6px vertical clearance) -->
+    <Thickness x:Key="TextPaddingDefault">12,6,12,6</Thickness>
+    <Thickness x:Key="TextPaddingCompact">8,6,8,6</Thickness>
+    <Thickness x:Key="TextPaddingVerticalOnly">0,6,0,6</Thickness>
+
+    <!-- ========================================================================= -->
+    <!-- TYPOGRAPHIC STYLES WITH BUILT-IN CLIPPING PREVENTION                      -->
+    <!-- ========================================================================= -->
+
+    <!-- 1. DisplayTextStyle: Grand Totals, Cash Tendered, Change Due -->
+    <Style x:Key="DisplayTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource PosFontFamily}"/>
+        <Setter Property="FontSize" Value="30"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Foreground" Value="{DynamicResource PrimaryBrush}"/>
+        <Setter Property="LineStackingStrategy" Value="BlockLineHeight"/>
+        <Setter Property="LineHeight" Value="42"/>
+        <Setter Property="MinHeight" Value="44"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <!-- 2. TitleTextStyle: Modal Dialog Titles, Shell Screen Banners -->
+    <Style x:Key="TitleTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource PosFontFamily}"/>
+        <Setter Property="FontSize" Value="22"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        <Setter Property="LineStackingStrategy" Value="BlockLineHeight"/>
+        <Setter Property="LineHeight" Value="30"/>
+        <Setter Property="MinHeight" Value="34"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <!-- 3. SubtitleTextStyle: Card Headers, Section Dividers -->
+    <Style x:Key="SubtitleTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource PosFontFamily}"/>
+        <Setter Property="FontSize" Value="16"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        <Setter Property="LineStackingStrategy" Value="BlockLineHeight"/>
+        <Setter Property="LineHeight" Value="24"/>
+        <Setter Property="MinHeight" Value="26"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <!-- 4. BodyTextStyle: Table Rows, Standard Labels, Inputs -->
+    <Style x:Key="BodyTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource PosFontFamily}"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontWeight" Value="Normal"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        <Setter Property="LineStackingStrategy" Value="BlockLineHeight"/>
+        <Setter Property="LineHeight" Value="20"/>
+        <Setter Property="MinHeight" Value="22"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <!-- 5. CaptionTextStyle: Sinhala/Tamil Subtitles, Barcodes, Metadata -->
+    <Style x:Key="CaptionTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource PosFontFamily}"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="Normal"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+        <Setter Property="LineStackingStrategy" Value="BlockLineHeight"/>
+        <Setter Property="LineHeight" Value="18"/>
+        <Setter Property="MinHeight" Value="18"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <!-- 6. SmallTextStyle: Micro Badges, Timestamps, Shift Details -->
+    <Style x:Key="SmallTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource PosFontFamily}"/>
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="FontWeight" Value="Normal"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+        <Setter Property="LineStackingStrategy" Value="BlockLineHeight"/>
+        <Setter Property="LineHeight" Value="16"/>
+        <Setter Property="MinHeight" Value="16"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <!-- 7. Multilingual Product Subtitle: Specifically designed for NameSi / NameTa -->
+    <Style x:Key="ProductMultilingualSubtitleStyle" TargetType="TextBlock" BasedOn="{StaticResource CaptionTextStyle}">
+        <Setter Property="Margin" Value="0,2,0,2"/>
+        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+</ResourceDictionary>

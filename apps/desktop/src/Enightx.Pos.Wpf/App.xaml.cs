@@ -2,13 +2,18 @@ using System.Windows;
 using Enightx.Pos.Domain;
 using Enightx.Pos.Storage;
 using Enightx.Pos.Services;
+using Enightx.Pos.Themes;
+using Enightx.Pos.Wpf.Services;
+using Enightx.Pos.Wpf.Themes;
 
 namespace Enightx.Pos.Wpf;
 
 public partial class App : Application
 {
+    public static IThemeManager ThemeManager { get; private set; } = null!;
     public static PosDatabase Database { get; private set; } = null!;
     public static IAuthService AuthService { get; private set; } = null!;
+    public static IAuthorizationGateService AuthorizationGateService { get; private set; } = null!;
     public static ICatalogService CatalogService { get; private set; } = null!;
     public static IShiftService ShiftService { get; private set; } = null!;
     public static ISaleService SaleService { get; private set; } = null!;
@@ -25,6 +30,19 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        // Initialize ThemeManager with WPF Resource Applier
+        var applier = new WpfThemeResourceApplier();
+        var savedTheme = LoadSavedThemePreference();
+        Pos.Themes.ThemeManager.Initialize(applier, savedTheme);
+        ThemeManager = Pos.Themes.ThemeManager.Current;
+
+        if (savedTheme == Theme.Dark)
+        {
+            ThemeManager.SetTheme(Theme.Dark);
+        }
+
+        ThemeManager.ThemeChanged += (_, args) => SaveThemePreference(args.NewTheme);
 
         // A power loss during replacement requires recovery before opening business data.
         var installResult = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "EnightxPOS", "updates-v2", "install-result.json");
@@ -52,6 +70,8 @@ public partial class App : Application
 
         Database = PosDatabase.CreateFile(dbPath);
         AuthService = new AuthService(Database);
+        var pinPrompt = new WpfPinPromptService(AuthService);
+        AuthorizationGateService = new AuthorizationGateService(AuthService, pinPrompt, Database);
         CatalogService = new CatalogService(Database);
         ShiftService = new ShiftService(Database);
         CustomerService = new CustomerService(Database, ShiftService);
@@ -168,6 +188,47 @@ public partial class App : Application
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Error during seeding: {ex.Message}");
+        }
+    }
+
+    private static Theme LoadSavedThemePreference()
+    {
+        try
+        {
+            var prefFile = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "EnightxPOS", "theme_preference.txt");
+
+            if (System.IO.File.Exists(prefFile))
+            {
+                var text = System.IO.File.ReadAllText(prefFile).Trim();
+                if (Enum.TryParse<Theme>(text, true, out var theme))
+                {
+                    return theme;
+                }
+            }
+        }
+        catch
+        {
+            // Fall back to Light if preference read fails
+        }
+        return Theme.Light;
+    }
+
+    public static void SaveThemePreference(Theme theme)
+    {
+        try
+        {
+            var dir = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "EnightxPOS");
+            System.IO.Directory.CreateDirectory(dir);
+            var prefFile = System.IO.Path.Combine(dir, "theme_preference.txt");
+            System.IO.File.WriteAllText(prefFile, theme.ToString());
+        }
+        catch
+        {
+            // Suppress file IO exceptions
         }
     }
 

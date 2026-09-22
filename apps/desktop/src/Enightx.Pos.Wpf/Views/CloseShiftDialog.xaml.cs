@@ -40,12 +40,12 @@ public partial class CloseShiftDialog : Window
             s.CashOut
         );
 
-        OpeningFloatText.Text = $"LKR {s.OpeningFloat:N2}";
-        NetCashSalesText.Text = $"LKR {netCashSales:N2} (Rec: {s.CashReceived:N2}, Chg: {s.ChangeGiven:N2})";
-        CashRefundsText.Text = $"LKR -{s.CashRefunds:N2}";
-        CashInText.Text = $"LKR +{s.CashIn:N2}";
-        CashOutText.Text = $"LKR -{s.CashOut:N2}";
-        ExpectedCashText.Text = $"LKR {_expectedCash:N2}";
+        OpeningFloatText.Text = $"Rs. {s.OpeningFloat:N2}";
+        NetCashSalesText.Text = $"Rs. {netCashSales:N2} (Rec: {s.CashReceived:N2}, Chg: {s.ChangeGiven:N2})";
+        CashRefundsText.Text = $"Rs. -{s.CashRefunds:N2}";
+        CashInText.Text = $"Rs. +{s.CashIn:N2}";
+        CashOutText.Text = $"Rs. -{s.CashOut:N2}";
+        ExpectedCashText.Text = $"Rs. {_expectedCash:N2}";
 
         CountedCashBox.Text = _expectedCash.ToString("F2");
         UpdateVariance();
@@ -63,24 +63,24 @@ public partial class CloseShiftDialog : Window
             var variance = MoneyCalculator.Round(counted - _expectedCash);
             if (variance == 0)
             {
-                VarianceText.Text = "LKR 0.00";
-                VarianceText.Foreground = new SolidColorBrush(Color.FromRgb(56, 161, 105)); // Green
+                VarianceText.Text = "Rs. 0.00";
+                VarianceText.Foreground = (Brush)FindResource("SuccessBrush");
                 VarianceNote.Text = "Balanced (No discrepancy)";
-                VarianceNote.Foreground = new SolidColorBrush(Color.FromRgb(113, 128, 150));
+                VarianceNote.Foreground = (Brush)FindResource("TextMutedBrush");
             }
             else if (variance > 0)
             {
-                VarianceText.Text = $"+LKR {variance:N2}";
-                VarianceText.Foreground = new SolidColorBrush(Color.FromRgb(49, 130, 206)); // Blue
-                VarianceNote.Text = $"Cash Overage of LKR {variance:N2}";
-                VarianceNote.Foreground = new SolidColorBrush(Color.FromRgb(49, 130, 206));
+                VarianceText.Text = $"+Rs. {variance:N2}";
+                VarianceText.Foreground = (Brush)FindResource("PrimaryBrush");
+                VarianceNote.Text = $"Cash Overage of Rs. {variance:N2}";
+                VarianceNote.Foreground = (Brush)FindResource("PrimaryBrush");
             }
             else
             {
-                VarianceText.Text = $"-LKR {Math.Abs(variance):N2}";
-                VarianceText.Foreground = new SolidColorBrush(Color.FromRgb(229, 62, 62)); // Red
-                VarianceNote.Text = $"Cash Shortage of LKR {Math.Abs(variance):N2}";
-                VarianceNote.Foreground = new SolidColorBrush(Color.FromRgb(229, 62, 62));
+                VarianceText.Text = $"-Rs. {Math.Abs(variance):N2}";
+                VarianceText.Foreground = (Brush)FindResource("DangerBrush");
+                VarianceNote.Text = $"Cash Shortage of Rs. {Math.Abs(variance):N2}";
+                VarianceNote.Foreground = (Brush)FindResource("DangerBrush");
             }
         }
         else
@@ -99,7 +99,7 @@ public partial class CloseShiftDialog : Window
         }
 
         var variance = MoneyCalculator.Round(counted - _expectedCash);
-        var message = $"Expected Cash: LKR {_expectedCash:N2}\nCounted Cash: LKR {counted:N2}\nVariance: {(variance >= 0 ? "+" : "")}LKR {variance:N2}\n\nConfirm closing shift?";
+        var message = $"Expected Cash: Rs. {_expectedCash:N2}\nCounted Cash: Rs. {counted:N2}\nVariance: {(variance >= 0 ? "+" : "")}Rs. {variance:N2}\n\nConfirm closing shift?";
         var confirm = MessageBox.Show(message, "Confirm Shift Closing", MessageBoxButton.YesNo, MessageBoxImage.Question);
         if (confirm != MessageBoxResult.Yes) return;
 
@@ -114,7 +114,7 @@ public partial class CloseShiftDialog : Window
 
             ClosedShift = closed;
             MessageBox.Show(
-                $"Shift closed successfully!\n\nFinal Expected: LKR {closed.ExpectedCash:N2}\nFinal Counted: LKR {closed.ActualCountedCash:N2}\nFinal Variance: {(closed.Variance >= 0 ? "+" : "")}LKR {closed.Variance:N2}",
+                $"Shift closed successfully!\n\nFinal Expected: Rs. {closed.ExpectedCash:N2}\nFinal Counted: Rs. {closed.ActualCountedCash:N2}\nFinal Variance: {(closed.Variance >= 0 ? "+" : "")}Rs. {closed.Variance:N2}",
                 "Shift Closed",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information

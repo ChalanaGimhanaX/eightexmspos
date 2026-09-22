@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Goods Receiving &amp; Purchase Inventory" Height="620" Width="780"
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
-        Background="#F5F7FA" Loaded="Window_Loaded">
+        Background="{DynamicResource BackgroundBrush}" Loaded="Window_Loaded">
     <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -16,31 +16,31 @@
         <!-- Header -->
         <Border Grid.Row="0" Margin="0,0,0,14">
             <StackPanel>
-                <TextBlock Text="📦 Goods Receiving &amp; Stock In" FontSize="20" FontWeight="Bold" Foreground="#1A365D"/>
-                <TextBlock Text="Receive new stock from suppliers, update moving average cost basis, and log audit movements." FontSize="13" Foreground="#718096" Margin="0,4,0,0"/>
+                <TextBlock Text="📦 Goods Receiving &amp; Stock In" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource ForegroundBrush}"/>
+                <TextBlock Text="Receive new stock from suppliers, update moving average cost basis, and log audit movements." FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
             </StackPanel>
         </Border>
 
         <!-- Supplier & Invoice -->
-        <Border Grid.Row="1" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,12">
+        <Border Grid.Row="1" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,12">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" Margin="0,0,10,0">
-                    <TextBlock Text="Supplier Name:" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                    <TextBlock Text="Supplier Name:" FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,4"/>
                     <TextBox x:Name="SupplierBox" Height="34" FontSize="14" Padding="6,2"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Margin="10,0,0,0">
-                    <TextBlock Text="Invoice / Delivery Ref:" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                    <TextBlock Text="Invoice / Delivery Ref:" FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,4"/>
                     <TextBox x:Name="InvoiceBox" Height="34" FontSize="14" Padding="6,2"/>
                 </StackPanel>
             </Grid>
         </Border>
 
         <!-- Add Item Row -->
-        <Border Grid.Row="2" Background="#EDF2F7" CornerRadius="8" Padding="12" Margin="0,0,0,12">
+        <Border Grid.Row="2" Background="{DynamicResource SurfaceCardBrush}" CornerRadius="8" Padding="12" Margin="0,0,0,12">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -49,36 +49,36 @@
                     <ColumnDefinition Width="110"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" Margin="0,0,10,0">
-                    <TextBlock Text="Select Product:" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                    <TextBlock Text="Select Product:" FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,4"/>
                     <ComboBox x:Name="ProductComboBox" Height="34" DisplayMemberPath="Name" SelectedValuePath="ProductId"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Margin="0,0,10,0">
-                    <TextBlock Text="Qty:" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                    <TextBlock Text="Qty:" FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,4"/>
                     <TextBox x:Name="QtyBox" Height="34" Text="10" FontSize="14" Padding="6,2"/>
                 </StackPanel>
                 <StackPanel Grid.Column="2" Margin="0,0,10,0">
-                    <TextBlock Text="Unit Cost (LKR):" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                    <TextBlock Text="Unit Cost (Rs.):" FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,4"/>
                     <TextBox x:Name="UnitCostBox" Height="34" FontSize="14" Padding="6,2"/>
                 </StackPanel>
                 <Button Grid.Column="3" Content="+ Add Line" Height="34" VerticalAlignment="Bottom"
-                        Background="#2B6CB0" Foreground="White" FontWeight="Bold" BorderThickness="0" Cursor="Hand"
+                        Background="{DynamicResource PrimaryBrush}" Foreground="{DynamicResource TextOnPrimaryBrush}" FontWeight="Bold" BorderThickness="0" Cursor="Hand"
                         Click="AddLine_Click"/>
             </Grid>
         </Border>
 
         <!-- Lines Grid -->
-        <Border Grid.Row="3" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="8">
+        <Border Grid.Row="3" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="8">
             <DataGrid x:Name="ItemsGrid" AutoGenerateColumns="False" CanUserAddRows="False"
                       HeadersVisibility="Column" GridLinesVisibility="Horizontal" RowHeight="36">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Product" Binding="{Binding ProductName}" Width="*" IsReadOnly="True"/>
                     <DataGridTextColumn Header="Qty" Binding="{Binding Quantity, StringFormat={}{0:F0}}" Width="80" IsReadOnly="True"/>
-                    <DataGridTextColumn Header="Unit Cost" Binding="{Binding UnitCost, StringFormat=LKR {0:N2}}" Width="120" IsReadOnly="True"/>
-                    <DataGridTextColumn Header="Total Cost" Binding="{Binding LineTotalCost, StringFormat=LKR {0:N2}}" Width="130" IsReadOnly="True" FontWeight="SemiBold"/>
+                    <DataGridTextColumn Header="Unit Cost" Binding="{Binding UnitCost, StringFormat=Rs. {0:N2}}" Width="120" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="Total Cost" Binding="{Binding LineTotalCost, StringFormat=Rs. {0:N2}}" Width="130" IsReadOnly="True" FontWeight="SemiBold"/>
                     <DataGridTemplateColumn Width="50">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <Button Content="✕" Width="24" Height="24" Background="#FFEBEE" Foreground="#D32F2F"
+                                <Button Content="✕" Width="24" Height="24" Background="{DynamicResource DangerBrush}" Foreground="{DynamicResource TextOnPrimaryBrush}"
                                         FontWeight="Bold" BorderThickness="0" Cursor="Hand" Click="RemoveLine_Click"/>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
@@ -91,13 +91,13 @@
         <Border Grid.Row="4" Margin="0,14,0,0">
             <DockPanel>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="Total Batch Cost: " FontSize="14" Foreground="#718096" VerticalAlignment="Center"/>
-                    <TextBlock x:Name="TotalCostText" Text="LKR 0.00" FontSize="18" FontWeight="Bold" Foreground="#2B6CB0" VerticalAlignment="Center"/>
+                    <TextBlock Text="Total Batch Cost: " FontSize="14" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="TotalCostText" Text="Rs. 0.00" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource PrimaryBrush}" VerticalAlignment="Center"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Content="Cancel" Width="90" Height="38" Margin="0,0,10,0" Background="#EDF2F7" Foreground="#4A5568"
+                    <Button Content="Cancel" Width="90" Height="38" Margin="0,0,10,0" Background="{DynamicResource SurfaceCardBrush}" Foreground="{DynamicResource ForegroundBrush}"
                             FontWeight="SemiBold" BorderThickness="0" Cursor="Hand" Click="Cancel_Click"/>
-                    <Button Content="💾 Commit Receiving" Width="170" Height="38" Background="#38A169" Foreground="White"
+                    <Button Content="💾 Commit Receiving" Width="170" Height="38" Background="{DynamicResource SuccessBrush}" Foreground="{DynamicResource TextOnPrimaryBrush}"
                             FontWeight="Bold" BorderThickness="0" Cursor="Hand" Click="CommitReceiving_Click"/>
                 </StackPanel>
             </DockPanel>

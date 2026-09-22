@@ -69,10 +69,10 @@ public partial class CustomerManagementDialog : Window
             DetailNameText.Text = customer.Name;
             DetailPhoneText.Text = $"📞 {customer.Phone}";
             DetailAddressText.Text = string.IsNullOrWhiteSpace(customer.Address) ? "No address specified" : $"📍 {customer.Address}";
-            DetailCreditLimitText.Text = $"LKR {customer.CreditLimit:N2}";
-            DetailOutstandingText.Text = $"LKR {customer.OutstandingBalance:N2}";
+            DetailCreditLimitText.Text = $"Rs. {customer.CreditLimit:#,##0.00}";
+            DetailOutstandingText.Text = $"Rs. {customer.OutstandingBalance:#,##0.00}";
             var avail = Math.Max(0, customer.CreditLimit - customer.OutstandingBalance);
-            DetailAvailableText.Text = $"LKR {avail:N2}";
+            DetailAvailableText.Text = $"Rs. {avail:#,##0.00}";
             DetailActiveBadge.Visibility = customer.IsActive ? Visibility.Visible : Visibility.Collapsed;
 
             PaymentAmountBox.Text = customer.OutstandingBalance > 0 ? customer.OutstandingBalance.ToString("F2") : "0.00";
@@ -133,7 +133,7 @@ public partial class CustomerManagementDialog : Window
                 notes: string.IsNullOrWhiteSpace(notes) ? null : notes
             );
 
-            var msg = $"Payment of LKR {amount:N2} ({method}) recorded successfully!\nNew Outstanding Balance: LKR {entry.BalanceAfter:N2}";
+            var msg = $"Payment of Rs. {amount:#,##0.00} ({method}) recorded successfully!\nNew Outstanding Balance: Rs. {entry.BalanceAfter:#,##0.00}";
             if (method.Equals("CASH", StringComparison.OrdinalIgnoreCase) && _currentShift != null)
             {
                 msg += "\n\nDrawer Cash has been updated for the active shift.";
@@ -209,4 +209,3 @@ public partial class CustomerManagementDialog : Window
         }
     }
 }
-

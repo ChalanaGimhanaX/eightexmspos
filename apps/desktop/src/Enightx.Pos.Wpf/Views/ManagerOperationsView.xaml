@@ -1,0 +1,101 @@
+<UserControl x:Class="Enightx.Pos.Wpf.Views.ManagerOperationsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" 
+             d:DesignHeight="768" d:DesignWidth="1024"
+             Background="{DynamicResource BackgroundBrush}"
+             Padding="24">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel MaxWidth="1200" HorizontalAlignment="Stretch">
+            <!-- Section Header -->
+            <TextBlock Text="Manager Operations &amp; Cash Supervision" 
+                       FontFamily="{StaticResource PosFontFamily}"
+                       FontSize="24" FontWeight="Bold" 
+                       Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,6"/>
+            <TextBlock Text="Manage cash movements, issue refunds, receive supplier inventory, and review daily store audits."
+                       FontFamily="{StaticResource PosFontFamily}"
+                       FontSize="14" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,20"/>
+
+            <!-- Grid of Action Cards -->
+            <UniformGrid Columns="2" Margin="0,0,0,16">
+                <!-- 1. Cash Drawer Management Card -->
+                <Border Style="{DynamicResource TouchCardBorderStyle}" Margin="8">
+                    <StackPanel>
+                        <TextBlock Text="💵 Cash Drawer &amp; Movements" FontSize="18" FontWeight="Bold" 
+                                   Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                        <TextBlock Text="Record cash drops, paid outs, opening float adjustments, and petty cash transactions." 
+                                   FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,16"/>
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="+ Cash In / Drop" Style="{DynamicResource TouchPrimaryButtonStyle}" 
+                                    Margin="0,0,10,0" Click="CashIn_Click"/>
+                            <Button Content="📊 Shift Report" Style="{DynamicResource TouchSecondaryButtonStyle}" 
+                                    Click="Reconcile_Click"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- 2. Refunds & Returns Card -->
+                <Border Style="{DynamicResource TouchCardBorderStyle}" Margin="8">
+                    <StackPanel>
+                        <TextBlock Text="↩️ Returns &amp; Customer Refunds" FontSize="18" FontWeight="Bold" 
+                                   Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                        <TextBlock Text="Process customer return items against original sales receipts and return stock to active inventory." 
+                                   FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,16"/>
+                        <Button Content="Process Return / Refund" Style="{DynamicResource TouchPrimaryButtonStyle}" 
+                                Click="Refund_Click"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 3. Goods Receiving Card -->
+                <Border Style="{DynamicResource TouchCardBorderStyle}" Margin="8">
+                    <StackPanel>
+                        <TextBlock Text="📦 Manual Goods Receiving (GRN)" FontSize="18" FontWeight="Bold" 
+                                   Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                        <TextBlock Text="Receive incoming shipments from vendors, verify delivered quantities, and update moving-average cost." 
+                                   FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,16"/>
+                        <Button Content="Direct GRN Receiving" Style="{DynamicResource TouchPrimaryButtonStyle}" 
+                                Click="Receiving_Click"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 4. Daily Performance & Audit Card -->
+                <Border Style="{DynamicResource TouchCardBorderStyle}" Margin="8">
+                    <StackPanel>
+                        <TextBlock Text="📊 Daily Store Financial Reports" FontSize="18" FontWeight="Bold" 
+                                   Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                        <TextBlock Text="View gross sales, net revenue, discounts, VAT tax breakdowns, and tender reconciliation." 
+                                   FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,16"/>
+                        <Button Content="View Daily Financials" Style="{DynamicResource TouchPrimaryButtonStyle}" 
+                                Click="DailyReport_Click"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 5. Customer Accounts Card -->
+                <Border Style="{DynamicResource TouchCardBorderStyle}" Margin="8">
+                    <StackPanel>
+                        <TextBlock Text="👥 Customer Credit &amp; Accounts" FontSize="18" FontWeight="Bold" 
+                                   Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                        <TextBlock Text="Manage customer credit balances, payment settlements, and contact directory." 
+                                   FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,16"/>
+                        <Button Content="Customer Directory" Style="{DynamicResource TouchPrimaryButtonStyle}" 
+                                Click="Customers_Click"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 6. Close Shift Card -->
+                <Border Style="{DynamicResource TouchCardBorderStyle}" Margin="8">
+                    <StackPanel>
+                        <TextBlock Text="🔒 Shift Reconciliation &amp; Closeout" FontSize="18" FontWeight="Bold" 
+                                   Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                        <TextBlock Text="Count physical drawer currency, compute cash variance, and lock the current counter session." 
+                                   FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,16"/>
+                        <Button Content="Reconcile &amp; Close Shift" Style="{DynamicResource TouchPrimaryButtonStyle}" 
+                                Click="CloseShift_Click"/>
+                    </StackPanel>
+                </Border>
+            </UniformGrid>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

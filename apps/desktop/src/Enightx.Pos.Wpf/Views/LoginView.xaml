@@ -5,36 +5,36 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="800">
-    <Grid Background="{StaticResource BackgroundBrush}">
-        <Border Background="{StaticResource SurfaceBrush}"
+    <Grid Background="{DynamicResource BackgroundBrush}">
+        <Border Background="{DynamicResource SurfaceBrush}"
                 Width="420" Padding="32" CornerRadius="8"
-                BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                 HorizontalAlignment="Center" VerticalAlignment="Center">
             <StackPanel>
                 <TextBlock Text="ENIGHTX POS" FontSize="26" FontWeight="Bold" 
-                           Foreground="{StaticResource PrimaryBrush}" HorizontalAlignment="Center"/>
-                <TextBlock Text="Terminal Login" FontSize="14" Foreground="{StaticResource TextSecondaryBrush}"
+                           Foreground="{DynamicResource PrimaryBrush}" HorizontalAlignment="Center"/>
+                <TextBlock Text="Terminal Login" FontSize="14" Foreground="{DynamicResource TextMutedBrush}"
                            HorizontalAlignment="Center" Margin="0,4,0,24"/>
 
-                <TextBlock Text="Username" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                <TextBlock Text="Username" FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,4"/>
                 <TextBox x:Name="UsernameBox" Height="36" Padding="8,4" FontSize="14"
                          Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}"/>
 
-                <TextBlock Text="Password" FontWeight="SemiBold" Margin="0,16,0,4"/>
+                <TextBlock Text="Password" FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}" Margin="0,16,0,4"/>
                 <PasswordBox x:Name="PasswordBox" Height="36" Padding="8,4" FontSize="14"/>
 
-                <TextBlock Text="{Binding ErrorMessage}" Foreground="Red" FontSize="12" 
+                <TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource DangerBrush}" FontSize="12" 
                            Margin="0,12,0,0" TextWrapping="Wrap"/>
 
                 <Button Content="Sign In" Height="42" Margin="0,24,0,0"
-                        Background="{StaticResource PrimaryBrush}" Foreground="White"
+                        Background="{DynamicResource PrimaryBrush}" Foreground="{DynamicResource TextOnPrimaryBrush}"
                         FontWeight="Bold" FontSize="15" Click="SignIn_Click"/>
 
-                <Border Background="#F0F4F8" CornerRadius="6" Padding="12" Margin="0,20,0,0" BorderBrush="#CFD8DC" BorderThickness="1">
+                <Border Background="{DynamicResource SurfaceCardBrush}" CornerRadius="6" Padding="12" Margin="0,20,0,0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                     <StackPanel>
-                        <TextBlock Text="Default Logins:" FontWeight="Bold" FontSize="12" Foreground="{StaticResource PrimaryBrush}"/>
-                        <TextBlock Text="• Manager:  admin / admin123" FontSize="12" Foreground="#37474F" Margin="0,4,0,0"/>
-                        <TextBlock Text="• Cashier:  cashier1 / cashier123" FontSize="12" Foreground="#37474F" Margin="0,2,0,0"/>
+                        <TextBlock Text="Default Logins:" FontWeight="Bold" FontSize="12" Foreground="{DynamicResource PrimaryBrush}"/>
+                        <TextBlock Text="• Manager:  admin / admin123" FontSize="12" Foreground="{DynamicResource ForegroundBrush}" Margin="0,4,0,0"/>
+                        <TextBlock Text="• Cashier:  cashier1 / cashier123" FontSize="12" Foreground="{DynamicResource ForegroundBrush}" Margin="0,2,0,0"/>
                     </StackPanel>
                 </Border>
             </StackPanel>

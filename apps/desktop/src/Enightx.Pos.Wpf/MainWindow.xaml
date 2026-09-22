@@ -1,35 +1,349 @@
 <Window x:Class="Enightx.Pos.Wpf.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Enightx POS - Counter Terminal" Height="768" Width="1024"
-        WindowState="Maximized" WindowStartupLocation="CenterScreen">
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Enightx POS - Adaptive Counter Terminal" 
+        Height="768" Width="1280" MinHeight="720" MinWidth="1024"
+        WindowState="Maximized" WindowStartupLocation="CenterScreen"
+        FontFamily="{StaticResource PosFontFamily}"
+        Background="{DynamicResource BackgroundBrush}"
+        Foreground="{DynamicResource TextPrimaryBrush}">
+
+    <Window.Resources>
+        <!-- Standard Boolean to Visibility Converter -->
+        <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
+
+        <!-- Navigation Tab Button Base Style (Left Rail, >= 56px Touch Target) -->
+        <Style x:Key="NavRailTabButtonStyle" TargetType="Button">
+            <Setter Property="Height" Value="56"/>
+            <Setter Property="MinHeight" Value="56"/>
+            <Setter Property="MinWidth" Value="48"/>
+            <Setter Property="Margin" Value="8,4"/>
+            <Setter Property="Padding" Value="14,6"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}"
+                                CornerRadius="8" SnapsToDevicePixels="True"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource PrimaryLightBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Active Navigation Tab Highlight Style -->
+        <Style x:Key="NavRailTabButtonActiveStyle" TargetType="Button" BasedOn="{StaticResource NavRailTabButtonStyle}">
+            <Setter Property="Background" Value="{DynamicResource PrimaryLightBrush}"/>
+        </Style>
+    </Window.Resources>
+
     <Grid>
         <Grid.RowDefinitions>
+            <!-- Row 0: Live Update Staging Banner -->
             <RowDefinition Height="Auto"/>
+            <!-- Row 1: Unified Top Header Bar (64px) -->
+            <RowDefinition Height="Auto"/>
+            <!-- Row 2: Adaptive Shell Body (Left Nav Rail + Main View) -->
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- Top Update Notification Banner (Hidden when no update) -->
-        <Border x:Name="UpdateBanner" Grid.Row="0" Background="#1565C0" Padding="14,8" Visibility="Collapsed">
+        <!-- ========================================================================= -->
+        <!-- ROW 0: UPDATE NOTIFICATION BANNER                                         -->
+        <!-- ========================================================================= -->
+        <Border x:Name="UpdateBanner" Grid.Row="0" 
+                Background="{DynamicResource PrimaryDarkBrush}" 
+                Padding="16,10" Visibility="Collapsed" SnapsToDevicePixels="True">
             <DockPanel>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="🚀 " FontSize="14" VerticalAlignment="Center"/>
-                    <TextBlock x:Name="UpdateBannerText" Text="A new software update is available!" 
-                               FontWeight="SemiBold" Foreground="White" FontSize="13" VerticalAlignment="Center"/>
+                    <TextBlock Text="🚀 " FontSize="16" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="UpdateBannerText" 
+                               Text="A new software update is ready for installation." 
+                               FontWeight="SemiBold" 
+                               Foreground="{DynamicResource TextOnPrimaryBrush}" 
+                               FontSize="13" VerticalAlignment="Center"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                    <Button Content="Update Now" Height="28" Padding="14,2" Margin="0,0,8,0"
-                            Background="White" Foreground="#1565C0" FontWeight="Bold" FontSize="12"
+                    <Button Content="Update Now" MinHeight="48" MinWidth="110" Padding="14,4" Margin="0,0,8,0"
+                            Background="{DynamicResource SurfaceBrush}" 
+                            Foreground="{DynamicResource PrimaryBrush}" 
+                            FontWeight="Bold" FontSize="12" Cursor="Hand"
                             Click="OpenUpdateDialog_Click"/>
-                    <Button Content="✕" Width="28" Height="28" Background="Transparent" BorderThickness="0"
-                            Foreground="White" FontWeight="Bold" FontSize="13"
+                    <Button Content="✕" Width="48" Height="48" MinWidth="48" MinHeight="48"
+                            Background="Transparent" BorderThickness="0"
+                            Foreground="{DynamicResource TextOnPrimaryBrush}" 
+                            FontWeight="Bold" FontSize="14" Cursor="Hand"
                             Click="DismissUpdateBanner_Click"/>
                 </StackPanel>
             </DockPanel>
         </Border>
 
-        <Grid x:Name="MainContainer" Grid.Row="1">
-            <!-- Content dynamically switches between LoginView and BillingView -->
+        <!-- ========================================================================= -->
+        <!-- ROW 1: TOP HEADER BAR (FEATURE 34)                                        -->
+        <!-- ========================================================================= -->
+        <Border x:Name="TopHeaderBar" Grid.Row="1"
+                Background="{DynamicResource HeaderBackgroundBrush}"
+                Height="64" MinHeight="64"
+                Padding="16,8" SnapsToDevicePixels="True"
+                Visibility="Collapsed">
+            <DockPanel LastChildFill="True">
+                
+                <!-- Left: App Brand, Counter/Branch Badge, Shift Float Indicator -->
+                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- Brand Title -->
+                    <TextBlock Text="⚡ ENIGHTX POS" 
+                               FontWeight="Bold" FontSize="18" 
+                               Foreground="{DynamicResource TextOnPrimaryBrush}" 
+                               VerticalAlignment="Center"/>
+
+                    <!-- Counter / Branch Badge -->
+                    <Border Background="{DynamicResource PrimaryDarkBrush}" 
+                            CornerRadius="6" Padding="10,4" Margin="14,0,0,0" 
+                            VerticalAlignment="Center">
+                        <TextBlock Text="{Binding CounterBranchText, FallbackValue='B01 / C01'}" 
+                                   FontWeight="Bold" FontSize="11" 
+                                   Foreground="{DynamicResource TextOnPrimaryBrush}"/>
+                    </Border>
+
+                    <!-- Shift Float Indicator Badge (>= 48px Hit Height) -->
+                    <Border Background="{DynamicResource SuccessSurfaceBrush}" 
+                            BorderBrush="{DynamicResource SuccessBrush}" 
+                            BorderThickness="1" CornerRadius="8" 
+                            Padding="12,6" Margin="16,0,0,0" 
+                            VerticalAlignment="Center" MinHeight="48"
+                            ToolTip="{Binding ShiftTooltip}">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding ShiftBadgeText, FallbackValue='● SHIFT OPEN'}" 
+                                       FontWeight="Bold" FontSize="12" 
+                                       Foreground="{DynamicResource SuccessBrush}" 
+                                       VerticalAlignment="Center"/>
+                            <TextBlock Text=" | " 
+                                       FontWeight="Bold" FontSize="12" 
+                                       Foreground="{DynamicResource SuccessBrush}" 
+                                       VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding FormattedOpeningFloat, FallbackValue='Rs. 5,000.00'}" 
+                                       FontWeight="Bold" FontSize="12" 
+                                       Foreground="{DynamicResource TextPrimaryBrush}" 
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Right: User Badge & Role Chip, Theme Toggle, Logout Button -->
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    
+                    <!-- Current User Badge & Role Chip -->
+                    <Border Background="{DynamicResource CardHoverBrush}" 
+                            BorderBrush="{DynamicResource BorderBrush}" 
+                            BorderThickness="1" CornerRadius="8" 
+                            Padding="12,6" Margin="0,0,12,0" 
+                            VerticalAlignment="Center" MinHeight="48">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="👤 " FontSize="14" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding DisplayName, FallbackValue='Cashier'}" 
+                                       FontWeight="Bold" FontSize="13" 
+                                       Foreground="{DynamicResource TextPrimaryBrush}" 
+                                       VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <!-- Role Chip -->
+                            <Border Background="{DynamicResource PrimaryBrush}" 
+                                    CornerRadius="10" Padding="8,2" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding RoleBadgeText, FallbackValue='CASHIER'}" 
+                                           FontWeight="Bold" FontSize="10" 
+                                           Foreground="{DynamicResource TextOnPrimaryBrush}"/>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Theme Toggle Switch Button (Feature 34: >= 48px hit area) -->
+                    <Button x:Name="ThemeToggleButton"
+                            Command="{Binding ToggleThemeCommand}"
+                            MinHeight="48" Height="48" MinWidth="130"
+                            Padding="12,6" Margin="0,0,10,0"
+                            Background="{DynamicResource SurfaceBrush}"
+                            Foreground="{DynamicResource TextPrimaryBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1" Cursor="Hand"
+                            ToolTip="Switch Light / Dark Theme">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="border" Background="{TemplateBinding Background}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        BorderThickness="{TemplateBinding BorderThickness}"
+                                        CornerRadius="8" Padding="{TemplateBinding Padding}"
+                                        SnapsToDevicePixels="True">
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding ThemeIcon, FallbackValue='🌙'}" FontSize="16" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding ThemeText, FallbackValue='Dark Mode'}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="border" Property="Background" Value="{DynamicResource CardHoverBrush}"/>
+                                    </Trigger>
+                                    <Trigger Property="IsPressed" Value="True">
+                                        <Setter TargetName="border" Property="Background" Value="{DynamicResource PrimaryLightBrush}"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+
+                    <!-- Logout Button (Feature 34: >= 48px hit area) -->
+                    <Button x:Name="LogoutButton"
+                            Command="{Binding LogoutCommand}"
+                            MinHeight="48" Height="48" MinWidth="100"
+                            Padding="14,6"
+                            Background="{DynamicResource DangerSurfaceBrush}"
+                            Foreground="{DynamicResource DangerBrush}"
+                            BorderBrush="{DynamicResource DangerBrush}"
+                            BorderThickness="1" Cursor="Hand"
+                            ToolTip="Lock Counter &amp; Logout">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="border" Background="{TemplateBinding Background}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        BorderThickness="{TemplateBinding BorderThickness}"
+                                        CornerRadius="8" Padding="{TemplateBinding Padding}"
+                                        SnapsToDevicePixels="True">
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <TextBlock Text="🔒 " FontSize="14" VerticalAlignment="Center"/>
+                                        <TextBlock Text="Logout" FontSize="13" FontWeight="Bold" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="border" Property="Background" Value="{DynamicResource DangerBrush}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource TextOnPrimaryBrush}"/>
+                                    </Trigger>
+                                    <Trigger Property="IsPressed" Value="True">
+                                        <Setter TargetName="border" Property="Opacity" Value="0.8"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- ========================================================================= -->
+        <!-- ROW 2: ADAPTIVE SHELL BODY (NAVIGATION RAIL + RESPONSIVE CONTENT)         -->
+        <!-- ========================================================================= -->
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <!-- Column 0: Left Navigation Rail (Width 220px) -->
+                <ColumnDefinition Width="Auto"/>
+                <!-- Column 1: Main Content Container (*) -->
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- ===================================================================== -->
+            <!-- LEFT NAVIGATION RAIL (FEATURE 35)                                     -->
+            <!-- ===================================================================== -->
+            <Border x:Name="LeftNavRail" Grid.Column="0"
+                    Width="220" MinWidth="180"
+                    Background="{DynamicResource SurfaceBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="0,0,1,0"
+                    SnapsToDevicePixels="True"
+                    Visibility="Collapsed">
+                <DockPanel LastChildFill="True">
+                    
+                    <!-- Header -->
+                    <TextBlock DockPanel.Dock="Top" Text="NAVIGATION" 
+                               FontSize="11" FontWeight="Bold" 
+                               Foreground="{DynamicResource TextSecondaryBrush}" 
+                               Margin="16,14,16,8"/>
+
+                    <!-- Footer: Local Database & Cloud Sync Status -->
+                    <Border DockPanel.Dock="Bottom" 
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" 
+                            Padding="14,12">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                <TextBlock Text="● " Foreground="{DynamicResource SuccessBrush}" FontSize="10" VerticalAlignment="Center"/>
+                                <TextBlock Text="Local DB: Online (WAL)" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="☁️ " FontSize="10" VerticalAlignment="Center"/>
+                                <TextBlock Text="Cloud Sync: Fresh" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Navigation Tab List -->
+                    <StackPanel Orientation="Vertical">
+                        
+                        <!-- 1. Cashier Checkout Tab (All Roles) -->
+                        <Button x:Name="TabCheckout"
+                                Command="{Binding NavigateCommand}" CommandParameter="Checkout"
+                                Visibility="{Binding IsCashierTabVisible, Converter={StaticResource BoolToVisConverter}}"
+                                Style="{StaticResource NavRailTabButtonActiveStyle}">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="🛒" FontSize="20" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="Checkout" FontWeight="Bold" FontSize="14" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                    <TextBlock Text="POS &amp; Counter Sales" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Button>
+
+                        <!-- 2. Manager Operations Tab (Role >= Manager) -->
+                        <Button x:Name="TabManager"
+                                Command="{Binding NavigateCommand}" CommandParameter="ManagerOperations"
+                                Visibility="{Binding IsManagerTabVisible, Converter={StaticResource BoolToVisConverter}}"
+                                Style="{StaticResource NavRailTabButtonStyle}">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="💵" FontSize="20" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="Cash &amp; Shifts" FontWeight="Bold" FontSize="14" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                    <TextBlock Text="Drawer, GRN, Refunds" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Button>
+
+                        <!-- 3. Owner Admin Tab (Role >= Owner) -->
+                        <Button x:Name="TabOwner"
+                                Command="{Binding NavigateCommand}" CommandParameter="OwnerAdmin"
+                                Visibility="{Binding IsOwnerTabVisible, Converter={StaticResource BoolToVisConverter}}"
+                                Style="{StaticResource NavRailTabButtonStyle}">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="⚙️" FontSize="20" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="Store Admin" FontWeight="Bold" FontSize="14" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                    <TextBlock Text="Catalog, Audits, Sync" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Button>
+
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <!-- ===================================================================== -->
+            <!-- MAIN CONTENT AREA (FEATURE 36: DYNAMIC VIEW HOST)                     -->
+            <!-- ===================================================================== -->
+            <Grid x:Name="MainContentContainer" Grid.Column="1"
+                  Background="{DynamicResource BackgroundBrush}"
+                  SnapsToDevicePixels="True">
+                <!-- Hosts LoginView, BillingView, ManagerOperationsView, OwnerAdminView -->
+            </Grid>
+
         </Grid>
     </Grid>
 </Window>

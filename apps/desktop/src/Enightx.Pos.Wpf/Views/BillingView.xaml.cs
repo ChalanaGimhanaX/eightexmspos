@@ -9,7 +9,7 @@ namespace Enightx.Pos.Wpf.Views;
 public partial class BillingView : UserControl
 {
     public event Action? RequestPayment;
-    public event Action? ShiftClosed;
+    public event Action<string>? RequestPaymentWithTender;
 
     public BillingView()
     {
@@ -22,6 +22,7 @@ public partial class BillingView : UserControl
         {
             await vm.LoadCatalogAsync();
             await vm.LoadHeldCartsAsync();
+            BarcodeInputBox.Focus();
         }
     }
 
@@ -55,7 +56,7 @@ public partial class BillingView : UserControl
     {
         if (sender is Button btn && btn.DataContext is Category cat && DataContext is BillingViewModel vm)
         {
-            vm.SelectedCategory = cat;
+            vm.SelectedCategory = (vm.SelectedCategory == cat) ? null : cat;
         }
     }
 
@@ -65,6 +66,12 @@ public partial class BillingView : UserControl
         {
             vm.SearchQuery = SearchBox.Text;
         }
+    }
+
+    private void ClearSearch_Click(object sender, RoutedEventArgs e)
+    {
+        SearchBox.Text = string.Empty;
+        SearchBox.Focus();
     }
 
     private void IncrementQty_Click(object sender, RoutedEventArgs e)
@@ -91,16 +98,21 @@ public partial class BillingView : UserControl
         }
     }
 
-    private async void SyncCatalog_Click(object sender, RoutedEventArgs e)
-    {
-        if (DataContext is BillingViewModel vm)
-        {
-            await vm.SyncCatalogWithCloudAsync();
-        }
-    }
-
     private void PayCash_Click(object sender, RoutedEventArgs e)
     {
+        RequestPaymentWithTender?.Invoke("CASH");
+        RequestPayment?.Invoke();
+    }
+
+    private void PayCard_Click(object sender, RoutedEventArgs e)
+    {
+        RequestPaymentWithTender?.Invoke("CARD");
+        RequestPayment?.Invoke();
+    }
+
+    private void PaySplit_Click(object sender, RoutedEventArgs e)
+    {
+        RequestPaymentWithTender?.Invoke("SPLIT");
         RequestPayment?.Invoke();
     }
 
@@ -108,204 +120,18 @@ public partial class BillingView : UserControl
     {
         if (DataContext is BillingViewModel vm)
         {
-            vm.ClearCart();
-        }
-    }
-
-    private void Refund_Click(object sender, RoutedEventArgs e)
-    {
-        if (DataContext is BillingViewModel vm)
-        {
-            var dialog = new RefundDialog(App.SaleService, vm.CurrentUser, vm.CurrentShift)
+            if (vm.CartItems.Count > 0)
             {
-                Owner = Window.GetWindow(this)
-            };
-            dialog.ShowDialog();
-        }
-    }
-
-    private void CashMovement_Click(object sender, RoutedEventArgs e)
-    {
-        if (DataContext is BillingViewModel vm)
-        {
-            var dialog = new CashMovementDialog(App.ShiftService, vm.CurrentUser, vm.CurrentShift)
-            {
-                Owner = Window.GetWindow(this)
-            };
-            dialog.ShowDialog();
-        }
-    }
-
-    private void ShiftReport_Click(object sender, RoutedEventArgs e)
-    {
-        if (DataContext is BillingViewModel vm)
-        {
-            var dialog = new ShiftReportDialog(App.ReportService, vm.CurrentShift.ShiftId)
-            {
-                Owner = Window.GetWindow(this)
-            };
-            dialog.ShowDialog();
-        }
-    }
-
-    private async void ProductManagement_Click(object sender, RoutedEventArgs e)
-    {
-        if (DataContext is BillingViewModel vm)
-        {
-            User activeUser = vm.CurrentUser;
-            if (vm.CurrentUser.Role != Role.Manager && vm.CurrentUser.Role != Role.Owner)
-            {
-                var pinDialog = new ManagerPinDialog(
-                    App.AuthService,
-                    actionDescription: "Product Catalog Management Access",
-                    branchId: vm.CurrentShift.BranchId,
-                    counterId: vm.CurrentShift.CounterId
-                )
+                var result = MessageBox.Show(
+                    "Are you sure you want to clear the active cart?",
+                    "Clear Cart",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question
+                );
+                if (result == MessageBoxResult.Yes)
                 {
-                    Owner = Window.GetWindow(this)
-                };
-
-                if (pinDialog.ShowDialog() != true || pinDialog.AuthorizedUser == null)
-                {
-                    return;
+                    vm.ClearCart();
                 }
-
-                activeUser = pinDialog.AuthorizedUser;
-            }
-
-            var dialog = new ProductManagementDialog(App.CatalogService, activeUser)
-            {
-                Owner = Window.GetWindow(this)
-            };
-
-            if (dialog.ShowDialog() == true)
-            {
-                await vm.LoadCatalogAsync();
-            }
-        }
-    }
-
-    private void Products_Click(object sender, RoutedEventArgs e) => ProductManagement_Click(sender, e);
-
-    private void DailyReport_Click(object sender, RoutedEventArgs e)
-    {
-        if (DataContext is BillingViewModel vm)
-        {
-            if (vm.CurrentUser.Role != Role.Manager && vm.CurrentUser.Role != Role.Owner)
-            {
-                var pinDialog = new ManagerPinDialog(
-                    App.AuthService,
-                    actionDescription: "Daily Financial Report Access",
-                    branchId: vm.CurrentShift.BranchId,
-                    counterId: vm.CurrentShift.CounterId
-                )
-                {
-                    Owner = Window.GetWindow(this)
-                };
-
-                if (pinDialog.ShowDialog() != true || pinDialog.AuthorizedUser == null)
-                {
-                    return;
-                }
-            }
-
-            var dialog = new DailyReportDialog(App.ReportService, vm.CurrentShift.BranchId)
-            {
-                Owner = Window.GetWindow(this)
-            };
-            dialog.ShowDialog();
-        }
-    }
-
-    private void InventoryValuation_Click(object sender, RoutedEventArgs e)
-    {
-        if (DataContext is BillingViewModel vm)
-        {
-            if (vm.CurrentUser.Role != Role.Manager && vm.CurrentUser.Role != Role.Owner)
-            {
-                var pinDialog = new ManagerPinDialog(
-                    App.AuthService,
-                    actionDescription: "Inventory Valuation Report Access",
-                    branchId: vm.CurrentShift.BranchId,
-                    counterId: vm.CurrentShift.CounterId
-                )
-                {
-                    Owner = Window.GetWindow(this)
-                };
-
-                if (pinDialog.ShowDialog() != true || pinDialog.AuthorizedUser == null)
-                {
-                    return;
-                }
-            }
-
-            var dialog = new InventoryValuationDialog(App.ReportService)
-            {
-                Owner = Window.GetWindow(this)
-            };
-            dialog.ShowDialog();
-        }
-    }
-
-    private void Customers_Click(object sender, RoutedEventArgs e)
-    {
-        if (DataContext is BillingViewModel vm)
-        {
-            var dialog = new CustomerManagementDialog(App.CustomerService, vm.CurrentUser, vm.CurrentShift)
-            {
-                Owner = Window.GetWindow(this)
-            };
-            dialog.ShowDialog();
-        }
-    }
-
-    private void GoodsReceiving_Click(object sender, RoutedEventArgs e)
-    {
-        if (DataContext is BillingViewModel vm)
-        {
-            User activeUser = vm.CurrentUser;
-            if (vm.CurrentUser.Role != Role.Manager && vm.CurrentUser.Role != Role.Owner)
-            {
-                var pinDialog = new ManagerPinDialog(
-                    App.AuthService,
-                    actionDescription: "Goods Receiving Access",
-                    branchId: vm.CurrentShift.BranchId,
-                    counterId: vm.CurrentShift.CounterId
-                )
-                {
-                    Owner = Window.GetWindow(this)
-                };
-
-                if (pinDialog.ShowDialog() != true || pinDialog.AuthorizedUser == null)
-                {
-                    return;
-                }
-
-                activeUser = pinDialog.AuthorizedUser;
-            }
-
-            var dialog = new GoodsReceivingDialog(App.GoodsReceivingService, App.CatalogService, activeUser, vm.CurrentShift.BranchId)
-            {
-                Owner = Window.GetWindow(this)
-            };
-            if (dialog.ShowDialog() == true)
-            {
-                _ = vm.LoadCatalogAsync();
-            }
-        }
-    }
-
-    private void CloseShift_Click(object sender, RoutedEventArgs e)
-    {
-        if (DataContext is BillingViewModel vm)
-        {
-            var dialog = new CloseShiftDialog(App.ShiftService, vm.CurrentUser, vm.CurrentShift)
-            {
-                Owner = Window.GetWindow(this)
-            };
-            if (dialog.ShowDialog() == true)
-            {
-                ShiftClosed?.Invoke();
             }
         }
     }
@@ -338,6 +164,162 @@ public partial class BillingView : UserControl
                 Owner = Window.GetWindow(this)
             };
             dialog.ShowDialog();
+        }
+    }
+
+    private async void OverridePrice_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement elem && elem.DataContext is CartItemViewModel item && DataContext is BillingViewModel vm)
+        {
+            var dialog = new Window
+            {
+                Title = "Price Override Authorization",
+                Width = 420,
+                Height = 310,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Owner = Window.GetWindow(this),
+                ResizeMode = ResizeMode.NoResize,
+                Background = (System.Windows.Media.Brush)FindResource("SurfaceBrush")
+            };
+
+            var sp = new StackPanel { Margin = new Thickness(20) };
+            sp.Children.Add(new TextBlock
+            {
+                Text = $"Override Price for: {item.ProductName}",
+                FontWeight = FontWeights.Bold,
+                FontSize = 15,
+                Margin = new Thickness(0, 0, 0, 4),
+                Foreground = (System.Windows.Media.Brush)FindResource("TextPrimaryBrush")
+            });
+            sp.Children.Add(new TextBlock
+            {
+                Text = $"Current Price: Rs. {item.UnitPrice:#,##0.00}",
+                FontSize = 13,
+                Margin = new Thickness(0, 0, 0, 12),
+                Foreground = (System.Windows.Media.Brush)FindResource("TextSecondaryBrush")
+            });
+
+            sp.Children.Add(new TextBlock { Text = "New Unit Price (Rs.):", Margin = new Thickness(0, 0, 0, 4), Foreground = (System.Windows.Media.Brush)FindResource("TextSecondaryBrush") });
+            var priceBox = new TextBox { Height = 40, FontSize = 14, VerticalContentAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 0, 10) };
+            sp.Children.Add(priceBox);
+
+            sp.Children.Add(new TextBlock { Text = "Reason (Required):", Margin = new Thickness(0, 0, 0, 4), Foreground = (System.Windows.Media.Brush)FindResource("TextSecondaryBrush") });
+            var reasonBox = new TextBox { Height = 40, FontSize = 14, VerticalContentAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 0, 16) };
+            sp.Children.Add(reasonBox);
+
+            var btnPanel = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
+            var cancelBtn = new Button { Content = "Cancel", Width = 90, Height = 38, Margin = new Thickness(0, 0, 8, 0) };
+            cancelBtn.Click += (_, _) => dialog.DialogResult = false;
+            var confirmBtn = new Button { Content = "Confirm", Width = 90, Height = 38 };
+            confirmBtn.Click += (_, _) => dialog.DialogResult = true;
+
+            btnPanel.Children.Add(cancelBtn);
+            btnPanel.Children.Add(confirmBtn);
+            sp.Children.Add(btnPanel);
+
+            dialog.Content = sp;
+            priceBox.Focus();
+
+            if (dialog.ShowDialog() == true)
+            {
+                if (!decimal.TryParse(priceBox.Text?.Trim(), out var newPrice) || newPrice < 0)
+                {
+                    MessageBox.Show("Please enter a valid non-negative price.", "Invalid Price", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                var reason = reasonBox.Text?.Trim();
+                if (string.IsNullOrWhiteSpace(reason))
+                {
+                    MessageBox.Show("An override reason is required.", "Reason Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                bool success = await vm.OverrideItemPriceAsync(item, newPrice, reason);
+                if (!success)
+                {
+                    MessageBox.Show(vm.StatusMessage, "Price Override Denied", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+            }
+        }
+    }
+
+    private async void ApplyDiscount_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is BillingViewModel vm)
+        {
+            if (vm.CartItems.Count == 0)
+            {
+                MessageBox.Show("Cannot apply discount to an empty cart.", "Empty Cart", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var dialog = new Window
+            {
+                Title = "Apply Cart Discount",
+                Width = 400,
+                Height = 280,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Owner = Window.GetWindow(this),
+                ResizeMode = ResizeMode.NoResize,
+                Background = (System.Windows.Media.Brush)FindResource("SurfaceBrush")
+            };
+
+            var sp = new StackPanel { Margin = new Thickness(20) };
+            sp.Children.Add(new TextBlock
+            {
+                Text = "Apply Discount to Active Cart",
+                FontWeight = FontWeights.Bold,
+                FontSize = 15,
+                Margin = new Thickness(0, 0, 0, 4),
+                Foreground = (System.Windows.Media.Brush)FindResource("TextPrimaryBrush")
+            });
+            sp.Children.Add(new TextBlock
+            {
+                Text = "Discounts > 10% require Manager PIN approval.",
+                FontSize = 12,
+                Margin = new Thickness(0, 0, 0, 12),
+                Foreground = (System.Windows.Media.Brush)FindResource("TextSecondaryBrush")
+            });
+
+            sp.Children.Add(new TextBlock { Text = "Discount Percentage (0 - 100%):", Margin = new Thickness(0, 0, 0, 4), Foreground = (System.Windows.Media.Brush)FindResource("TextSecondaryBrush") });
+            var rateBox = new TextBox { Height = 40, FontSize = 14, VerticalContentAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 0, 10) };
+            sp.Children.Add(rateBox);
+
+            sp.Children.Add(new TextBlock { Text = "Reason (Optional):", Margin = new Thickness(0, 0, 0, 4), Foreground = (System.Windows.Media.Brush)FindResource("TextSecondaryBrush") });
+            var reasonBox = new TextBox { Height = 40, FontSize = 14, VerticalContentAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 0, 16) };
+            sp.Children.Add(reasonBox);
+
+            var btnPanel = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
+            var cancelBtn = new Button { Content = "Cancel", Width = 90, Height = 38, Margin = new Thickness(0, 0, 8, 0) };
+            cancelBtn.Click += (_, _) => dialog.DialogResult = false;
+            var confirmBtn = new Button { Content = "Apply", Width = 90, Height = 38 };
+            confirmBtn.Click += (_, _) => dialog.DialogResult = true;
+
+            btnPanel.Children.Add(cancelBtn);
+            btnPanel.Children.Add(confirmBtn);
+            sp.Children.Add(btnPanel);
+
+            dialog.Content = sp;
+            rateBox.Focus();
+
+            if (dialog.ShowDialog() == true)
+            {
+                if (!decimal.TryParse(rateBox.Text?.Trim(), out var percent) || percent < 0 || percent > 100)
+                {
+                    MessageBox.Show("Please enter a valid percentage between 0 and 100.", "Invalid Discount", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                var discountRate = percent / 100m;
+                var reason = reasonBox.Text?.Trim();
+
+                bool success = await vm.ApplyCartDiscountAsync(discountRate, reason);
+                if (!success)
+                {
+                    MessageBox.Show(vm.StatusMessage, "Discount Authorization Denied", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+            }
         }
     }
 }

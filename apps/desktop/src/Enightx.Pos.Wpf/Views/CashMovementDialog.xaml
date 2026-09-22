@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Cash Drawer Movement" Height="360" Width="480"
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
-        Background="#F5F7FA">
+        Background="{DynamicResource BackgroundBrush}">
     <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -14,24 +14,24 @@
         <!-- Header -->
         <Border Grid.Row="0" Margin="0,0,0,16">
             <StackPanel>
-                <TextBlock x:Name="DialogTitleText" Text="💵 Drawer Cash In / Cash Out" FontSize="18" FontWeight="Bold" Foreground="#1A365D"/>
-                <TextBlock Text="Record cash addition or removal from the cash drawer." FontSize="13" Foreground="#718096" Margin="0,4,0,0"/>
+                <TextBlock x:Name="DialogTitleText" Text="💵 Drawer Cash In / Cash Out" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource ForegroundBrush}"/>
+                <TextBlock Text="Record cash addition or removal from the cash drawer." FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
             </StackPanel>
         </Border>
 
         <!-- Inputs -->
-        <Border Grid.Row="1" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="16">
+        <Border Grid.Row="1" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="16">
             <StackPanel>
-                <TextBlock Text="Movement Type:" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                <TextBlock Text="Movement Type:" FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,6"/>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
-                    <RadioButton x:Name="CashInRadio" Content="Cash In (Deposit / Float Add)" IsChecked="True" FontWeight="SemiBold" Margin="0,0,16,0"/>
-                    <RadioButton x:Name="CashOutRadio" Content="Cash Out (Payout / Expense)" FontWeight="SemiBold"/>
+                    <RadioButton x:Name="CashInRadio" Content="Cash In (Deposit / Float Add)" IsChecked="True" FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,16,0"/>
+                    <RadioButton x:Name="CashOutRadio" Content="Cash Out (Payout / Expense)" FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}"/>
                 </StackPanel>
 
-                <TextBlock Text="Amount (LKR):" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                <TextBlock Text="Amount (Rs.):" FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,4"/>
                 <TextBox x:Name="AmountBox" Height="36" FontSize="16" FontWeight="Bold" Padding="8,4" Margin="0,0,0,14"/>
 
-                <TextBlock Text="Mandatory Reason:" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                <TextBlock Text="Mandatory Reason:" FontWeight="SemiBold" Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,4"/>
                 <TextBox x:Name="ReasonBox" Height="36" FontSize="13" Padding="8,4"/>
             </StackPanel>
         </Border>
@@ -39,10 +39,10 @@
         <!-- Buttons -->
         <Border Grid.Row="2" Margin="0,16,0,0">
             <DockPanel>
-                <Button Content="Cancel" Width="90" Height="38" Background="#EDF2F7" Foreground="#4A5568"
+                <Button Content="Cancel" Width="90" Height="38" Background="{DynamicResource SurfaceCardBrush}" Foreground="{DynamicResource ForegroundBrush}"
                         FontWeight="SemiBold" BorderThickness="0" Cursor="Hand" Click="Cancel_Click"/>
                 <Button Content="Confirm Movement" Width="150" Height="38" HorizontalAlignment="Right"
-                        Background="#2B6CB0" Foreground="White" FontWeight="Bold" BorderThickness="0"
+                        Background="{DynamicResource PrimaryBrush}" Foreground="{DynamicResource TextOnPrimaryBrush}" FontWeight="Bold" BorderThickness="0"
                         Cursor="Hand" Click="Confirm_Click"/>
             </DockPanel>
         </Border>

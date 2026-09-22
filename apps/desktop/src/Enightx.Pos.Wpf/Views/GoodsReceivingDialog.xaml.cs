@@ -112,7 +112,7 @@ public partial class GoodsReceivingDialog : Window
     private void RefreshTotal()
     {
         var total = MoneyCalculator.Round(_lines.Sum(l => l.LineTotalCost));
-        TotalCostText.Text = $"LKR {total:N2}";
+        TotalCostText.Text = $"Rs. {total:N2}";
     }
 
     private async void CommitReceiving_Click(object sender, RoutedEventArgs e)
@@ -151,7 +151,7 @@ public partial class GoodsReceivingDialog : Window
             var receipt = await _receivingService.ReceiveGoodsAsync(cmd);
 
             MessageBox.Show(
-                $"Goods receiving committed successfully!\n\nSupplier: {receipt.SupplierName}\nInvoice: {receipt.InvoiceReference}\nItems Received: {receipt.Lines.Count}\nTotal Cost: LKR {receipt.TotalCost:N2}\n\nInventory levels and moving average cost bases updated.",
+                $"Goods receiving committed successfully!\n\nSupplier: {receipt.SupplierName}\nInvoice: {receipt.InvoiceReference}\nItems Received: {receipt.Lines.Count}\nTotal Cost: Rs. {receipt.TotalCost:N2}\n\nInventory levels and moving average cost bases updated.",
                 "Receiving Committed",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information

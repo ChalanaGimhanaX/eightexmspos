@@ -3,19 +3,19 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Customer Information" Height="480" Width="460"
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
-        Background="{StaticResource BackgroundBrush}">
+        Background="{DynamicResource BackgroundBrush}">
     <Grid Margin="24">
         <StackPanel>
             <TextBlock x:Name="DialogTitleText" Text="Add New Customer" FontSize="18" FontWeight="Bold" 
-                       Foreground="{StaticResource PrimaryDarkBrush}" Margin="0,0,0,16"/>
+                       Foreground="{DynamicResource PrimaryBrush}" Margin="0,0,0,16"/>
 
-            <TextBlock Text="Customer Name *" FontWeight="SemiBold" FontSize="13" Margin="0,0,0,4"/>
+            <TextBlock Text="Customer Name *" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,4"/>
             <TextBox x:Name="NameBox" Height="36" FontSize="14" Padding="6,4" Margin="0,0,0,10"/>
 
-            <TextBlock Text="Phone Number *" FontWeight="SemiBold" FontSize="13" Margin="0,0,0,4"/>
+            <TextBlock Text="Phone Number *" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,4"/>
             <TextBox x:Name="PhoneBox" Height="36" FontSize="14" Padding="6,4" Margin="0,0,0,10"/>
 
-            <TextBlock Text="Address" FontWeight="SemiBold" FontSize="13" Margin="0,0,0,4"/>
+            <TextBlock Text="Address" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,4"/>
             <TextBox x:Name="AddressBox" Height="36" FontSize="14" Padding="6,4" Margin="0,0,0,10"/>
 
             <Grid Margin="0,0,0,10">
@@ -26,25 +26,25 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0">
-                    <TextBlock Text="Credit Limit (LKR)" FontWeight="SemiBold" FontSize="13" Margin="0,0,0,4"/>
+                    <TextBlock Text="Credit Limit (Rs.)" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,4"/>
                     <TextBox x:Name="CreditLimitBox" Height="36" FontSize="14" Padding="6,4" Text="10000.00"/>
                 </StackPanel>
 
                 <StackPanel x:Name="InitialBalancePanel" Grid.Column="2">
-                    <TextBlock Text="Initial Balance (LKR)" FontWeight="SemiBold" FontSize="13" Margin="0,0,0,4"/>
+                    <TextBlock Text="Initial Balance (Rs.)" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource ForegroundBrush}" Margin="0,0,0,4"/>
                     <TextBox x:Name="InitialBalanceBox" Height="36" FontSize="14" Padding="6,4" Text="0.00"/>
                 </StackPanel>
             </Grid>
 
-            <CheckBox x:Name="ActiveCheckBox" Content="Customer is Active" IsChecked="True" FontSize="13" Margin="0,4,0,16"/>
+            <CheckBox x:Name="ActiveCheckBox" Content="Customer is Active" IsChecked="True" FontSize="13" Foreground="{DynamicResource ForegroundBrush}" Margin="0,4,0,16"/>
 
-            <TextBlock x:Name="ErrorText" Foreground="Red" FontSize="12" Margin="0,0,0,10" Visibility="Collapsed" TextWrapping="Wrap"/>
+            <TextBlock x:Name="ErrorText" Foreground="{DynamicResource DangerBrush}" FontSize="12" Margin="0,0,0,10" Visibility="Collapsed" TextWrapping="Wrap"/>
 
             <DockPanel Margin="0,8,0,0">
-                <Button Content="Cancel" Width="100" Height="42" Background="#ECEFF1" 
-                        Foreground="#37474F" FontWeight="SemiBold" Click="Cancel_Click"/>
+                <Button Content="Cancel" Width="100" Height="42" Background="{DynamicResource SurfaceCardBrush}" 
+                        Foreground="{DynamicResource ForegroundBrush}" FontWeight="SemiBold" Click="Cancel_Click"/>
                 <Button Content="Save Customer" Height="42" Margin="12,0,0,0" 
-                        Background="{StaticResource PrimaryBrush}" Foreground="White" 
+                        Background="{DynamicResource PrimaryBrush}" Foreground="{DynamicResource TextOnPrimaryBrush}" 
                         FontWeight="Bold" FontSize="15" Click="Save_Click"/>
             </DockPanel>
         </StackPanel>
