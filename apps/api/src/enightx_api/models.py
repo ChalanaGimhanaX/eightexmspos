@@ -15,7 +15,11 @@ class Device(Base):
     hardware_fingerprint = Column(String, nullable=False)
     app_version = Column(String, nullable=False)
     device_generation = Column(Integer, nullable=False, default=1)
-    token = Column(String, nullable=False)
+    token = Column(String, nullable=False, unique=True, index=True)
+    is_active = Column(Boolean, nullable=False, default=True)
+    status = Column(String(32), nullable=False, default="ONLINE")
+    last_heartbeat_at = Column(DateTime(timezone=True), nullable=True)
+    last_sync_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=func.now())
 
 class SyncBatch(Base):

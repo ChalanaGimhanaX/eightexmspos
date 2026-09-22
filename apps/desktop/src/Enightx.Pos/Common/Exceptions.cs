@@ -41,3 +41,16 @@ public class CreditLimitExceededException : PosException
 {
     public CreditLimitExceededException(string message) : base(message) { }
 }
+
+public class LicenseExpiredException : PosException
+{
+    public LicenseExpiredException(string message = "License has expired and offline grace period has ended. Checkout is locked.") : base(message) { }
+    public LicenseExpiredException(string message, Exception inner) : base(message, inner) { }
+}
+
+public class LicenseLockoutException : LicenseExpiredException
+{
+    public LicenseLockoutException(string message = "License has expired and offline grace period has ended. Checkout is locked.") : base(message) { }
+    public LicenseLockoutException(string message, Exception inner) : base(message, inner) { }
+}
+

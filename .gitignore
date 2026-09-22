@@ -58,6 +58,9 @@ logs/
 
 # Review bundles and local drops
 review/submissions/*/artifacts/
+.agents/
+ORIGINAL_REQUEST.md
+PROJECT.md
 
 # OS files
 .DS_Store

@@ -23,6 +23,15 @@
                     </Border>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Button Content="🏷️ Products" Height="32" Padding="8,0" Margin="0,0,6,0"
+                            Background="#37474F" Foreground="White" FontWeight="SemiBold" FontSize="11" BorderThickness="0"
+                            Cursor="Hand" Click="ProductManagement_Click"/>
+                    <Button Content="📅 Daily Report" Height="32" Padding="8,0" Margin="0,0,6,0"
+                            Background="#37474F" Foreground="White" FontWeight="SemiBold" FontSize="11" BorderThickness="0"
+                            Cursor="Hand" Click="DailyReport_Click"/>
+                    <Button Content="📋 Valuation" Height="32" Padding="8,0" Margin="0,0,6,0"
+                            Background="#37474F" Foreground="White" FontWeight="SemiBold" FontSize="11" BorderThickness="0"
+                            Cursor="Hand" Click="InventoryValuation_Click"/>
                     <Button Content="👥 Customers" Height="32" Padding="10,0" Margin="0,0,8,0"
                             Background="#2E7D32" Foreground="White" FontWeight="SemiBold" FontSize="12" BorderThickness="0"
                             Cursor="Hand" Click="Customers_Click"/>

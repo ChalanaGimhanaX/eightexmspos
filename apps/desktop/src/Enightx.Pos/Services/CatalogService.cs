@@ -9,6 +9,8 @@ namespace Enightx.Pos.Services;
 public interface ICatalogService
 {
     Task AddProductAsync(Product product);
+    Task UpdateProductAsync(Product product);
+    Task DeleteProductAsync(string productId);
     Task<Product?> GetProductByBarcodeAsync(string barcode);
     Task<Product?> GetProductByIdAsync(string productId);
     Task<decimal> GetStockOnHandAsync(string productId);
@@ -17,6 +19,7 @@ public interface ICatalogService
     Task<DateTime?> GetLastCatalogSyncTimeAsync();
     Task SetLastCatalogSyncTimeAsync(DateTime timestamp);
     Task<List<Product>> GetAllActiveProductsAsync();
+    Task<List<Product>> GetAllProductsAsync(bool includeInactive = false);
     Task<List<Category>> GetAllActiveCategoriesAsync();
 }
 
@@ -31,25 +34,97 @@ public class CatalogService : ICatalogService
 
     public async Task AddProductAsync(Product product)
     {
+        if (product == null) throw new ArgumentNullException(nameof(product));
+        if (string.IsNullOrWhiteSpace(product.ProductId)) throw new ArgumentException("Product ID cannot be empty.", nameof(product));
+        if (string.IsNullOrWhiteSpace(product.Barcode)) throw new ArgumentException("Barcode cannot be empty.", nameof(product));
+        if (string.IsNullOrWhiteSpace(product.Name)) throw new ArgumentException("Product name cannot be empty.", nameof(product));
+        if (product.UnitPrice < 0) throw new ArgumentException("Unit price cannot be negative.", nameof(product));
+        if (product.CostBasis < 0) throw new ArgumentException("Cost basis cannot be negative.", nameof(product));
+        if (product.TaxRate < 0) throw new ArgumentException("Tax rate cannot be negative.", nameof(product));
+        if (product.MinStockThreshold < 0) throw new ArgumentException("Minimum stock threshold cannot be negative.", nameof(product));
+
         using var conn = _db.CreateConnection();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
-            INSERT INTO products (product_id, category_id, barcode, name, name_si, name_ta, unit_price, cost_basis, tax_rate, stock_on_hand, is_active)
-            VALUES ($id, $catid, $bcode, $name, $nsi, $nta, $uprice, $cbasis, $trate, $soh, $active);
+            INSERT INTO products (product_id, category_id, barcode, name, name_si, name_ta, unit_price, cost_basis, tax_rate, stock_on_hand, min_stock_threshold, is_active)
+            VALUES ($id, $catid, $bcode, $name, $nsi, $nta, $uprice, $cbasis, $trate, $soh, $minstock, $active);
         ";
         cmd.Parameters.AddWithValue("$id", product.ProductId);
         cmd.Parameters.AddWithValue("$catid", (object?)product.CategoryId ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("$bcode", product.Barcode);
-        cmd.Parameters.AddWithValue("$name", product.Name);
+        cmd.Parameters.AddWithValue("$bcode", product.Barcode.Trim());
+        cmd.Parameters.AddWithValue("$name", product.Name.Trim());
         cmd.Parameters.AddWithValue("$nsi", (object?)product.NameSi ?? DBNull.Value);
         cmd.Parameters.AddWithValue("$nta", (object?)product.NameTa ?? DBNull.Value);
         cmd.Parameters.AddWithValue("$uprice", product.UnitPrice);
         cmd.Parameters.AddWithValue("$cbasis", product.CostBasis);
         cmd.Parameters.AddWithValue("$trate", product.TaxRate);
         cmd.Parameters.AddWithValue("$soh", product.StockOnHand);
+        cmd.Parameters.AddWithValue("$minstock", product.MinStockThreshold);
         cmd.Parameters.AddWithValue("$active", product.IsActive ? 1 : 0);
 
         await cmd.ExecuteNonQueryAsync();
+    }
+
+    public async Task UpdateProductAsync(Product product)
+    {
+        if (product == null) throw new ArgumentNullException(nameof(product));
+        if (string.IsNullOrWhiteSpace(product.ProductId)) throw new ArgumentException("Product ID cannot be empty.", nameof(product));
+        if (string.IsNullOrWhiteSpace(product.Barcode)) throw new ArgumentException("Barcode cannot be empty.", nameof(product));
+        if (string.IsNullOrWhiteSpace(product.Name)) throw new ArgumentException("Product name cannot be empty.", nameof(product));
+        if (product.UnitPrice < 0) throw new ArgumentException("Unit price cannot be negative.", nameof(product));
+        if (product.CostBasis < 0) throw new ArgumentException("Cost basis cannot be negative.", nameof(product));
+        if (product.TaxRate < 0) throw new ArgumentException("Tax rate cannot be negative.", nameof(product));
+        if (product.MinStockThreshold < 0) throw new ArgumentException("Minimum stock threshold cannot be negative.", nameof(product));
+
+        using var conn = _db.CreateConnection();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            UPDATE products SET
+                category_id = $catid,
+                barcode = $bcode,
+                name = $name,
+                name_si = $nsi,
+                name_ta = $nta,
+                unit_price = $uprice,
+                cost_basis = $cbasis,
+                tax_rate = $trate,
+                min_stock_threshold = $minstock,
+                is_active = $active
+            WHERE product_id = $id;
+        ";
+        cmd.Parameters.AddWithValue("$id", product.ProductId);
+        cmd.Parameters.AddWithValue("$catid", (object?)product.CategoryId ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("$bcode", product.Barcode.Trim());
+        cmd.Parameters.AddWithValue("$name", product.Name.Trim());
+        cmd.Parameters.AddWithValue("$nsi", (object?)product.NameSi ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("$nta", (object?)product.NameTa ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("$uprice", product.UnitPrice);
+        cmd.Parameters.AddWithValue("$cbasis", product.CostBasis);
+        cmd.Parameters.AddWithValue("$trate", product.TaxRate);
+        cmd.Parameters.AddWithValue("$minstock", product.MinStockThreshold);
+        cmd.Parameters.AddWithValue("$active", product.IsActive ? 1 : 0);
+
+        var rows = await cmd.ExecuteNonQueryAsync();
+        if (rows == 0)
+        {
+            throw new KeyNotFoundException($"Product with ID '{product.ProductId}' was not found.");
+        }
+    }
+
+    public async Task DeleteProductAsync(string productId)
+    {
+        if (string.IsNullOrWhiteSpace(productId)) throw new ArgumentException("Product ID cannot be empty.", nameof(productId));
+
+        using var conn = _db.CreateConnection();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "UPDATE products SET is_active = 0 WHERE product_id = $id;";
+        cmd.Parameters.AddWithValue("$id", productId);
+
+        var rows = await cmd.ExecuteNonQueryAsync();
+        if (rows == 0)
+        {
+            throw new KeyNotFoundException($"Product with ID '{productId}' was not found.");
+        }
     }
 
     public async Task<Product?> GetProductByBarcodeAsync(string barcode)
@@ -57,7 +132,7 @@ public class CatalogService : ICatalogService
         using var conn = _db.CreateConnection();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
-            SELECT product_id, barcode, name, name_si, name_ta, unit_price, cost_basis, tax_rate, stock_on_hand, is_active, category_id
+            SELECT product_id, barcode, name, name_si, name_ta, unit_price, cost_basis, tax_rate, stock_on_hand, is_active, category_id, min_stock_threshold
             FROM products WHERE barcode = $bcode AND is_active = 1;
         ";
         cmd.Parameters.AddWithValue("$bcode", barcode.Trim());
@@ -73,7 +148,7 @@ public class CatalogService : ICatalogService
         using var conn = _db.CreateConnection();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
-            SELECT product_id, barcode, name, name_si, name_ta, unit_price, cost_basis, tax_rate, stock_on_hand, is_active, category_id
+            SELECT product_id, barcode, name, name_si, name_ta, unit_price, cost_basis, tax_rate, stock_on_hand, is_active, category_id, min_stock_threshold
             FROM products WHERE product_id = $id AND is_active = 1;
         ";
         cmd.Parameters.AddWithValue("$id", productId);
@@ -213,8 +288,8 @@ public class CatalogService : ICatalogService
                 using var cmd = conn.CreateCommand();
                 cmd.Transaction = tx;
                 cmd.CommandText = @"
-                    INSERT INTO products (product_id, category_id, barcode, name, name_si, name_ta, unit_price, cost_basis, tax_rate, stock_on_hand, is_active)
-                    VALUES ($id, $catid, $bcode, $name, $nsi, $nta, $uprice, $cbasis, $trate, 0.0, $active)
+                    INSERT INTO products (product_id, category_id, barcode, name, name_si, name_ta, unit_price, cost_basis, tax_rate, stock_on_hand, min_stock_threshold, is_active)
+                    VALUES ($id, $catid, $bcode, $name, $nsi, $nta, $uprice, $cbasis, $trate, 0.0, $minstock, $active)
                     ON CONFLICT(product_id) DO UPDATE SET
                         category_id = excluded.category_id,
                         barcode = excluded.barcode,
@@ -224,6 +299,7 @@ public class CatalogService : ICatalogService
                         unit_price = excluded.unit_price,
                         cost_basis = excluded.cost_basis,
                         tax_rate = excluded.tax_rate,
+                        min_stock_threshold = excluded.min_stock_threshold,
                         is_active = excluded.is_active;
                 ";
                 cmd.Parameters.AddWithValue("$id", prod.ProductId);
@@ -235,6 +311,7 @@ public class CatalogService : ICatalogService
                 cmd.Parameters.AddWithValue("$uprice", prod.UnitPrice);
                 cmd.Parameters.AddWithValue("$cbasis", prod.CostBasis);
                 cmd.Parameters.AddWithValue("$trate", prod.TaxRate);
+                cmd.Parameters.AddWithValue("$minstock", prod.MinStockThreshold);
                 cmd.Parameters.AddWithValue("$active", prod.IsActive ? 1 : 0);
                 await cmd.ExecuteNonQueryAsync();
             }
@@ -313,11 +390,17 @@ public class CatalogService : ICatalogService
 
     public async Task<List<Product>> GetAllActiveProductsAsync()
     {
+        return await GetAllProductsAsync(includeInactive: false);
+    }
+
+    public async Task<List<Product>> GetAllProductsAsync(bool includeInactive = false)
+    {
         using var conn = _db.CreateConnection();
         using var cmd = conn.CreateCommand();
-        cmd.CommandText = @"
-            SELECT product_id, barcode, name, name_si, name_ta, unit_price, cost_basis, tax_rate, stock_on_hand, is_active, category_id
-            FROM products WHERE is_active = 1
+        cmd.CommandText = $@"
+            SELECT product_id, barcode, name, name_si, name_ta, unit_price, cost_basis, tax_rate, stock_on_hand, is_active, category_id, min_stock_threshold
+            FROM products
+            {(includeInactive ? "" : "WHERE is_active = 1")}
             ORDER BY name ASC;
         ";
         using var reader = await cmd.ExecuteReaderAsync();
@@ -368,7 +451,8 @@ public class CatalogService : ICatalogService
             TaxRate = reader.GetDecimal(7),
             StockOnHand = reader.GetDecimal(8),
             IsActive = reader.GetInt32(9) == 1,
-            CategoryId = reader.FieldCount > 10 && !reader.IsDBNull(10) ? reader.GetString(10) : null
+            CategoryId = reader.FieldCount > 10 && !reader.IsDBNull(10) ? reader.GetString(10) : null,
+            MinStockThreshold = reader.FieldCount > 11 && !reader.IsDBNull(11) ? reader.GetDecimal(11) : 0.0m
         };
     }
 }

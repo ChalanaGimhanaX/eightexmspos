@@ -148,6 +148,105 @@ public partial class BillingView : UserControl
         }
     }
 
+    private async void ProductManagement_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is BillingViewModel vm)
+        {
+            User activeUser = vm.CurrentUser;
+            if (vm.CurrentUser.Role != Role.Manager && vm.CurrentUser.Role != Role.Owner)
+            {
+                var pinDialog = new ManagerPinDialog(
+                    App.AuthService,
+                    actionDescription: "Product Catalog Management Access",
+                    branchId: vm.CurrentShift.BranchId,
+                    counterId: vm.CurrentShift.CounterId
+                )
+                {
+                    Owner = Window.GetWindow(this)
+                };
+
+                if (pinDialog.ShowDialog() != true || pinDialog.AuthorizedUser == null)
+                {
+                    return;
+                }
+
+                activeUser = pinDialog.AuthorizedUser;
+            }
+
+            var dialog = new ProductManagementDialog(App.CatalogService, activeUser)
+            {
+                Owner = Window.GetWindow(this)
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                await vm.LoadCatalogAsync();
+            }
+        }
+    }
+
+    private void Products_Click(object sender, RoutedEventArgs e) => ProductManagement_Click(sender, e);
+
+    private void DailyReport_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is BillingViewModel vm)
+        {
+            if (vm.CurrentUser.Role != Role.Manager && vm.CurrentUser.Role != Role.Owner)
+            {
+                var pinDialog = new ManagerPinDialog(
+                    App.AuthService,
+                    actionDescription: "Daily Financial Report Access",
+                    branchId: vm.CurrentShift.BranchId,
+                    counterId: vm.CurrentShift.CounterId
+                )
+                {
+                    Owner = Window.GetWindow(this)
+                };
+
+                if (pinDialog.ShowDialog() != true || pinDialog.AuthorizedUser == null)
+                {
+                    return;
+                }
+            }
+
+            var dialog = new DailyReportDialog(App.ReportService, vm.CurrentShift.BranchId)
+            {
+                Owner = Window.GetWindow(this)
+            };
+            dialog.ShowDialog();
+        }
+    }
+
+    private void InventoryValuation_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is BillingViewModel vm)
+        {
+            if (vm.CurrentUser.Role != Role.Manager && vm.CurrentUser.Role != Role.Owner)
+            {
+                var pinDialog = new ManagerPinDialog(
+                    App.AuthService,
+                    actionDescription: "Inventory Valuation Report Access",
+                    branchId: vm.CurrentShift.BranchId,
+                    counterId: vm.CurrentShift.CounterId
+                )
+                {
+                    Owner = Window.GetWindow(this)
+                };
+
+                if (pinDialog.ShowDialog() != true || pinDialog.AuthorizedUser == null)
+                {
+                    return;
+                }
+            }
+
+            var dialog = new InventoryValuationDialog(App.ReportService)
+            {
+                Owner = Window.GetWindow(this)
+            };
+            dialog.ShowDialog();
+        }
+    }
+
     private void Customers_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is BillingViewModel vm)

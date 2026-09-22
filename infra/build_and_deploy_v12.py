@@ -45,8 +45,8 @@ def compute_sha256(path: str) -> str:
     return h.hexdigest()
 
 def main():
-    ver = "1.0.13"
-    notes = "Enightx POS v1.0.13: Customer Credit ('Naya' Ledger), Debt Collections, Customer Management, and Manager Role PIN Authorization Gate."
+    ver = "1.0.16"
+    notes = "Enightx POS v1.0.16: Full Phase 2 & 3 UI Update - Customer Credit (Naya Ledger), Held Bills, Shift Control, Returns & Refunds, Goods Receiving, Reports, and Manager PIN Gate."
 
     print(f"==================================================")
     print(f" Building & Deploying Enightx POS v{ver}")
@@ -79,6 +79,10 @@ def main():
     with open(os.path.join(FOLDER_DIR, "enightx_version.txt"), "w", encoding="utf-8") as f:
         f.write(ver)
     shutil.copy2(os.path.join(FOLDER_DIR, "Enightx.Pos.Wpf.exe"), os.path.join(FOLDER_DIR, "EnightxPos.exe"))
+    # Copy ApplyUpdate.ps1
+    ps1_src = os.path.join(WORKSPACE, "apps/desktop/src/Enightx.Pos.Wpf/ApplyUpdate.ps1")
+    if os.path.isfile(ps1_src):
+        shutil.copy2(ps1_src, os.path.join(FOLDER_DIR, "ApplyUpdate.ps1"))
 
     # 2. Package Setup Zip
     setup_zip = os.path.join(OUTPUT_DIR, "EnightxPos-Setup.zip")
@@ -99,7 +103,7 @@ def main():
             for file in files:
                 fp = os.path.join(root, file)
                 rel = os.path.relpath(fp, FOLDER_DIR)
-                if file.startswith("Enightx.") or file.endswith(".json") or file == "enightx_version.txt" or "sqlite" in file.lower() or "resources.dll" in file.lower():
+                if file.startswith("Enightx.") or file.endswith(".json") or file == "enightx_version.txt" or file == "ApplyUpdate.ps1" or "sqlite" in file.lower() or "resources.dll" in file.lower():
                     z.write(fp, rel)
     print(f"    Update zip size: {os.path.getsize(update_zip) / (1024*1024):.2f} MB")
 
@@ -122,15 +126,29 @@ def main():
     zip_sha = compute_sha256(update_zip)
     manifest = {
         "version": ver,
+        "Version": ver,
         "releaseNotes": notes,
+        "ReleaseNotes": notes,
+        "release_notes": notes,
         "downloadUrl": "https://posapi.eightexms.site/downloads/Enightx.Pos.Wpf.exe",
+        "DownloadUrl": "https://posapi.eightexms.site/downloads/Enightx.Pos.Wpf.exe",
+        "download_url": "https://posapi.eightexms.site/downloads/Enightx.Pos.Wpf.exe",
         "updateZipUrl": "https://posapi.eightexms.site/downloads/EnightxPos-Update.zip",
+        "UpdateZipUrl": "https://posapi.eightexms.site/downloads/EnightxPos-Update.zip",
+        "update_zip_url": "https://posapi.eightexms.site/downloads/EnightxPos-Update.zip",
         "setupZipUrl": "https://posapi.eightexms.site/downloads/EnightxPos-Setup.zip",
+        "SetupZipUrl": "https://posapi.eightexms.site/downloads/EnightxPos-Setup.zip",
+        "setup_zip_url": "https://posapi.eightexms.site/downloads/EnightxPos-Setup.zip",
         "sha256": exe_sha,
+        "Sha256": exe_sha,
         "zipSha256": zip_sha,
+        "ZipSha256": zip_sha,
         "zipSizeBytes": os.path.getsize(update_zip),
+        "ZipSizeBytes": os.path.getsize(update_zip),
         "publishedAtUtc": datetime.now(timezone.utc).isoformat(),
-        "mandatory": False
+        "PublishedAtUtc": datetime.now(timezone.utc).isoformat(),
+        "mandatory": True,
+        "Mandatory": True
     }
     manifest_path = os.path.join(OUTPUT_DIR, "version.json")
     with open(manifest_path, "w", encoding="utf-8") as f:
@@ -152,6 +170,8 @@ def main():
     sftp.put(exe_path, f"{TARGET_DIR}/Enightx.Pos.Wpf.exe")
     print("    Uploading EnightxPos.exe...")
     sftp.put(os.path.join(SINGLE_DIR, "EnightxPos.exe"), f"{TARGET_DIR}/EnightxPos.exe")
+    print("    Uploading enightx_version.txt...")
+    sftp.put(os.path.join(FOLDER_DIR, "enightx_version.txt"), f"{TARGET_DIR}/enightx_version.txt")
     print("    Uploading version.json...")
     sftp.put(manifest_path, f"{TARGET_DIR}/version.json")
     sftp.close()
@@ -163,13 +183,13 @@ def main():
     print(chan.recv(4096).decode("utf-8", errors="replace"))
     c.close()
 
-    # 7. Broadcast via WebSocket
-    print("--> Triggering real-time broadcast...")
+    # 7. Broadcast via WebSocket API
+    print("--> Triggering real-time broadcast via API...")
     try:
         req = urllib.request.Request(
             "https://posapi.eightexms.site/api/v1/updates/broadcast",
-            data=json.dumps(manifest).encode("utf-8"),
-            headers={"Content-Type": "application/json", "Authorization": "Bearer secure_release_token_enightx_2026"}
+            data=json.dumps({"version": ver, "releaseNotes": notes, "downloadUrl": "https://posapi.eightexms.site/downloads/Enightx.Pos.Wpf.exe"}).encode("utf-8"),
+            headers={"Content-Type": "application/json"}
         )
         with urllib.request.urlopen(req, timeout=10) as resp:
             data = json.loads(resp.read().decode("utf-8"))

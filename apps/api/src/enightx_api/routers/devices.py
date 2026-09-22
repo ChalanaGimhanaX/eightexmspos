@@ -26,7 +26,9 @@ def enroll_device(request: DeviceEnrollmentRequest, db: Session = Depends(get_db
         hardware_fingerprint=request.hardware_fingerprint,
         app_version=request.app_version,
         device_generation=1,
-        token=token
+        token=token,
+        is_active=True,
+        status="ONLINE"
     )
     db.add(device)
     db.commit()
@@ -43,13 +45,21 @@ def device_heartbeat(request: HeartbeatRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Device not found")
     if device.token != request.token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid device token")
+    if hasattr(device, "is_active") and not device.is_active:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Device enrollment has been deactivated")
 
     # Update app version if upgraded
     if request.app_version and device.app_version != request.app_version:
         device.app_version = request.app_version
-        db.commit()
+
+    now = datetime.now(timezone.utc)
+    device.last_heartbeat_at = now
+    if request.status:
+        device.status = request.status
+
+    db.commit()
 
     return HeartbeatResponse(
         acknowledged=True,
-        server_time=datetime.now(timezone.utc)
+        server_time=now
     )

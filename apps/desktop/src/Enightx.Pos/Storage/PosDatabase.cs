@@ -144,6 +144,123 @@ public class PosDatabase : IDisposable
             alterSalesCustCmd.ExecuteNonQuery();
         }
         catch { }
+
+        try
+        {
+            using var alterMinStockCmd = conn.CreateCommand();
+            alterMinStockCmd.CommandText = "ALTER TABLE products ADD COLUMN min_stock_threshold NUMERIC NOT NULL DEFAULT 0.0;";
+            alterMinStockCmd.ExecuteNonQuery();
+        }
+        catch { }
+
+        try
+        {
+            using var cmdM3 = conn.CreateCommand();
+            cmdM3.CommandText = @"
+                CREATE TABLE IF NOT EXISTS transfers (
+                    transfer_id TEXT PRIMARY KEY,
+                    transfer_number TEXT UNIQUE NOT NULL,
+                    tenant_id TEXT NOT NULL DEFAULT 'TENANT_LK_01',
+                    source_branch_id TEXT NOT NULL,
+                    dest_branch_id TEXT NOT NULL,
+                    status INTEGER NOT NULL DEFAULT 2,
+                    dispatched_by TEXT NOT NULL,
+                    dispatched_at_utc TEXT NOT NULL,
+                    received_by TEXT,
+                    received_at_utc TEXT,
+                    cancelled_by TEXT,
+                    cancelled_at_utc TEXT,
+                    cancellation_reason TEXT,
+                    total_dispatched_quantity NUMERIC NOT NULL DEFAULT 0,
+                    total_received_quantity NUMERIC,
+                    has_discrepancy INTEGER NOT NULL DEFAULT 0,
+                    discrepancy_notes TEXT,
+                    notes TEXT,
+                    created_at_utc TEXT NOT NULL,
+                    updated_at_utc TEXT NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS transfer_items (
+                    transfer_item_id TEXT PRIMARY KEY,
+                    transfer_id TEXT NOT NULL,
+                    product_id TEXT NOT NULL,
+                    product_name TEXT NOT NULL,
+                    barcode TEXT NOT NULL,
+                    dispatched_quantity NUMERIC NOT NULL,
+                    received_quantity NUMERIC,
+                    discrepancy_quantity NUMERIC NOT NULL DEFAULT 0,
+                    unit_cost NUMERIC NOT NULL DEFAULT 0,
+                    notes TEXT,
+                    FOREIGN KEY (transfer_id) REFERENCES transfers(transfer_id) ON DELETE CASCADE,
+                    FOREIGN KEY (product_id) REFERENCES products(product_id)
+                );
+
+                CREATE TABLE IF NOT EXISTS stock_count_sessions (
+                    session_id TEXT PRIMARY KEY,
+                    tenant_id TEXT NOT NULL,
+                    branch_id TEXT NOT NULL,
+                    status INTEGER NOT NULL DEFAULT 1,
+                    started_by TEXT NOT NULL,
+                    started_at_utc TEXT NOT NULL,
+                    completed_by TEXT,
+                    completed_at_utc TEXT,
+                    cancelled_by TEXT,
+                    cancelled_at_utc TEXT,
+                    cancellation_reason TEXT,
+                    notes TEXT,
+                    total_items_counted INTEGER NOT NULL DEFAULT 0,
+                    total_variance_quantity NUMERIC NOT NULL DEFAULT 0.0,
+                    total_variance_value NUMERIC NOT NULL DEFAULT 0.0,
+                    lines_with_variance_count INTEGER NOT NULL DEFAULT 0
+                );
+
+                CREATE TABLE IF NOT EXISTS stock_count_items (
+                    item_id TEXT PRIMARY KEY,
+                    session_id TEXT NOT NULL,
+                    product_id TEXT NOT NULL,
+                    product_name TEXT NOT NULL,
+                    barcode TEXT NOT NULL,
+                    snapshot_stock NUMERIC NOT NULL,
+                    counted_quantity NUMERIC,
+                    variance_quantity NUMERIC NOT NULL DEFAULT 0.0,
+                    cost_basis NUMERIC NOT NULL DEFAULT 0.0,
+                    variance_value NUMERIC NOT NULL DEFAULT 0.0,
+                    is_counted INTEGER NOT NULL DEFAULT 0,
+                    counted_by TEXT,
+                    counted_at_utc TEXT,
+                    notes TEXT,
+                    FOREIGN KEY (session_id) REFERENCES stock_count_sessions(session_id) ON DELETE CASCADE,
+                    FOREIGN KEY (product_id) REFERENCES products(product_id)
+                );
+            ";
+            cmdM3.ExecuteNonQuery();
+        }
+        catch { }
+
+        try
+        {
+            using var cmdLic = conn.CreateCommand();
+            cmdLic.CommandText = @"
+                CREATE TABLE IF NOT EXISTS license_entitlements (
+                    entitlement_id TEXT PRIMARY KEY,
+                    tenant_id TEXT NOT NULL,
+                    plan TEXT NOT NULL,
+                    issued_at_utc TEXT NOT NULL,
+                    expires_at_utc TEXT NOT NULL,
+                    grace_period_days INTEGER NOT NULL DEFAULT 7,
+                    max_devices INTEGER NOT NULL DEFAULT 1,
+                    features_json TEXT NOT NULL DEFAULT '[]',
+                    revision INTEGER NOT NULL DEFAULT 1,
+                    signature_hex TEXT NOT NULL,
+                    raw_payload_base64 TEXT NOT NULL,
+                    applied_at_utc TEXT NOT NULL
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_license_entitlements_tenant ON license_entitlements(tenant_id, revision DESC);
+            ";
+            cmdLic.ExecuteNonQuery();
+        }
+        catch { }
     }
 
     private const string SchemaDdl = @"
@@ -179,6 +296,7 @@ public class PosDatabase : IDisposable
             cost_basis NUMERIC NOT NULL,
             tax_rate NUMERIC NOT NULL DEFAULT 0.0,
             stock_on_hand NUMERIC NOT NULL DEFAULT 0.0,
+            min_stock_threshold NUMERIC NOT NULL DEFAULT 0.0,
             is_active INTEGER NOT NULL DEFAULT 1,
             FOREIGN KEY (category_id) REFERENCES categories(category_id)
         );
@@ -381,7 +499,111 @@ public class PosDatabase : IDisposable
         );
 
         CREATE INDEX IF NOT EXISTS idx_customer_ledger_cust ON customer_ledger_entries(customer_id);
+
+        CREATE TABLE IF NOT EXISTS transfers (
+            transfer_id TEXT PRIMARY KEY,
+            transfer_number TEXT UNIQUE NOT NULL,
+            tenant_id TEXT NOT NULL DEFAULT 'TENANT_LK_01',
+            source_branch_id TEXT NOT NULL,
+            dest_branch_id TEXT NOT NULL,
+            status INTEGER NOT NULL DEFAULT 2,
+            dispatched_by TEXT NOT NULL,
+            dispatched_at_utc TEXT NOT NULL,
+            received_by TEXT,
+            received_at_utc TEXT,
+            cancelled_by TEXT,
+            cancelled_at_utc TEXT,
+            cancellation_reason TEXT,
+            total_dispatched_quantity NUMERIC NOT NULL DEFAULT 0,
+            total_received_quantity NUMERIC,
+            has_discrepancy INTEGER NOT NULL DEFAULT 0,
+            discrepancy_notes TEXT,
+            notes TEXT,
+            created_at_utc TEXT NOT NULL,
+            updated_at_utc TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS transfer_items (
+            transfer_item_id TEXT PRIMARY KEY,
+            transfer_id TEXT NOT NULL,
+            product_id TEXT NOT NULL,
+            product_name TEXT NOT NULL,
+            barcode TEXT NOT NULL,
+            dispatched_quantity NUMERIC NOT NULL,
+            received_quantity NUMERIC,
+            discrepancy_quantity NUMERIC NOT NULL DEFAULT 0,
+            unit_cost NUMERIC NOT NULL DEFAULT 0,
+            notes TEXT,
+            FOREIGN KEY (transfer_id) REFERENCES transfers(transfer_id) ON DELETE CASCADE,
+            FOREIGN KEY (product_id) REFERENCES products(product_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_transfers_source ON transfers(source_branch_id);
+        CREATE INDEX IF NOT EXISTS idx_transfers_dest ON transfers(dest_branch_id);
+        CREATE INDEX IF NOT EXISTS idx_transfers_status ON transfers(status);
+        CREATE INDEX IF NOT EXISTS idx_transfer_items_transfer ON transfer_items(transfer_id);
+        CREATE INDEX IF NOT EXISTS idx_transfer_items_product ON transfer_items(product_id);
+
+        CREATE TABLE IF NOT EXISTS stock_count_sessions (
+            session_id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            branch_id TEXT NOT NULL,
+            status INTEGER NOT NULL DEFAULT 1,
+            started_by TEXT NOT NULL,
+            started_at_utc TEXT NOT NULL,
+            completed_by TEXT,
+            completed_at_utc TEXT,
+            cancelled_by TEXT,
+            cancelled_at_utc TEXT,
+            cancellation_reason TEXT,
+            notes TEXT,
+            total_items_counted INTEGER NOT NULL DEFAULT 0,
+            total_variance_quantity NUMERIC NOT NULL DEFAULT 0.0,
+            total_variance_value NUMERIC NOT NULL DEFAULT 0.0,
+            lines_with_variance_count INTEGER NOT NULL DEFAULT 0
+        );
+
+        CREATE TABLE IF NOT EXISTS stock_count_items (
+            item_id TEXT PRIMARY KEY,
+            session_id TEXT NOT NULL,
+            product_id TEXT NOT NULL,
+            product_name TEXT NOT NULL,
+            barcode TEXT NOT NULL,
+            snapshot_stock NUMERIC NOT NULL,
+            counted_quantity NUMERIC,
+            variance_quantity NUMERIC NOT NULL DEFAULT 0.0,
+            cost_basis NUMERIC NOT NULL DEFAULT 0.0,
+            variance_value NUMERIC NOT NULL DEFAULT 0.0,
+            is_counted INTEGER NOT NULL DEFAULT 0,
+            counted_by TEXT,
+            counted_at_utc TEXT,
+            notes TEXT,
+            FOREIGN KEY (session_id) REFERENCES stock_count_sessions(session_id) ON DELETE CASCADE,
+            FOREIGN KEY (product_id) REFERENCES products(product_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_stock_count_sessions_branch ON stock_count_sessions(branch_id, status);
+        CREATE INDEX IF NOT EXISTS idx_stock_count_items_session ON stock_count_items(session_id);
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_stock_count_items_session_product ON stock_count_items(session_id, product_id);
+
+        CREATE TABLE IF NOT EXISTS license_entitlements (
+            entitlement_id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            plan TEXT NOT NULL,
+            issued_at_utc TEXT NOT NULL,
+            expires_at_utc TEXT NOT NULL,
+            grace_period_days INTEGER NOT NULL DEFAULT 7,
+            max_devices INTEGER NOT NULL DEFAULT 1,
+            features_json TEXT NOT NULL DEFAULT '[]',
+            revision INTEGER NOT NULL DEFAULT 1,
+            signature_hex TEXT NOT NULL,
+            raw_payload_base64 TEXT NOT NULL,
+            applied_at_utc TEXT NOT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_license_entitlements_tenant ON license_entitlements(tenant_id, revision DESC);
     ";
+
 
     public void Dispose()
     {

@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from typing import Optional
-from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi import APIRouter, Depends, Query, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
@@ -12,32 +12,72 @@ from ..schemas import (
     CategorySchema,
 )
 from ..database import get_db
-from ..models import SyncBatch, SyncEvent, Product, Category
+from ..dependencies import get_authenticated_device
+from ..models import SyncBatch, SyncEvent, Product, Category, Device
 
 router = APIRouter(prefix="/api/v1/sync", tags=["Sync"])
 
 @router.post("/push", response_model=SyncBatchResponse)
-def push_sync_batch(batch: SyncBatchRequest, db: Session = Depends(get_db)):
-    # 1. Idempotency check: If batch has already been processed, return existing status and ack sequence
-    existing_batch = db.query(SyncBatch).filter(SyncBatch.batch_id == batch.batch_id).first()
+def push_sync_batch(
+    batch: SyncBatchRequest,
+    device: Device = Depends(get_authenticated_device),
+    db: Session = Depends(get_db)
+):
+    # 1. Device and tenant integrity verification (403 Forbidden)
+    if batch.tenant_id != device.tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Batch tenant_id '{batch.tenant_id}' does not match authenticated device tenant '{device.tenant_id}' (tenant_id mismatch)"
+        )
+
+    if batch.source_device_id != device.device_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Batch source_device_id '{batch.source_device_id}' does not match authenticated device ID '{device.device_id}' (source_device_id mismatch)"
+        )
+
+    for ev in batch.events:
+        if ev.tenant_id != device.tenant_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Event {ev.event_id} tenant_id '{ev.tenant_id}' does not match authenticated tenant '{device.tenant_id}' (tenant_id mismatch)"
+            )
+        if ev.device_id != device.device_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Event {ev.event_id} device_id '{ev.device_id}' does not match authenticated device ID '{device.device_id}' (device_id mismatch)"
+            )
+        if ev.branch_id != device.branch_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Event {ev.event_id} branch_id '{ev.branch_id}' does not match authenticated branch ID '{device.branch_id}' (branch_id mismatch)"
+            )
+
+    # 2. Tenant-scoped idempotency check
+    existing_batch = db.query(SyncBatch).filter(
+        SyncBatch.batch_id == batch.batch_id,
+        SyncBatch.tenant_id == device.tenant_id
+    ).first()
     if existing_batch:
+        device.last_sync_at = datetime.now(timezone.utc)
+        db.commit()
         return SyncBatchResponse(
             batch_id=existing_batch.batch_id,
             acknowledged_sequence=existing_batch.acknowledged_sequence,
             status=existing_batch.status
         )
 
-    # 2. Calculate the max acknowledged source sequence from the batch
+    # 3. Calculate the max acknowledged source sequence from the batch
     if batch.events:
         max_seq = max(ev.source_sequence for ev in batch.events)
     else:
         max_seq = batch.batch_sequence
 
-    # 3. Create and persist batch record
+    # 4. Create and persist batch record
     sync_batch = SyncBatch(
         batch_id=batch.batch_id,
-        tenant_id=batch.tenant_id,
-        source_device_id=batch.source_device_id,
+        tenant_id=device.tenant_id,
+        source_device_id=device.device_id,
         source_generation=batch.source_generation,
         batch_sequence=batch.batch_sequence,
         sent_at=batch.sent_at,
@@ -49,14 +89,14 @@ def push_sync_batch(batch: SyncBatchRequest, db: Session = Depends(get_db)):
         db.add(sync_batch)
         db.flush()
 
-        # 4. Ingest and deduplicate events
+        # Ingest and deduplicate events
         for ev in batch.events:
             stmt = pg_insert(SyncEvent).values(
                 event_id=ev.event_id,
                 batch_id=batch.batch_id,
-                tenant_id=ev.tenant_id,
-                branch_id=ev.branch_id,
-                device_id=ev.device_id,
+                tenant_id=device.tenant_id,
+                branch_id=device.branch_id,
+                device_id=device.device_id,
                 device_generation=ev.device_generation,
                 source_sequence=ev.source_sequence,
                 schema_version=ev.schema_version,
@@ -67,17 +107,24 @@ def push_sync_batch(batch: SyncBatchRequest, db: Session = Depends(get_db)):
             ).on_conflict_do_nothing(index_elements=["event_id"])
             db.execute(stmt)
 
+        device.last_sync_at = datetime.now(timezone.utc)
         db.commit()
     except IntegrityError:
         db.rollback()
-        existing_batch = db.query(SyncBatch).filter(SyncBatch.batch_id == batch.batch_id).first()
+        existing_batch = db.query(SyncBatch).filter(
+            SyncBatch.batch_id == batch.batch_id,
+            SyncBatch.tenant_id == device.tenant_id
+        ).first()
         if existing_batch:
             return SyncBatchResponse(
                 batch_id=existing_batch.batch_id,
                 acknowledged_sequence=existing_batch.acknowledged_sequence,
                 status=existing_batch.status
             )
-        raise
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Batch ID collision with existing batch in another tenant"
+        )
 
     return SyncBatchResponse(
         batch_id=batch.batch_id,
@@ -91,6 +138,7 @@ def get_catalog_sync(
     since: Optional[str] = Query(default=None, description="ISO UTC timestamp"),
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=1000),
+    device: Device = Depends(get_authenticated_device),
     db: Session = Depends(get_db)
 ):
     now = datetime.now(timezone.utc)
@@ -107,8 +155,9 @@ def get_catalog_sync(
         except Exception:
             raise HTTPException(status_code=422, detail="Invalid ISO timestamp format for 'since'")
 
-    prod_query = db.query(Product)
-    cat_query = db.query(Category)
+    # Strictly scope products and categories to authenticated device's tenant_id
+    prod_query = db.query(Product).filter(Product.tenant_id == device.tenant_id)
+    cat_query = db.query(Category).filter(Category.tenant_id == device.tenant_id)
     deleted_item_ids: list[str] = []
 
     if since_dt is not None:
@@ -121,11 +170,14 @@ def get_catalog_sync(
             Category.deleted_at.is_(None)
         )
 
+        # Scoped soft-deleted items
         del_prods = db.query(Product.product_id).filter(
+            Product.tenant_id == device.tenant_id,
             Product.deleted_at.isnot(None),
             Product.deleted_at >= since_dt
         ).all()
         del_cats = db.query(Category.category_id).filter(
+            Category.tenant_id == device.tenant_id,
             Category.deleted_at.isnot(None),
             Category.deleted_at >= since_dt
         ).all()
@@ -168,6 +220,10 @@ def get_catalog_sync(
         for c in categories
     ]
 
+    # Record device.last_sync_at
+    device.last_sync_at = now
+    db.commit()
+
     return CatalogSyncResponse(
         server_time=now,
         products=product_items,
@@ -175,4 +231,3 @@ def get_catalog_sync(
         deleted_item_ids=deleted_item_ids,
         has_more=has_more
     )
-

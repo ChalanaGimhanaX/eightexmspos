@@ -57,6 +57,7 @@ public class Product
     public decimal CostBasis { get; set; }
     public decimal TaxRate { get; set; }
     public decimal StockOnHand { get; set; }
+    public decimal MinStockThreshold { get; set; } = 0.0m;
     public bool IsActive { get; set; } = true;
 }
 
@@ -212,6 +213,10 @@ public class CatalogProductDto
     [JsonPropertyName("tax_rate")]
     [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
     public decimal TaxRate { get; set; }
+
+    [JsonPropertyName("min_stock_threshold")]
+    [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
+    public decimal MinStockThreshold { get; set; } = 0.0m;
 
     [JsonPropertyName("is_active")]
     public bool IsActive { get; set; } = true;
@@ -482,5 +487,203 @@ public class CustomerLedgerEntry
     public required string ActorId { get; set; }
     public DateTime OccurredAtUtc { get; set; } = DateTime.UtcNow;
 }
+
+public enum TransferStatus
+{
+    Draft = 1,
+    InTransit = 2,
+    Received = 3,
+    Cancelled = 4
+}
+
+public class TransferLineItem
+{
+    public Guid TransferItemId { get; set; } = Guid.NewGuid();
+    public string TransferId { get; set; } = string.Empty;
+    public required string ProductId { get; set; }
+    public string ProductName { get; set; } = string.Empty;
+    public string Barcode { get; set; } = string.Empty;
+    public decimal DispatchedQuantity { get; set; }
+    public decimal? ReceivedQuantity { get; set; }
+    public decimal DiscrepancyQuantity { get; set; } = 0m;
+    public decimal UnitCost { get; set; } = 0m;
+    public string? Notes { get; set; }
+}
+
+public class TransferItem : TransferLineItem { }
+
+public class Transfer
+{
+    public string TransferId { get; set; } = Guid.NewGuid().ToString();
+    public required string TransferNumber { get; set; }
+    public string TenantId { get; set; } = "TENANT_LK_01";
+    public required string SourceBranchId { get; set; }
+    public required string DestBranchId { get; set; }
+    public TransferStatus Status { get; set; } = TransferStatus.InTransit;
+    public required string DispatchedBy { get; set; }
+    public DateTime DispatchedAtUtc { get; set; } = DateTime.UtcNow;
+    public string? ReceivedBy { get; set; }
+    public DateTime? ReceivedAtUtc { get; set; }
+    public string? CancelledBy { get; set; }
+    public DateTime? CancelledAtUtc { get; set; }
+    public string? CancellationReason { get; set; }
+    public decimal TotalDispatchedQuantity { get; set; }
+    public decimal? TotalReceivedQuantity { get; set; }
+    public bool HasDiscrepancy { get; set; }
+    public string? DiscrepancyNotes { get; set; }
+    public string? Notes { get; set; }
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
+
+    public List<TransferLineItem> Lines { get; set; } = new();
+}
+
+public enum StockCountStatus
+{
+    InProgress = 1,
+    Completed = 2,
+    Cancelled = 3
+}
+
+public class StockCountItem
+{
+    public Guid ItemId { get; set; } = Guid.NewGuid();
+    public required string SessionId { get; set; }
+    public required string ProductId { get; set; }
+    public required string ProductName { get; set; }
+    public required string Barcode { get; set; }
+    public decimal SnapshotStock { get; set; }
+    public decimal? CountedQuantity { get; set; }
+    public decimal VarianceQuantity { get; set; }
+    public decimal CostBasis { get; set; }
+    public decimal VarianceValue { get; set; }
+    public bool IsCounted { get; set; }
+    public string? CountedBy { get; set; }
+    public DateTime? CountedAtUtc { get; set; }
+    public string? Notes { get; set; }
+}
+
+public class StockCountSession
+{
+    public required string SessionId { get; set; }
+    public required string TenantId { get; set; }
+    public required string BranchId { get; set; }
+    public StockCountStatus Status { get; set; } = StockCountStatus.InProgress;
+    public required string StartedBy { get; set; }
+    public DateTime StartedAtUtc { get; set; } = DateTime.UtcNow;
+    public string? CompletedBy { get; set; }
+    public DateTime? CompletedAtUtc { get; set; }
+    public string? CancelledBy { get; set; }
+    public DateTime? CancelledAtUtc { get; set; }
+    public string? CancellationReason { get; set; }
+    public string? Notes { get; set; }
+
+    public int TotalItemsCounted { get; set; }
+    public decimal TotalVarianceQuantity { get; set; }
+    public decimal TotalVarianceValue { get; set; }
+    public int LinesWithVarianceCount { get; set; }
+
+    public List<StockCountItem> Items { get; set; } = new();
+}
+
+public class StockCountAdjustmentJournal
+{
+    public required string SessionId { get; set; }
+    public required string TenantId { get; set; }
+    public required string BranchId { get; set; }
+    public DateTime ExecutedAtUtc { get; set; } = DateTime.UtcNow;
+    public required string ExecutedBy { get; set; }
+    public decimal TotalVarianceQuantity { get; set; }
+    public decimal TotalVarianceValue { get; set; }
+    public List<StockCountJournalLine> Lines { get; set; } = new();
+}
+
+public class StockCountJournalLine
+{
+    public required string ProductId { get; set; }
+    public required string ProductName { get; set; }
+    public required string Barcode { get; set; }
+    public decimal SnapshotStock { get; set; }
+    public decimal CountedQuantity { get; set; }
+    public decimal VarianceQuantity { get; set; }
+    public decimal CostBasis { get; set; }
+    public decimal VarianceValue { get; set; }
+    public string AdjustmentReason { get; set; } = "STOCK_COUNT_ADJUSTMENT";
+}
+
+public enum LicenseStatus
+{
+    Unlicensed = 0,
+    Active = 1,
+    GracePeriod = 2,
+    ExpiredLockedOut = 3
+}
+
+public class LicenceEntitlement
+{
+    public string EntitlementId { get; set; } = Guid.NewGuid().ToString();
+    public required string TenantId { get; set; }
+    public required string Plan { get; set; }
+    public DateTime IssuedAtUtc { get; set; }
+    public DateTime ExpiresAtUtc { get; set; }
+    public int GracePeriodDays { get; set; } = 7;
+    public int MaxDevices { get; set; } = 1;
+    public List<string> Features { get; set; } = new();
+    public int Revision { get; set; } = 1;
+    public string SignatureHex { get; set; } = string.Empty;
+    public string RawPayloadBase64 { get; set; } = string.Empty;
+    public string RawToken { get; set; } = string.Empty;
+    public string Signature
+    {
+        get => !string.IsNullOrEmpty(SignatureHex) ? SignatureHex : string.Empty;
+        set => SignatureHex = value;
+    }
+    public DateTime AppliedAtUtc { get; set; } = DateTime.UtcNow;
+}
+
+public class LicenseStatusInfo
+{
+    public required LicenseStatus Status { get; set; }
+    public bool IsSaleAllowed { get; set; }
+    public string? TenantId { get; set; }
+    public string? Plan { get; set; }
+    public DateTime? ExpiresAtUtc { get; set; }
+    public DateTime? GracePeriodExpiresAtUtc { get; set; }
+    public int DaysRemaining { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public LicenceEntitlement? ActiveEntitlement { get; set; }
+}
+
+public class EntitlementPayloadDto
+{
+    [JsonPropertyName("entitlement_id")]
+    public string? EntitlementId { get; set; }
+
+    [JsonPropertyName("tenant_id")]
+    public required string TenantId { get; set; }
+
+    [JsonPropertyName("plan")]
+    public required string Plan { get; set; }
+
+    [JsonPropertyName("issued_at")]
+    public required string IssuedAt { get; set; }
+
+    [JsonPropertyName("expires_at")]
+    public required string ExpiresAt { get; set; }
+
+    [JsonPropertyName("grace_period_days")]
+    public int GracePeriodDays { get; set; } = 7;
+
+    [JsonPropertyName("max_devices")]
+    public int MaxDevices { get; set; } = 1;
+
+    [JsonPropertyName("features")]
+    public List<string>? Features { get; set; }
+
+    [JsonPropertyName("revision")]
+    public int Revision { get; set; } = 1;
+}
+
+
 
 

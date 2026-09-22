@@ -108,7 +108,41 @@ public partial class MainWindow : Window
         _currentShift = await App.ShiftService.GetActiveShiftAsync("B01", "C01");
         if (_currentShift == null)
         {
-            _currentShift = await App.ShiftService.OpenShiftAsync("B01", "C01", _currentUser.UserId, 5000.00m, "TENANT_LK_01");
+            var openShiftDialog = new OpenShiftDialog(_currentUser, "B01", "C01")
+            {
+                Owner = this
+            };
+
+            if (openShiftDialog.ShowDialog() != true)
+            {
+                // Cashier cancelled opening float; abort session and return to login
+                _currentUser = null;
+                ShowLogin();
+                return;
+            }
+
+            try
+            {
+                _currentShift = await App.ShiftService.OpenShiftAsync(
+                    "B01",
+                    "C01",
+                    _currentUser.UserId,
+                    openShiftDialog.OpeningFloat,
+                    "TENANT_LK_01"
+                );
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Failed to open cashier shift: {ex.Message}",
+                    "Shift Open Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error
+                );
+                _currentUser = null;
+                ShowLogin();
+                return;
+            }
         }
 
         var billingVm = new BillingViewModel(_currentUser, _currentShift, App.CatalogService, App.SaleService, App.HeldCartService);

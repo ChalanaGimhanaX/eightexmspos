@@ -10,6 +10,7 @@ public interface IReportService
     Task<ShiftReport> GenerateShiftReportAsync(Guid shiftId);
     Task<DailyReport> GenerateDailyReportAsync(DateTime dateUtc, string? branchId = null);
     Task<InventorySummaryReport> GenerateInventorySummaryReportAsync();
+    Task<InventorySummaryReport> GenerateInventoryValuationReportAsync();
 }
 
 public class ReportService : IReportService
@@ -534,6 +535,11 @@ public class ReportService : IReportService
             TotalValuationAtRetail = MoneyCalculator.Round(totalValRetail),
             Items = items
         };
+    }
+
+    public Task<InventorySummaryReport> GenerateInventoryValuationReportAsync()
+    {
+        return GenerateInventorySummaryReportAsync();
     }
 }
 

@@ -74,23 +74,34 @@ public interface ISaleService
     Task<Sale?> GetSaleByIdAsync(Guid saleId);
     Task<Sale?> GetSaleByReceiptNumberAsync(string receiptNumber);
     Task<int> GetSaleCountAsync();
+    Task<List<Sale>> GetRecentSalesAsync(int limit = 50, string? branchId = null);
 }
 
 public class SaleService : ISaleService
 {
     private readonly PosDatabase _db;
     private readonly ICatalogService _catalog;
+    private readonly ILicenseService? _licenseService;
 
     public SaleService(PosDatabase db, ICatalogService catalog)
+        : this(db, catalog, null)
+    {
+    }
+
+    public SaleService(PosDatabase db, ICatalogService catalog, ILicenseService? licenseService)
     {
         _db = db;
         _catalog = catalog;
+        _licenseService = licenseService;
     }
 
     public async Task<Sale> CommitSaleAsync(
         CreateSaleCommand command,
         Func<SqliteConnection, SqliteTransaction, Task>? failureHook = null)
     {
+        // 0. Pre-commit license lockout guardrail (R4, Feature 22)
+        _licenseService?.ValidateSaleAllowed(command.TenantId);
+
         if (command.Items == null || command.Items.Count == 0)
         {
             throw new PosException("Cannot commit a sale with no items.");
@@ -1450,4 +1461,40 @@ public class SaleService : ISaleService
         cmd.CommandText = "SELECT COUNT(*) FROM sales;";
         return Convert.ToInt32(await cmd.ExecuteScalarAsync());
     }
+
+    public async Task<List<Sale>> GetRecentSalesAsync(int limit = 50, string? branchId = null)
+    {
+        using var conn = _db.CreateConnection();
+        using var cmd = conn.CreateCommand();
+        var sql = "SELECT sale_id FROM sales ";
+        if (!string.IsNullOrWhiteSpace(branchId))
+        {
+            sql += "WHERE branch_id = $bid ";
+            cmd.Parameters.AddWithValue("$bid", branchId);
+        }
+        sql += "ORDER BY created_at_utc DESC LIMIT $limit;";
+        cmd.Parameters.AddWithValue("$limit", limit);
+        cmd.CommandText = sql;
+
+        var saleIds = new List<Guid>();
+        using (var reader = await cmd.ExecuteReaderAsync())
+        {
+            while (await reader.ReadAsync())
+            {
+                saleIds.Add(Guid.Parse(reader.GetString(0)));
+            }
+        }
+
+        var sales = new List<Sale>();
+        foreach (var sid in saleIds)
+        {
+            var sale = await GetSaleByIdAsync(sid);
+            if (sale != null)
+            {
+                sales.Add(sale);
+            }
+        }
+        return sales;
+    }
 }
+

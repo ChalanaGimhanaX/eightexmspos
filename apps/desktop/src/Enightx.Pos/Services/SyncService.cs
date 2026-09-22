@@ -23,17 +23,56 @@ public class SyncService : ISyncService
     private readonly ICatalogService _catalogService;
     private readonly HttpClient _httpClient;
     private readonly string _apiBaseUrl;
+    private readonly string? _configuredDeviceToken;
 
     public SyncService(
         PosDatabase db,
         ICatalogService? catalogService = null,
         HttpClient? httpClient = null,
-        string apiBaseUrl = "https://posapi.eightexms.site")
+        string apiBaseUrl = "https://posapi.eightexms.site",
+        string? deviceToken = null)
     {
         _db = db;
         _catalogService = catalogService ?? new CatalogService(db);
         _httpClient = httpClient ?? new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
         _apiBaseUrl = apiBaseUrl;
+        _configuredDeviceToken = deviceToken;
+    }
+
+    private async Task<string?> GetDeviceTokenAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(_configuredDeviceToken))
+        {
+            return _configuredDeviceToken;
+        }
+
+        var envToken = Environment.GetEnvironmentVariable("ENIGHTX_DEVICE_TOKEN");
+        if (!string.IsNullOrWhiteSpace(envToken))
+        {
+            return envToken;
+        }
+
+        try
+        {
+            using var conn = _db.CreateConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT value FROM sync_state WHERE key = 'device_token' LIMIT 1;";
+            var res = await cmd.ExecuteScalarAsync();
+            if (res != null && res != DBNull.Value)
+            {
+                var str = res.ToString();
+                if (!string.IsNullOrWhiteSpace(str))
+                {
+                    return str;
+                }
+            }
+        }
+        catch
+        {
+            // Table or entry may not exist or DB connection error
+        }
+
+        return null;
     }
 
     public async Task<List<OutboxEvent>> GetPendingEventsAsync(int limit = 50)
@@ -146,7 +185,18 @@ public class SyncService : ISyncService
             };
 
             var url = $"{_apiBaseUrl.TrimEnd('/')}/api/v1/sync/push";
-            using var resp = await _httpClient.PostAsJsonAsync(url, batchObj, ct);
+            using var req = new HttpRequestMessage(HttpMethod.Post, url)
+            {
+                Content = JsonContent.Create(batchObj)
+            };
+
+            var token = await GetDeviceTokenAsync();
+            if (!string.IsNullOrWhiteSpace(token))
+            {
+                req.Headers.TryAddWithoutValidation("X-Device-Token", token);
+            }
+
+            using var resp = await _httpClient.SendAsync(req, ct);
 
             if (!resp.IsSuccessStatusCode)
             {
@@ -223,6 +273,8 @@ public class SyncService : ISyncService
             const int pageSize = 200;
             bool hasMore = true;
 
+            var deviceToken = await GetDeviceTokenAsync();
+
             while (hasMore && !ct.IsCancellationRequested)
             {
                 var query = new List<string>();
@@ -235,7 +287,13 @@ public class SyncService : ISyncService
                 var queryString = string.Join("&", query);
 
                 var url = $"{_apiBaseUrl.TrimEnd('/')}/api/v1/sync/catalog?{queryString}";
-                using var resp = await _httpClient.GetAsync(url, ct);
+                using var req = new HttpRequestMessage(HttpMethod.Get, url);
+                if (!string.IsNullOrWhiteSpace(deviceToken))
+                {
+                    req.Headers.TryAddWithoutValidation("X-Device-Token", deviceToken);
+                }
+
+                using var resp = await _httpClient.SendAsync(req, ct);
 
                 if (!resp.IsSuccessStatusCode)
                 {
@@ -315,4 +373,3 @@ public class SyncService : ISyncService
         }
     }
 }
-
