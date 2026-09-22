@@ -40,3 +40,4 @@
 1. **Local Autonomy**: All transaction data is stored locally in SQLite on each counter and operates continuously during internet or cloud outages.
 2. **Encrypted Cloud Backups**: Daily database snapshots are encrypted with AES-256 before transmission and stored on secure cloud servers with 30-day versioned retention.
 3. **Tenant Privacy**: Strict tenant isolation prevents any cross-business data access. Provider staff access requires explicit temporary authorization from the store owner.
+

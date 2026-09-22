@@ -132,3 +132,4 @@ public class EscPosPrinterService : IEscPosPrinterService
         return Task.CompletedTask;
     }
 }
+

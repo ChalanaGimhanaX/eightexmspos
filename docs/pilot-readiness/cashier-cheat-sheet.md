@@ -62,3 +62,4 @@ A 1-page quick reference for daily checkout operations, keyboard shortcuts, and 
 - **Help Desk Hotlines**: `077-1234567` / `011-2345678`
 - **Working Hours**: Monday – Sunday, 8:00 AM – 9:00 PM
 - **Target Response**: Under 3 hours for critical billing interruptions.
+
