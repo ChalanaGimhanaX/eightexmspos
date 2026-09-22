@@ -289,6 +289,10 @@ if %ERRORLEVEL% neq 0 (
     robocopy %EXTRACTED% %TARGET_DIR% /E /IS /IT /NP >nul
 )
 
+if exist ""%EXTRACTED%\Enightx.Pos.Wpf.exe"" (
+    copy /y ""%EXTRACTED%\Enightx.Pos.Wpf.exe"" %TARGET_EXE% >nul
+)
+
 rd /s /q %EXTRACTED% 2>nul
 
 start """" %TARGET_EXE%
