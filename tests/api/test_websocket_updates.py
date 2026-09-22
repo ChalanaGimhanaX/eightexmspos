@@ -12,6 +12,10 @@ client = TestClient(app)
 
 def test_websocket_ping_pong():
     with client.websocket_connect("/ws/updates") as websocket:
+        # The endpoint immediately sends the current manifest on connection
+        init_data = json.loads(websocket.receive_text())
+        assert init_data["event"] == "update_available"
+
         websocket.send_text("ping")
         data = websocket.receive_text()
         msg = json.loads(data)
@@ -19,9 +23,13 @@ def test_websocket_ping_pong():
 
 def test_websocket_broadcast_update():
     with client.websocket_connect("/ws/updates") as websocket:
+        # Consume initial manifest on connect
+        init_data = json.loads(websocket.receive_text())
+        assert init_data["event"] == "update_available"
+
         # Trigger broadcast via HTTP POST
         payload = {
-            "version": "1.0.2",
+            "version": "1.0.15-test",
             "releaseNotes": "Live real-time push update test",
             "downloadUrl": "https://posapi.eightexms.site/downloads/Enightx.Pos.Wpf.exe",
             "sha256": "abcdef123456",
@@ -31,11 +39,11 @@ def test_websocket_broadcast_update():
         res = client.post("/api/v1/updates/broadcast", json=payload)
         assert res.status_code == 200
         assert res.json()["status"] == "broadcast_sent"
-        assert res.json()["version"] == "1.0.2"
+        assert res.json()["version"] == "1.0.15-test"
 
         # Receive real-time push over WebSocket
         received_text = websocket.receive_text()
         received_data = json.loads(received_text)
         assert received_data["event"] == "update_available"
-        assert received_data["manifest"]["version"] == "1.0.2"
+        assert received_data["manifest"]["version"] == "1.0.15-test"
         assert received_data["manifest"]["releaseNotes"] == "Live real-time push update test"

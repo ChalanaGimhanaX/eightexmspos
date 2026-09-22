@@ -212,6 +212,7 @@ public partial class MainWindow : Window
         {
             await App.SyncWorker.SyncCycleAsync();
             UpdateSyncBadge(App.SyncWorker.IsOnline);
+            await CheckForUpdatesAsync();
         }
         catch
         {

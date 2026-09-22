@@ -394,36 +394,42 @@ start """" %TARGET%
                     await ws.ConnectAsync(new Uri(targetWsUrl), token);
                     Debug.WriteLine("[UpdateService] WebSocket connected. Listening for real-time updates...");
 
+                    using var pingCts = CancellationTokenSource.CreateLinkedTokenSource(token);
+                    var pingTask = Task.Run(async () =>
+                    {
+                        var pingBytes = Encoding.UTF8.GetBytes("ping");
+                        while (!pingCts.Token.IsCancellationRequested && ws.State == WebSocketState.Open)
+                        {
+                            try
+                            {
+                                await Task.Delay(20000, pingCts.Token);
+                                if (ws.State == WebSocketState.Open)
+                                {
+                                    await ws.SendAsync(new ArraySegment<byte>(pingBytes), WebSocketMessageType.Text, true, pingCts.Token);
+                                }
+                            }
+                            catch { break; }
+                        }
+                    }, pingCts.Token);
+
                     while (ws.State == WebSocketState.Open && !token.IsCancellationRequested)
                     {
                         var segment = new ArraySegment<byte>(buffer);
-                        var receiveTask = ws.ReceiveAsync(segment, token);
-                        var completed = await Task.WhenAny(receiveTask, Task.Delay(25000, token));
-
-                        if (completed == receiveTask)
+                        var result = await ws.ReceiveAsync(segment, token);
+                        if (result.MessageType == WebSocketMessageType.Close)
                         {
-                            var result = await receiveTask;
-                            if (result.MessageType == WebSocketMessageType.Close)
-                            {
-                                await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", token);
-                                break;
-                            }
-
-                            if (result.MessageType == WebSocketMessageType.Text)
-                            {
-                                var jsonText = Encoding.UTF8.GetString(buffer, 0, result.Count);
-                                ProcessWebSocketMessage(jsonText);
-                            }
+                            await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", token);
+                            break;
                         }
-                        else
+
+                        if (result.MessageType == WebSocketMessageType.Text)
                         {
-                            if (ws.State == WebSocketState.Open)
-                            {
-                                var pingBytes = Encoding.UTF8.GetBytes("ping");
-                                await ws.SendAsync(new ArraySegment<byte>(pingBytes), WebSocketMessageType.Text, true, token);
-                            }
+                            var jsonText = Encoding.UTF8.GetString(buffer, 0, result.Count);
+                            ProcessWebSocketMessage(jsonText);
                         }
                     }
+
+                    pingCts.Cancel();
                 }
                 catch (OperationCanceledException)
                 {
