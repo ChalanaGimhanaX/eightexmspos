@@ -32,12 +32,16 @@ public record PrintResult(bool Success, string? ErrorMessage, string ReceiptCont
 public interface IReceiptService
 {
     string FormatReceipt(Sale sale, bool isReprint = false);
+    string FormatTaxInvoiceReceipt(Sale sale, string? customerName = null, string? customerVatNumber = null, string? customerAddress = null, bool isReprint = false);
     Task<PrintResult> PrintSaleReceiptAsync(Guid saleId, bool simulateHardwareFailure = false);
     Task<PrintResult> ReprintSaleReceiptAsync(Guid saleId, string actorId, string reason, bool simulateHardwareFailure = false);
 }
 
 public class ReceiptService : IReceiptService
 {
+    public const string DefaultVatRegistrationNumber = "VAT-102938475-7000";
+    public const string DefaultTinNumber = "TIN-203948571";
+
     private readonly PosDatabase _db;
     private readonly ISaleService _saleService;
     private readonly IPrinterService _printerService;
@@ -47,6 +51,89 @@ public class ReceiptService : IReceiptService
         _db = db;
         _saleService = saleService;
         _printerService = printerService;
+    }
+
+    public string FormatTaxInvoiceReceipt(Sale sale, string? customerName = null, string? customerVatNumber = null, string? customerAddress = null, bool isReprint = false)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("========================================");
+        sb.AppendLine("              TAX INVOICE               ");
+        sb.AppendLine("         Nimal Motors (Pvt) Ltd         ");
+        sb.AppendLine("       No. 124 Galle Road, Colombo      ");
+        sb.AppendLine($"   VAT Reg No : {DefaultVatRegistrationNumber}   ");
+        sb.AppendLine($"   TIN Number : {DefaultTinNumber}   ");
+        sb.AppendLine("            Tel: 011-2345678            ");
+        sb.AppendLine("========================================");
+
+        if (isReprint)
+        {
+            sb.AppendLine("   *** DUPLICATE / REPRINT INVOICE ***  ");
+            sb.AppendLine($"   Reprint Count: {sale.ReprintCount}   ");
+            sb.AppendLine($"   Reprinted At: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
+            sb.AppendLine("----------------------------------------");
+        }
+
+        sb.AppendLine($"Invoice No : {sale.ReceiptNumber}");
+        sb.AppendLine($"Date / Time: {sale.CreatedAtUtc:yyyy-MM-dd HH:mm:ss} UTC");
+        sb.AppendLine($"Branch     : {sale.BranchId}   Counter: {sale.CounterId}");
+        sb.AppendLine($"Cashier    : {sale.CashierId}");
+
+        if (!string.IsNullOrWhiteSpace(customerName))
+        {
+            sb.AppendLine("----------------------------------------");
+            sb.AppendLine($"Customer   : {customerName}");
+            if (!string.IsNullOrWhiteSpace(customerVatNumber))
+                sb.AppendLine($"Cust VAT No: {customerVatNumber}");
+            if (!string.IsNullOrWhiteSpace(customerAddress))
+                sb.AppendLine($"Address    : {customerAddress}");
+        }
+
+        sb.AppendLine("----------------------------------------");
+        sb.AppendLine("Item                  Qty  Price  Amount");
+        sb.AppendLine("----------------------------------------");
+
+        foreach (var l in sale.Lines)
+        {
+            var name = l.ProductName.Length > 18 ? l.ProductName[..18] : l.ProductName.PadRight(18);
+            sb.AppendLine($"{name} {l.Quantity,4:F0} {l.UnitPrice,6:F2} {l.LineTotal,7:F2}");
+            if (l.DiscountAmount > 0)
+            {
+                sb.AppendLine($"  (Discount: -LKR {l.DiscountAmount:F2})");
+            }
+            if (l.TaxAmount > 0)
+            {
+                sb.AppendLine($"  (VAT 18%: LKR {l.TaxAmount:F2})");
+            }
+        }
+
+        sb.AppendLine("----------------------------------------");
+        sb.AppendLine($"Value of Supply: LKR {sale.Subtotal,15:F2}");
+        if (sale.DiscountTotal > 0)
+        {
+            sb.AppendLine($"Discounts      : LKR -{sale.DiscountTotal,14:F2}");
+        }
+        if (sale.TaxTotal > 0)
+        {
+            sb.AppendLine($"VAT (18%)      : LKR {sale.TaxTotal,15:F2}");
+        }
+        sb.AppendLine($"TOTAL PAYABLE  : LKR {sale.GrandTotal,15:F2}");
+        sb.AppendLine("----------------------------------------");
+
+        foreach (var t in sale.Tenders)
+        {
+            sb.AppendLine($"Paid ({t.TenderType}) : LKR {t.AmountTendered,15:F2}");
+            if (t.ChangeGiven > 0)
+            {
+                sb.AppendLine($"Change Given : LKR {t.ChangeGiven,15:F2}");
+            }
+        }
+
+        sb.AppendLine("========================================");
+        sb.AppendLine("  This is a statutory Tax Invoice.      ");
+        sb.AppendLine("  Registered under IRD Sri Lanka.       ");
+        sb.AppendLine("========================================");
+
+        return sb.ToString();
     }
 
     public string FormatReceipt(Sale sale, bool isReprint = false)
