@@ -222,7 +222,7 @@ curl -s -X POST https://posapi.eightexms.site/api/v1/devices/enroll \
   -d '{"device_code":"DEV01","hardware_fingerprint":"hw_test_123","tenant_id":"ten_001","branch_id":"br_001","device_name":"Counter 1","app_version":"1.0.0"}'
 ```
 ```json
-{"device_id":"dev_b3f8b21ff5f1","device_generation":1,"token":"tok_8e51fc5da2e7415d80c9af2c817fa96f"}
+{"device_id":"dev_example","device_generation":1,"token":"DEVICE_TOKEN_PLACEHOLDER"}
 ```
 
 ### 4. Sync Batch Push Endpoint
